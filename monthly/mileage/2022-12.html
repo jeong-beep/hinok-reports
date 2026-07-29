@@ -677,17 +677,34 @@
       return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
     } catch (e) { return null; }
   }
+  function hinokLogVisit(email) {
+    try {
+      const url = 'https://docs.google.com/forms/d/e/1FAIpQLSdxFBLKsClbQcpYbjJzi4iGFIErQC1tty7mz2wiIIzH-SQnvQ/formResponse';
+      const params = new URLSearchParams();
+      params.append('entry.1550214245', email);
+      params.append('entry.1208487914', location.href);
+      fetch(url, { method: 'POST', mode: 'no-cors', body: params });
+    } catch (e) {}
+  }
   function hinokHandleCredential(response) {
     const payload = hinokParseJwt(response.credential);
     if (payload && payload.hd === 'hinok.life') {
       localStorage.setItem('hinok_auth', JSON.stringify({ exp: Date.now() + 12 * 60 * 60 * 1000, email: payload.email }));
       document.documentElement.classList.add('auth-ok');
+      hinokLogVisit(payload.email);
     } else {
       document.getElementById('auth-error').style.display = 'block';
     }
   }
   window.addEventListener('load', () => {
-    if (document.documentElement.classList.contains('auth-ok')) return;
+    if (document.documentElement.classList.contains('auth-ok')) {
+      try {
+        const raw = localStorage.getItem('hinok_auth');
+        const data = raw && JSON.parse(raw);
+        if (data && data.email) hinokLogVisit(data.email);
+      } catch (e) {}
+      return;
+    }
     if (typeof google === 'undefined' || !google.accounts) return;
     google.accounts.id.initialize({
       client_id: '490629671344-150ivr5s67rv02odtt5fo285us2ef6tp.apps.googleusercontent.com',
