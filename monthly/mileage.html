@@ -263,6 +263,16 @@
     padding: 1px 6px;
     white-space: nowrap;
   }
+  .id-cell { display: flex; align-items: center; gap: 6px; }
+  .sub-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 1px 7px;
+    white-space: nowrap;
+  }
   .amt-earn { color: var(--amt-earn); font-weight: 600; }
   .amt-use { color: var(--amt-use); font-weight: 600; }
   .amt-balance { color: var(--ink); }
@@ -490,6 +500,12 @@
   const COLLAPSED_COUNT = 10;
   let currentSegment = 'all';
 
+  // "전체 고객" 탭에서 정기배송 구독고객에게 라벨을 붙이기 위한 아이디 집합
+  const subscriberIds = new Set();
+  Object.values(RANKING_DATA.sub).forEach(list => {
+    list.forEach(([name]) => subscriberIds.add(name));
+  });
+
   function renderRankingTable(domId, count) {
     const el = document.getElementById(domId);
     const periodKey = PERIOD_IDS[domId];
@@ -497,9 +513,11 @@
     el.innerHTML = '';
     list.slice(0, count).forEach(([name, grade, use, earn, balance], i) => {
       const tr = document.createElement('tr');
+      const subLabel = (currentSegment === 'all' && subscriberIds.has(name))
+        ? '<span class="sub-tag">정기배송</span>' : '';
       tr.innerHTML = `
         <td class="rank">${i + 1}</td>
-        <td>${name}</td>
+        <td><span class="id-cell">${name}${subLabel}</span></td>
         <td><span class="grade-tag">${grade || '-'}</span></td>
         <td class="num amt-use">▼${use.toLocaleString()}원</td>
         <td class="num amt-earn">▲${earn.toLocaleString()}원</td>
