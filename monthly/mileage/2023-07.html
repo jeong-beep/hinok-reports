@@ -374,6 +374,26 @@
     text-align: center;
     padding-top: 8px;
   }
+
+  .trend-wrap { position: relative; }
+  .trend-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--plane);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 9px;
+    border-radius: 6px;
+    line-height: 1.4;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+    opacity: 0;
+    transition: opacity 0.1s;
+    z-index: 5;
+  }
+  .trend-tooltip.visible { opacity: 1; }
+  .trend-point, .trend-bar-seg { cursor: pointer; }
 </style>
 
 <div class="page">
@@ -454,10 +474,13 @@
   <section>
     <div class="section-head">
       <h2>최근 12개월 카테고리 추이</h2>
-      <span class="section-note">월별 적립/사용 금액 추이</span>
+      <span class="section-note">적립(누적 막대) · 사용(선 그래프)</span>
     </div>
     <div class="card">
-      <div id="trend-chart"></div>
+      <div class="trend-wrap">
+        <div id="trend-chart"></div>
+        <div class="trend-tooltip" id="trend-tooltip"></div>
+      </div>
       <div class="legend" id="trend-legend"></div>
     </div>
   </section>
@@ -593,19 +616,23 @@
     if (e.target.value) window.location.href = e.target.value;
   });
 
-  // 최근 12개월 카테고리 추이 (SVG 라인차트)
-  const TREND_DATA = [{"month":"2022-08","gradePurchase":0,"subscription":0,"review":66300,"orderUse":1863910},{"month":"2022-09","gradePurchase":0,"subscription":0,"review":56400,"orderUse":1395600},{"month":"2022-10","gradePurchase":0,"subscription":0,"review":73900,"orderUse":786100},{"month":"2022-11","gradePurchase":0,"subscription":0,"review":64700,"orderUse":1633902},{"month":"2022-12","gradePurchase":0,"subscription":0,"review":26600,"orderUse":1265900},{"month":"2023-01","gradePurchase":0,"subscription":0,"review":29200,"orderUse":1450600},{"month":"2023-02","gradePurchase":0,"subscription":0,"review":34700,"orderUse":949600},{"month":"2023-03","gradePurchase":0,"subscription":0,"review":40500,"orderUse":1104600},{"month":"2023-04","gradePurchase":0,"subscription":0,"review":18100,"orderUse":1616910},{"month":"2023-05","gradePurchase":0,"subscription":0,"review":21800,"orderUse":1665200},{"month":"2023-06","gradePurchase":0,"subscription":0,"review":32600,"orderUse":1488601},{"month":"2023-07","gradePurchase":0,"subscription":0,"review":46500,"orderUse":2206301}];
+  // 최근 12개월 카테고리 추이 — 적립 4종은 누적 막대, 사용은 선 그래프
+  const TREND_DATA = [{"month":"2022-08","gradePurchase":0,"subscription":0,"review":66300,"signup":2790000,"orderUse":1863910},{"month":"2022-09","gradePurchase":0,"subscription":0,"review":56400,"signup":1740000,"orderUse":1395600},{"month":"2022-10","gradePurchase":0,"subscription":0,"review":73900,"signup":1130000,"orderUse":786100},{"month":"2022-11","gradePurchase":0,"subscription":0,"review":64700,"signup":1935000,"orderUse":1633902},{"month":"2022-12","gradePurchase":0,"subscription":0,"review":26600,"signup":1710000,"orderUse":1265900},{"month":"2023-01","gradePurchase":0,"subscription":0,"review":29200,"signup":1915000,"orderUse":1450600},{"month":"2023-02","gradePurchase":0,"subscription":0,"review":34700,"signup":1375000,"orderUse":949600},{"month":"2023-03","gradePurchase":0,"subscription":0,"review":40500,"signup":1510000,"orderUse":1104600},{"month":"2023-04","gradePurchase":0,"subscription":0,"review":18100,"signup":2040000,"orderUse":1616910},{"month":"2023-05","gradePurchase":0,"subscription":0,"review":21800,"signup":2050000,"orderUse":1665200},{"month":"2023-06","gradePurchase":0,"subscription":0,"review":32600,"signup":2015000,"orderUse":1488601},{"month":"2023-07","gradePurchase":0,"subscription":0,"review":46500,"signup":2775000,"orderUse":2206301}];
   (function renderTrendChart() {
     const container = document.getElementById('trend-chart');
     const legendEl = document.getElementById('trend-legend');
-    const series = [
+    const tooltip = document.getElementById('trend-tooltip');
+    const wrap = document.querySelector('.trend-wrap');
+
+    const earnSeries = [
       { key: 'gradePurchase', label: '등급별구매적립', color: 'var(--cat-1)' },
       { key: 'subscription', label: '정기배송적립', color: 'var(--cat-2)' },
       { key: 'review', label: '리뷰작성적립', color: 'var(--cat-3)' },
-      { key: 'orderUse', label: '주문사용차감', color: 'var(--cat-4)' },
+      { key: 'signup', label: '신규가입적립', color: 'var(--cat-4)' },
     ];
+    const useSeries = { key: 'orderUse', label: '주문사용차감', color: 'var(--amt-use)' };
 
-    series.forEach(s => {
+    [...earnSeries, useSeries].forEach(s => {
       const item = document.createElement('span');
       item.className = 'legend-item';
       item.innerHTML = `<span class="swatch" style="background:${s.color}"></span>${s.label}`;
@@ -619,32 +646,71 @@
     }
 
     const W = 640, H = 220, padL = 8, padR = 8, padT = 12, padB = 24;
-    const maxVal = Math.max(1, ...TREND_DATA.flatMap(d => series.map(s => d[s.key])));
-    const x = i => padL + (i * (W - padL - padR)) / (n - 1);
+    const maxStack = Math.max(1, ...TREND_DATA.map(d => earnSeries.reduce((s, ser) => s + d[ser.key], 0)));
+    const maxUse = Math.max(1, ...TREND_DATA.map(d => d[useSeries.key]));
+    const maxVal = Math.max(maxStack, maxUse);
+    const slot = (W - padL - padR) / n;
+    const barW = Math.min(28, slot * 0.55);
+    const xCenter = i => padL + slot * (i + 0.5);
     const y = v => H - padB - (v / maxVal) * (H - padT - padB);
 
     let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; overflow:visible;">`;
-
-    // 가로 기준선
     svg += `<line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="var(--hairline)" stroke-width="1"/>`;
 
-    series.forEach(s => {
-      const points = TREND_DATA.map((d, i) => `${x(i)},${y(d[s.key])}`).join(' ');
-      svg += `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
-      TREND_DATA.forEach((d, i) => {
-        svg += `<circle cx="${x(i)}" cy="${y(d[s.key])}" r="3" fill="${s.color}"><title>${d.month} ${s.label}: ${d[s.key].toLocaleString()}원</title></circle>`;
+    // 누적 막대 (적립 4종)
+    TREND_DATA.forEach((d, i) => {
+      let stackBase = 0;
+      const cx = xCenter(i);
+      earnSeries.forEach(s => {
+        const val = d[s.key];
+        if (val <= 0) return;
+        const y0 = y(stackBase);
+        const y1 = y(stackBase + val);
+        svg += `<rect class="trend-bar-seg" data-month="${d.month}" data-label="${s.label}" data-value="${val}"
+          x="${cx - barW / 2}" y="${y1}" width="${barW}" height="${Math.max(0.5, y0 - y1)}" fill="${s.color}"/>`;
+        stackBase += val;
       });
     });
 
-    // x축 월 라벨 (전부 표시하되 좁으면 홀수번째만)
+    // 사용 선 그래프
+    const points = TREND_DATA.map((d, i) => `${xCenter(i)},${y(d[useSeries.key])}`).join(' ');
+    svg += `<polyline points="${points}" fill="none" stroke="${useSeries.color}" stroke-width="2"/>`;
+    TREND_DATA.forEach((d, i) => {
+      svg += `<circle class="trend-point" data-month="${d.month}" data-label="${useSeries.label}" data-value="${d[useSeries.key]}"
+        cx="${xCenter(i)}" cy="${y(d[useSeries.key])}" r="4" fill="${useSeries.color}"/>`;
+    });
+
+    // x축 월 라벨
     TREND_DATA.forEach((d, i) => {
       if (n > 8 && i % 2 !== 0 && i !== n - 1) return;
       const label = d.month.slice(5) + '월';
-      svg += `<text x="${x(i)}" y="${H - 6}" font-size="9" fill="var(--ink-muted)" text-anchor="middle">${label}</text>`;
+      svg += `<text x="${xCenter(i)}" y="${H - 6}" font-size="9" fill="var(--ink-muted)" text-anchor="middle">${label}</text>`;
     });
 
     svg += '</svg>';
     container.innerHTML = svg;
+
+    function showTooltip(evt, el) {
+      const rect = wrap.getBoundingClientRect();
+      const px = evt.clientX - rect.left;
+      const py = evt.clientY - rect.top;
+      tooltip.textContent = `${el.dataset.month} ${el.dataset.label}: ${Number(el.dataset.value).toLocaleString()}원`;
+      tooltip.style.left = px + 'px';
+      tooltip.style.top = (py - 8) + 'px';
+      tooltip.classList.add('visible');
+    }
+    function hideTooltip() {
+      tooltip.classList.remove('visible');
+    }
+
+    container.querySelectorAll('.trend-bar-seg, .trend-point').forEach(el => {
+      el.addEventListener('mousemove', evt => showTooltip(evt, el));
+      el.addEventListener('mouseenter', evt => showTooltip(evt, el));
+      el.addEventListener('mouseleave', hideTooltip);
+      el.addEventListener('touchstart', evt => {
+        showTooltip(evt.touches[0], el);
+      }, { passive: true });
+    });
   })();
 
   const categoryData = [{"label":"리뷰작성적립","amount":46500,"kind":"earn"},{"label":"신규가입적립","amount":2775000,"kind":"earn"},{"label":"주문사용차감","amount":2206301,"kind":"use"}];
