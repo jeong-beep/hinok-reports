@@ -451,21 +451,14 @@
     <p class="subtitle">2021-04-01부터 2022-06까지의 전체 적립금 원장을 집계했습니다. 임직원·관리자·마케팅용·회사 이벤트 계정은 전 항목에서 제외했습니다.</p>
   </header>
 
-  <section class="kpi-row">
-    <div class="kpi">
-      <span class="label">전체 보유 적립금</span>
-      <span class="value">1,291,590원</span>
-      <span class="sub">520명 보유 중</span>
+  <section>
+    <div class="section-head">
+      <h2>최근 12개월 카테고리 추이</h2>
+      <span class="section-note">월별 적립/사용 금액 추이</span>
     </div>
-    <div class="kpi">
-      <span class="label">다음 소멸 배치</span>
-      <span class="value">D-274</span>
-      <span class="sub">2023-04-01 · 연 1회 일괄 소멸</span>
-    </div>
-    <div class="kpi">
-      <span class="label">다음 배치 예상 소멸액</span>
-      <span class="value critical">1,038,590원</span>
-      <span class="sub">415명 · 현재 잔액의 약 80%</span>
+    <div class="card">
+      <div id="trend-chart"></div>
+      <div class="legend" id="trend-legend"></div>
     </div>
   </section>
 
@@ -599,6 +592,60 @@
   document.getElementById('month-nav').addEventListener('change', (e) => {
     if (e.target.value) window.location.href = e.target.value;
   });
+
+  // 최근 12개월 카테고리 추이 (SVG 라인차트)
+  const TREND_DATA = [{"month":"2021-07","gradePurchase":0,"subscription":0,"review":39100,"orderUse":432200},{"month":"2021-08","gradePurchase":0,"subscription":0,"review":23700,"orderUse":282200},{"month":"2021-09","gradePurchase":0,"subscription":0,"review":20100,"orderUse":197100},{"month":"2021-10","gradePurchase":0,"subscription":0,"review":11200,"orderUse":115000},{"month":"2021-11","gradePurchase":0,"subscription":0,"review":7000,"orderUse":162900},{"month":"2021-12","gradePurchase":0,"subscription":0,"review":15300,"orderUse":271200},{"month":"2022-01","gradePurchase":0,"subscription":0,"review":37700,"orderUse":438600},{"month":"2022-02","gradePurchase":0,"subscription":0,"review":23900,"orderUse":433200},{"month":"2022-03","gradePurchase":0,"subscription":0,"review":30700,"orderUse":340600},{"month":"2022-04","gradePurchase":0,"subscription":0,"review":22100,"orderUse":207300},{"month":"2022-05","gradePurchase":0,"subscription":0,"review":15300,"orderUse":214110},{"month":"2022-06","gradePurchase":0,"subscription":0,"review":11700,"orderUse":148400}];
+  (function renderTrendChart() {
+    const container = document.getElementById('trend-chart');
+    const legendEl = document.getElementById('trend-legend');
+    const series = [
+      { key: 'gradePurchase', label: '등급별구매적립', color: 'var(--cat-1)' },
+      { key: 'subscription', label: '정기배송적립', color: 'var(--cat-2)' },
+      { key: 'review', label: '리뷰작성적립', color: 'var(--cat-3)' },
+      { key: 'orderUse', label: '주문사용차감', color: 'var(--cat-4)' },
+    ];
+
+    series.forEach(s => {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="swatch" style="background:${s.color}"></span>${s.label}`;
+      legendEl.appendChild(item);
+    });
+
+    const n = TREND_DATA.length;
+    if (n < 2) {
+      container.innerHTML = '<p class="section-note">추이를 그리기엔 데이터가 아직 부족합니다(1개월 뿐).</p>';
+      return;
+    }
+
+    const W = 640, H = 220, padL = 8, padR = 8, padT = 12, padB = 24;
+    const maxVal = Math.max(1, ...TREND_DATA.flatMap(d => series.map(s => d[s.key])));
+    const x = i => padL + (i * (W - padL - padR)) / (n - 1);
+    const y = v => H - padB - (v / maxVal) * (H - padT - padB);
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; overflow:visible;">`;
+
+    // 가로 기준선
+    svg += `<line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="var(--hairline)" stroke-width="1"/>`;
+
+    series.forEach(s => {
+      const points = TREND_DATA.map((d, i) => `${x(i)},${y(d[s.key])}`).join(' ');
+      svg += `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+      TREND_DATA.forEach((d, i) => {
+        svg += `<circle cx="${x(i)}" cy="${y(d[s.key])}" r="3" fill="${s.color}"><title>${d.month} ${s.label}: ${d[s.key].toLocaleString()}원</title></circle>`;
+      });
+    });
+
+    // x축 월 라벨 (전부 표시하되 좁으면 홀수번째만)
+    TREND_DATA.forEach((d, i) => {
+      if (n > 8 && i % 2 !== 0 && i !== n - 1) return;
+      const label = d.month.slice(5) + '월';
+      svg += `<text x="${x(i)}" y="${H - 6}" font-size="9" fill="var(--ink-muted)" text-anchor="middle">${label}</text>`;
+    });
+
+    svg += '</svg>';
+    container.innerHTML = svg;
+  })();
 
   const categoryData = [{"label":"리뷰작성적립","amount":11700,"kind":"earn"},{"label":"신규가입적립","amount":190000,"kind":"earn"},{"label":"주문사용차감","amount":148400,"kind":"use"}];
   const maxAmt = Math.max(1, ...categoryData.map(d => d.amount));
