@@ -1,4 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>적립금 현황 리포트 · 2024-02</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  (function () {
+    try {
+      var raw = localStorage.getItem('hinok_auth');
+      var data = raw && JSON.parse(raw);
+      if (data && data.exp > Date.now()) {
+        document.documentElement.classList.add('auth-ok');
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     color-scheme: light;
@@ -408,7 +425,35 @@
   }
   .trend-tooltip.visible { opacity: 1; }
   .trend-point, .trend-bar-seg { cursor: pointer; }
+
+  .page { display: none; }
+  html.auth-ok .page { display: flex; }
+  .auth-gate { display: flex; }
+  html.auth-ok .auth-gate { display: none; }
+  .auth-gate {
+    position: fixed; inset: 0; z-index: 100;
+    align-items: center; justify-content: center;
+    background: var(--plane);
+  }
+  .auth-box {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 32px 24px; text-align: center; max-width: 320px;
+  }
+  .auth-title { margin: 0; font-size: 17px; font-weight: 800; }
+  .auth-sub { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .auth-error { margin: 0; font-size: 12.5px; color: var(--serious); }
 </style>
+</head>
+<body>
+
+<div class="auth-gate" id="auth-gate">
+  <div class="auth-box">
+    <p class="auth-title">HINOK.LIFE 사내 전용 리포트</p>
+    <p class="auth-sub">회사 구글 계정(@hinok.life)으로 로그인해주세요.</p>
+    <div id="g_id_signin"></div>
+    <p class="auth-error" id="auth-error" style="display:none">hinok.life 계정으로만 접근할 수 있습니다. 다른 계정으로 로그인하셨다면 다시 시도해주세요.</p>
+  </div>
+</div>
 
 <div class="page">
 
@@ -626,6 +671,33 @@
 </div>
 
 <script>
+  function hinokParseJwt(token) {
+    try {
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+    } catch (e) { return null; }
+  }
+  function hinokHandleCredential(response) {
+    const payload = hinokParseJwt(response.credential);
+    if (payload && payload.hd === 'hinok.life') {
+      localStorage.setItem('hinok_auth', JSON.stringify({ exp: Date.now() + 12 * 60 * 60 * 1000, email: payload.email }));
+      document.documentElement.classList.add('auth-ok');
+    } else {
+      document.getElementById('auth-error').style.display = 'block';
+    }
+  }
+  window.addEventListener('load', () => {
+    if (document.documentElement.classList.contains('auth-ok')) return;
+    if (typeof google === 'undefined' || !google.accounts) return;
+    google.accounts.id.initialize({
+      client_id: '490629671344-150ivr5s67rv02odtt5fo285us2ef6tp.apps.googleusercontent.com',
+      callback: hinokHandleCredential,
+      hd: 'hinok.life',
+    });
+    google.accounts.id.renderButton(document.getElementById('g_id_signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ko' });
+    google.accounts.id.prompt();
+  });
+
   document.getElementById('month-nav').addEventListener('change', (e) => {
     if (e.target.value) window.location.href = e.target.value;
   });
@@ -835,3 +907,5 @@
     });
   });
 </script>
+</body>
+</html>
