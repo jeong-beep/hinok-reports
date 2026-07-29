@@ -16,7 +16,69 @@
     --warning:      #c99a2a;
     --serious:      #c1543a;
     --critical:     #c1543a;
-    --cat-1: #c1543a; --cat-2: #2e9467; --cat-3: #c99a2a; --cat-4: #8259a5;
+    --cat-1: #1d6fa5; --cat-2: #2e9467; --cat-3: #c99a2a; --cat-4: #8259a5;
+    --trend-use: #c1543a;
+    --amt-earn: #c1543a;
+    --amt-use:  #1d6fa5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane:        #14171a;
+      --surface:      #1c2024;
+      --surface-2:    #23282d;
+      --ink:          #f2f4f6;
+      --ink-2:        #c1c8ce;
+      --ink-muted:    #8b939c;
+      --hairline:     #2c3237;
+      --border:       rgba(255,255,255,0.10);
+      --accent:       #3e8cc4;
+      --accent-soft:  #1c2a3d;
+      --good:         #0ca30c;
+      --warning:      #a87f28;
+      --serious:      #c96a50;
+      --critical:     #c96a50;
+      --cat-1: #3e8cc4; --cat-2: #3ea87a; --cat-3: #a87f28; --cat-4: #9670be;
+      --trend-use: #c96a50;
+      --amt-earn: #c96a50;
+      --amt-use:  #3e8cc4;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:        #14171a;
+    --surface:      #1c2024;
+    --surface-2:    #23282d;
+    --ink:          #f2f4f6;
+    --ink-2:        #c1c8ce;
+    --ink-muted:    #8b939c;
+    --hairline:     #2c3237;
+    --border:       rgba(255,255,255,0.10);
+    --accent:       #3e8cc4;
+    --accent-soft:  #1c2a3d;
+    --good:         #0ca30c;
+    --warning:      #a87f28;
+    --serious:      #c96a50;
+    --critical:     #c96a50;
+    --cat-1: #3e8cc4; --cat-2: #3ea87a; --cat-3: #a87f28; --cat-4: #9670be;
+    --trend-use: #c96a50;
+    --amt-earn: #c96a50;
+    --amt-use:  #3e8cc4;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --plane:        #ffffff;
+    --surface:      #ffffff;
+    --surface-2:    #f2f5f7;
+    --ink:          #15191d;
+    --ink-2:        #4c545c;
+    --ink-muted:    #8b939c;
+    --hairline:     #e6e9eb;
+    --border:       rgba(15,23,32,0.10);
+    --accent:       #1d6fa5;
+    --accent-soft:  #e8f1fa;
+    --cat-1: #1d6fa5; --cat-2: #2e9467; --cat-3: #c99a2a; --cat-4: #8259a5;
+    --trend-use: #c1543a;
     --amt-earn: #c1543a;
     --amt-use:  #1d6fa5;
   }
@@ -446,7 +508,7 @@
       <div class="bars" id="bars"></div>
       <div class="legend">
         <span class="legend-item"><span class="swatch" style="background:var(--cat-1)"></span>적립 카테고리</span>
-        <span class="legend-item"><span class="swatch" style="background:var(--cat-2)"></span>차감(사용)</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--trend-use)"></span>차감(사용)</span>
       </div>
     </div>
   </section>
@@ -582,7 +644,7 @@
       { key: 'review', label: '리뷰작성적립', color: 'var(--cat-3)' },
       { key: 'signup', label: '신규가입적립', color: 'var(--cat-4)' },
     ];
-    const useSeries = { key: 'orderUse', label: '주문사용차감', color: 'var(--amt-use)' };
+    const useSeries = { key: 'orderUse', label: '주문사용차감', color: 'var(--trend-use)' };
 
     [...earnSeries, useSeries].forEach(s => {
       const item = document.createElement('span');
@@ -671,7 +733,7 @@
   categoryData.forEach(d => {
     const row = document.createElement('div');
     row.className = 'bar-row';
-    const color = d.kind === 'earn' ? 'var(--cat-1)' : 'var(--cat-2)';
+    const color = d.kind === 'earn' ? 'var(--cat-1)' : 'var(--trend-use)';
     row.innerHTML = `
       <span class="bar-label">${d.label}</span>
       <span class="bar-track"><span class="bar-fill" style="width:${(d.amount / maxAmt * 100).toFixed(1)}%; background:${color}"></span></span>
@@ -688,7 +750,7 @@
     const el = document.getElementById(domId);
     const bars = [
       { label: '일반고객', rate: USAGE_RATE.general[periodKey].rate, color: 'var(--cat-1)' },
-      { label: '정기배송', rate: USAGE_RATE.subscription[periodKey].rate, color: 'var(--cat-3)' },
+      { label: '정기배송', rate: USAGE_RATE.subscription[periodKey].rate, color: 'var(--cat-2)' },
     ];
     bars.forEach(b => {
       const row = document.createElement('div');
