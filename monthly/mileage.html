@@ -277,6 +277,17 @@
   .amt-use { color: var(--amt-use); font-weight: 600; }
   .amt-balance { color: var(--ink); }
 
+  .rate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  @media (min-width: 640px) {
+    .rate-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  }
+  .rate-card .bars { gap: 8px; }
+  .rate-card .bar-row { grid-template-columns: 56px 1fr 44px; gap: 6px; }
+
   .segment-toggle {
     display: flex;
     gap: 6px;
@@ -389,6 +400,32 @@
 
   <section>
     <div class="section-head">
+      <h2>적립금 사용소진율 비교</h2>
+      <span class="section-note">소진율 = 기간 내 사용액 ÷ 기간 내 적립액</span>
+    </div>
+    <div class="rate-grid">
+      <div class="card rate-card">
+        <h3 class="period-head">해당 월</h3>
+        <div class="bars" id="rate-month"></div>
+      </div>
+      <div class="card rate-card">
+        <h3 class="period-head">최근 6개월</h3>
+        <div class="bars" id="rate-m6"></div>
+      </div>
+      <div class="card rate-card">
+        <h3 class="period-head">최근 12개월</h3>
+        <div class="bars" id="rate-y12"></div>
+      </div>
+      <div class="card rate-card">
+        <h3 class="period-head">전체 기간</h3>
+        <div class="bars" id="rate-total"></div>
+      </div>
+    </div>
+    <p class="section-note" style="margin:-4px 0 0">일반고객 = 정기배송적립을 받은 적 없는 회원 · 정기배송 구독고객 = 전체 이력 중 정기배송적립을 한 번이라도 받은 회원</p>
+  </section>
+
+  <section>
+    <div class="section-head">
       <h2>활발한 고객 랭킹</h2>
       <span class="section-note">순위 기준 = 기간 내 <b>사용액</b> (적립은 등급별구매적립 비중이 커서 큰 의미가 없어 제외)</span>
     </div>
@@ -491,6 +528,28 @@
       <span class="bar-value">${d.amount.toLocaleString()}원</span>
     `;
     barsEl.appendChild(row);
+  });
+
+  // 사용소진율(사용액/적립액) 비교 — 일반고객 vs 정기배송 구독고객
+  const USAGE_RATE = {"general":{"month":{"earn":705209,"use":121715,"rate":17.3},"m6":{"earn":6573202,"use":3250565,"rate":49.5},"y12":{"earn":15398424,"use":5519649,"rate":35.8},"total":{"earn":88434456,"use":50345282,"rate":56.9}},"subscription":{"month":{"earn":282235,"use":43304,"rate":15.3},"m6":{"earn":1314049,"use":1240901,"rate":94.4},"y12":{"earn":3417738,"use":2331366,"rate":68.2},"total":{"earn":10570834,"use":5456445,"rate":51.6}}};
+
+  const RATE_PERIOD_IDS = { 'rate-month': 'month', 'rate-m6': 'm6', 'rate-y12': 'y12', 'rate-total': 'total' };
+  Object.entries(RATE_PERIOD_IDS).forEach(([domId, periodKey]) => {
+    const el = document.getElementById(domId);
+    const bars = [
+      { label: '일반고객', rate: USAGE_RATE.general[periodKey].rate, color: 'var(--cat-1)' },
+      { label: '정기배송', rate: USAGE_RATE.subscription[periodKey].rate, color: 'var(--cat-3)' },
+    ];
+    bars.forEach(b => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <span class="bar-label">${b.label}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${Math.min(b.rate, 100).toFixed(1)}%; background:${b.color}"></span></span>
+        <span class="bar-value">${b.rate}%</span>
+      `;
+      el.appendChild(row);
+    });
   });
 
   // RANKING_DATA[segment][period] = [[id, grade, useAmount, earnAmount, balance], ...]
