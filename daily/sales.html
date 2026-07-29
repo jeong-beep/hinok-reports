@@ -126,6 +126,7 @@
          padding: 14px 16px; box-shadow: var(--shadow); }
   .kpi .k { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
   .kpi .v { font-size: 25px; font-weight: 620; margin-top: 4px; letter-spacing: -.02em; }
+  .kpi .v.long { font-size: 20px; }          /* 억 단위 누계가 넘치지 않도록 */
   .kpi .v small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
   .kpi .d { font-size: 12px; margin-top: 5px; color: var(--ink-muted); }
   .chip { display: inline-flex; align-items: center; gap: 3px; font-weight: 620;
@@ -159,6 +160,14 @@
   .tip .t-d { font-size: 10.5px; opacity: .72; }
   .tip .t-m { font-size: 11px; margin-top: 3px; max-width: 300px; white-space: normal;
               border-top: 1px solid rgba(255,255,255,.2); padding-top: 3px; }
+  /* 날짜별 판매처 내역 */
+  .tip .t-rows { margin-top: 5px; padding-top: 4px; font-size: 11px;
+                 border-top: 1px solid rgba(255,255,255,.2); }
+  .tip .t-rows div { display: grid; grid-template-columns: 9px 1fr auto 44px;
+                     align-items: center; gap: 6px; line-height: 1.65; }
+  .tip .t-rows i { width: 7px; height: 7px; border-radius: 2px; }
+  .tip .t-rows b { font-weight: 600; }
+  .tip .t-rows em { font-style: normal; opacity: .66; text-align: right; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 16px 0; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
   .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -289,9 +298,6 @@
       <label class="field"><span>판매처</span>
         <select id="channel"><option value="">전체 판매처</option></select>
       </label>
-      <label class="field"><span>제품라인</span>
-        <select id="line"><option value="">전체 라인</option></select>
-      </label>
       <div class="spacer"></div>
       <button class="ghost" type="button" id="reload">데이터 새로고침</button>
     </div>
@@ -304,12 +310,13 @@
       <section class="card">
         <div class="head">
           <h2 id="trendTitle">일일 총 주문금액 추이</h2>
-          <span class="note">점(●)이 있는 날짜엔 메모가 있습니다 — 선 위에 올려 보세요.</span>
+          <span class="note">막대 한 칸이 판매처 하나입니다 — 올리면 판매처·금액·비중이 나옵니다. 축 아래 점(●)은 메모.</span>
         </div>
+        <div class="legend" id="trendLegend"></div>
         <div class="body">
           <div class="chartbox" id="trendBox">
-            <svg class="chart" id="trend" viewBox="0 0 1000 260" preserveAspectRatio="none"
-                 role="img" aria-label="일일 총 주문금액 추이"></svg>
+            <svg class="chart" id="trend" viewBox="0 0 1000 300"
+                 role="img" aria-label="판매처별 일일 주문금액 누적막대와 총액 추이선"></svg>
             <div class="tip" id="trendTip"></div>
           </div>
         </div>
@@ -597,8 +604,7 @@
   var state = {
     ch: qs.get('ch') || '',
     metric: qs.get('metric') === 'qty' ? 'qty' : 'amt',
-    month: qs.get('month') || '',
-    line: ''
+    month: qs.get('month') || ''
   };
 
   function buildControls() {
@@ -618,11 +624,6 @@
     if (state.ch && DATA.channels.indexOf(state.ch) < 0) state.ch = '';
     c.value = state.ch;
     c.onchange = function () { state.ch = c.value; syncUrl(); render(); };
-
-    var l = document.getElementById('line');
-    l.innerHTML = '<option value="">전체 라인</option>' +
-      DATA.lines.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('');
-    l.onchange = function () { state.line = l.value; render(); };
 
     document.getElementById('metric').onclick = function (e) {
       var b = e.target.closest('button[data-v]'); if (!b) return;
@@ -682,14 +683,13 @@
       var r = DATA.rows[k];
       var j = di[r.d]; if (j === undefined) continue;
       if (state.ch && r.ch !== state.ch) continue;
-      if (state.line && r.line !== state.line) continue;
       var v = state.metric === 'amt' ? r.amt : r.qty;
 
       var c = ci[r.ch];
       if (c !== undefined) { chV[c][j] += v; chHas[c][j] = 1; chTot[c] += v; }
       dayTot[j] += v;
 
-      var key = r.code + ' ' + r.name;
+      var key = r.code + '\u0000' + r.name;
       var p = pIdx[key];
       if (p === undefined) {
         p = prods.length; pIdx[key] = p;
@@ -757,7 +757,7 @@
         : '최근 ' + A.n + '일');
 
     document.getElementById('trendTitle').textContent =
-      (state.ch || '일일 총') + ' ' + unitTxt + ' 추이' + (state.line ? ' · ' + state.line : '');
+      (state.ch || '일일 총') + ' ' + unitTxt + ' 추이';
     document.getElementById('rankTitle').textContent = '판매처별 기간 합계 (' + unitTxt + ')';
     document.getElementById('m2Title').textContent =
       (state.ch || '전체 판매처') + ' 일일 ' + unitTxt + ' 현황 (상품별)';
@@ -791,77 +791,182 @@
       if (v > bv) { bv = v; bi = i; }
     }
     var unit = state.metric === 'amt' ? '원' : '개';
+    var prevDate = last - 7 >= 0 ? A.win[last - 7] : null;
+    var won = function (v) { return nf.format(Math.round(v)); };
+
+    /* 카드의 큰 숫자는 반드시 그 카드의 제목이 말하는 값이어야 합니다.
+       (이전 버전은 "전주 동요일 대비" 자리에 지난주 금액을 그대로 띄웠습니다) */
     var t = [
       ['당일 ' + (state.metric === 'amt' ? '총 주문금액' : '총 주문수량'),
-       nf.format(Math.round(today)), unit, '일평균 대비 ' + chip(avg ? (today - avg) / avg : null)],
-      ['기간 일평균', nf.format(Math.round(avg)), unit,
+       won(today), unit,
+       '일평균 대비 ' + chip(avg ? (today - avg) / avg : null)],
+
+      ['기간 일평균', won(avg), unit,
        '<span class="chip flat">' + A.n + '일 평균</span>'],
-      ['전주 동요일 대비', prev != null ? nf.format(Math.round(prev)) : '—', prev != null ? unit : '',
-       prev ? chip((today - prev) / prev) : '<span class="chip flat">기간 밖</span>'],
+
+      ['전주 동요일 대비',
+       prev ? ((today - prev) / prev > 0 ? '+' : '') + ((today - prev) / prev * 100).toFixed(1) + '%' : '—', '',
+       prev != null
+         ? '<span class="chip flat">' + md(prevDate) + ' ' + won(prev) + unit + '</span>'
+         : '<span class="chip flat">기간 밖</span>'],
+
       ['당일 1위 판매처', bi >= 0 && bv > 0 ? A.chs[bi] : '—', '',
        bi >= 0 && bv > 0
-         ? '<span class="chip flat">' + compact(bv) + ' · 비중 ' + (today ? (bv / today * 100).toFixed(0) : 0) + '%</span>'
+         ? '<span class="chip flat">' + won(bv) + unit + ' · 비중 ' +
+           (today ? (bv / today * 100).toFixed(0) : 0) + '%</span>'
          : '<span class="chip flat">주문 없음</span>'],
-      ['기간 누계', compact(sum), '',
+
+      ['기간 누계', won(sum), unit,
        '<span class="chip flat">' + (A.n ? md(A.win[0]) + ' ~ ' + md(A.win[last]) : '—') + '</span>']
     ];
     document.getElementById('kpis').innerHTML = t.map(function (x) {
-      return '<div class="kpi"><div class="k">' + esc(x[0]) + '</div><div class="v num">' +
-             esc(x[1]) + (x[2] ? '<small>' + x[2] + '</small>' : '') +
+      var big = String(x[1]);
+      var cls = 'v num' + (big.length > 10 ? ' long' : '');
+      return '<div class="kpi"><div class="k">' + esc(x[0]) + '</div><div class="' + cls + '">' +
+             esc(big) + (x[2] ? '<small>' + x[2] + '</small>' : '') +
              '</div><div class="d">' + x[3] + '</div></div>';
     }).join('');
   }
 
+  /**
+   * 판매처별 누적막대 + 일일 총액 선.
+   * 막대 한 칸이 판매처 하나이고, 색은 채널분류를 따릅니다. 면세 3사처럼 같은 분류가
+   * 이어질 때는 2px 간격으로 나뉘며, 어느 판매처인지는 마우스를 올리면 나옵니다.
+   */
   function renderTrend(A) {
     var svg = document.getElementById('trend');
-    var W = 1000, H = 260, ml = 66, mr = 14, mt = 14, mb = 34;
+    var W = 1000, H = 300, ml = 74, mr = 16, mt = 16, mb = 38;
     if (!A.n) { svg.innerHTML = ''; return; }
-    var max = Math.max(1, Math.max.apply(null, A.dayTot)) * 1.08;
-    var x = function (k) { return ml + (A.n === 1 ? (W - ml - mr) / 2 : k * (W - ml - mr) / (A.n - 1)); };
-    var y = function (v) { return H - mb - (v / max) * (H - mt - mb); };
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 
-    var o = '', t;
-    for (t = 0; t <= 4; t++) {
-      var yy = y(max * t / 4);
-      o += '<line class="gridline" x1="' + ml + '" y1="' + yy + '" x2="' + (W - mr) + '" y2="' + yy + '"/>' +
-           '<text x="' + (ml - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + compact(max * t / 4) + '</text>';
+    /* 반품이 있는 날은 판매처 값이 음수입니다. 버리지 않고 기준선 아래로 그려야
+       막대와 표의 숫자가 어긋나지 않습니다. */
+    var posMax = 1, negMin = 0, k2, i2, v2, ps, ns;
+    for (k2 = 0; k2 < A.n; k2++) {
+      ps = 0; ns = 0;
+      for (i2 = 0; i2 < A.chs.length; i2++) {
+        v2 = A.chV[i2][k2];
+        if (v2 > 0) ps += v2; else ns += v2;
+      }
+      if (ps > posMax) posMax = ps;
+      if (ns < negMin) negMin = ns;
     }
-    var pts = A.dayTot.map(function (v, k) { return x(k) + ',' + y(v); });
-    o += '<path d="M' + pts.join('L') + 'L' + x(A.n - 1) + ',' + (H - mb) + 'L' + x(0) + ',' + (H - mb) +
-         'Z" fill="var(--accent)" opacity=".10"/>';
-    o += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--accent)" stroke-width="2" ' +
-         'stroke-linejoin="round" stroke-linecap="round"/>';
+    var top = posMax * 1.08, bottom = negMin * 1.15;
+    var band = (W - ml - mr) / A.n;
+    var bw = Math.max(3, Math.min(30, band * 0.68));
+    var cx = function (k) { return ml + band * (k + 0.5); };
+    var y = function (v) { return H - mb - ((v - bottom) / (top - bottom)) * (H - mt - mb); };
+
+    var o = '', t, yy;
+    for (t = 0; t <= 4; t++) {
+      yy = y(top * t / 4);
+      o += '<line class="gridline" x1="' + ml + '" y1="' + yy.toFixed(1) + '" x2="' + (W - mr) +
+           '" y2="' + yy.toFixed(1) + '"/>' +
+           '<text x="' + (ml - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end">' +
+           compact(top * t / 4) + '</text>';
+    }
+
+    /* 누적막대 — 판매처 순서는 표와 동일하게 유지 */
+    var segs = [];
+    for (var k = 0; k < A.n; k++) {
+      var accP = 0, accN = 0, total = A.dayTot[k];
+      for (var i = 0; i < A.chs.length; i++) {
+        var v = A.chV[i][k];
+        if (!v) continue;
+        var y0, y1;
+        if (v > 0) { y0 = y(accP); y1 = y(accP + v); accP += v; }
+        else       { y1 = y(accN); y0 = y(accN + v); accN += v; }
+        var h = Math.max(1.5, Math.abs(y0 - y1) - 2);     // 세그먼트 사이 2px 간격
+        segs.push({ k: k, i: i, v: v, total: total });
+        o += '<rect x="' + (cx(k) - bw / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) +
+             '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) +
+             '" fill="' + grpColor(GROUP_OF[A.chs[i]] || '기타') + '"' +
+             (v < 0 ? ' opacity=".55"' : '') +
+             ' data-s="' + (segs.length - 1) + '"></rect>';
+      }
+    }
+    if (negMin < 0) {                                     /* 0 기준선 */
+      o += '<line x1="' + ml + '" y1="' + y(0).toFixed(1) + '" x2="' + (W - mr) +
+           '" y2="' + y(0).toFixed(1) + '" stroke="var(--border)" stroke-width="1"/>';
+    }
+
+    /* 일일 총액 선 — 계열색이 아닌 잉크색이라 판매처와 섞이지 않습니다 */
+    var pts = A.dayTot.map(function (v, k) { return cx(k).toFixed(1) + ',' + y(v).toFixed(1); });
+    o += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ink)" stroke-width="2" ' +
+         'stroke-linejoin="round" stroke-linecap="round" opacity=".82" pointer-events="none"/>';
+    o += '<circle cx="' + cx(A.n - 1).toFixed(1) + '" cy="' + y(A.dayTot[A.n - 1]).toFixed(1) +
+         '" r="4.5" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" pointer-events="none"/>';
     o += '<line class="axis" x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '"/>';
 
     var step = Math.max(1, Math.ceil(A.n / 12));
     A.win.forEach(function (d, k) {
       if (k % step === 0 || k === A.n - 1)
-        o += '<text x="' + x(k) + '" y="' + (H - mb + 15) + '" text-anchor="middle">' + md(d) + '</text>';
-      if (memoBy[d]) o += '<circle cx="' + x(k) + '" cy="' + (H - mb + 22) + '" r="3" fill="var(--accent)"/>';
+        o += '<text x="' + cx(k).toFixed(1) + '" y="' + (H - mb + 15) + '" text-anchor="middle">' + md(d) + '</text>';
+      if (memoBy[d]) o += '<circle cx="' + cx(k).toFixed(1) + '" cy="' + (H - mb + 24) + '" r="3" fill="var(--accent)"/>';
     });
-    o += '<circle cx="' + x(A.n - 1) + '" cy="' + y(A.dayTot[A.n - 1]) +
-         '" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>';
-    o += '<line id="cross" x1="0" y1="' + mt + '" x2="0" y2="' + (H - mb) +
-         '" stroke="var(--border)" stroke-width="1" opacity="0"/>';
     svg.innerHTML = o;
 
-    var tip = document.getElementById('trendTip'), cross = svg.querySelector('#cross');
+    var tip = document.getElementById('trendTip');
+    var unit = state.metric === 'amt' ? '원' : '개';
+
     svg.onpointermove = function (e) {
-      var r = svg.getBoundingClientRect();
-      var px = (e.clientX - r.left) / r.width * W;
-      var k = Math.round((px - ml) / ((W - ml - mr) / Math.max(1, A.n - 1)));
-      k = Math.max(0, Math.min(A.n - 1, k));
-      var d = A.win[k], ms = memoBy[d] || [];
-      cross.setAttribute('x1', x(k)); cross.setAttribute('x2', x(k)); cross.setAttribute('opacity', '1');
-      tip.innerHTML = '<div class="t-d">' + d + ' ' + md(d) + '</div><strong class="num">' +
-        nf.format(Math.round(A.dayTot[k])) + (state.metric === 'amt' ? '원' : '개') + '</strong>' +
-        (ms.length ? '<div class="t-m">' + ms.map(function (m) {
-          return '· [' + esc(m[1]) + '] ' + esc(m[2]); }).join('<br>') + '</div>' : '');
-      tip.style.left = (x(k) / W * r.width) + 'px';
-      tip.style.top = (y(A.dayTot[k]) / H * r.height - 10) + 'px';
+      var box = svg.getBoundingClientRect();
+      var rect = e.target.closest('rect[data-s]');
+      var html, px, py;
+
+      if (rect) {                                    // 막대 한 칸 → 판매처 상세
+        var s = segs[+rect.dataset.s], d = A.win[s.k];
+        html = '<div class="t-d">' + d + ' ' + md(d) + '</div><strong>' + esc(A.chs[s.i]) +
+               '</strong> · <span class="num">' + nf.format(Math.round(s.v)) + unit +
+               '</span> · 비중 ' + (s.total ? (s.v / s.total * 100).toFixed(1) : '0.0') + '%' +
+               '<div class="t-m">일일 총 ' + nf.format(Math.round(s.total)) + unit + '</div>';
+        var rb = rect.getBoundingClientRect();
+        px = rb.left - box.left + rb.width / 2;
+        py = rb.top - box.top;
+      } else {
+        /* 빈 곳 → 그날 판매처 내역 전체. 막대가 1~2px인 작은 판매처도 여기서 보입니다. */
+        var kk = Math.floor(((e.clientX - box.left) / box.width * W - ml) / band);
+        kk = Math.max(0, Math.min(A.n - 1, kk));
+        var dd = A.win[kk], ms = memoBy[dd] || [], dt = A.dayTot[kk];
+
+        var list = [];
+        for (var q = 0; q < A.chs.length; q++) {
+          if (A.chV[q][kk]) list.push({ c: A.chs[q], v: A.chV[q][kk] });
+        }
+        list.sort(function (a, b) { return b.v - a.v; });
+
+        html = '<div class="t-d">' + dd + ' ' + md(dd) + '</div><strong class="num">' +
+               nf.format(Math.round(dt)) + unit + '</strong>' +
+               '<div class="t-rows">' + list.map(function (r) {
+                 return '<div><i style="background:' + grpColor(GROUP_OF[r.c] || '기타') + '"></i>' +
+                        '<span>' + esc(r.c) + '</span><b class="num">' + nf.format(Math.round(r.v)) + '</b>' +
+                        '<em>' + (dt ? (r.v / dt * 100).toFixed(1) : '0.0') + '%</em></div>';
+               }).join('') + '</div>' +
+               (ms.length ? '<div class="t-m">' + ms.map(function (m) {
+                 return '· [' + esc(m[1]) + '] ' + esc(m[2]); }).join('<br>') + '</div>' : '');
+        px = cx(kk) / W * box.width;
+        py = y(Math.max(0, dt)) / H * box.height - 10;
+      }
+      tip.innerHTML = html;
+      tip.style.left = px + 'px';
+      tip.style.top = py + 'px';
       tip.style.opacity = '1';
     };
-    svg.onpointerleave = function () { tip.style.opacity = '0'; cross.setAttribute('opacity', '0'); };
+    svg.onpointerleave = function () { tip.style.opacity = '0'; };
+
+    /* 범례 — 이 기간에 실제로 실적이 있는 분류만 */
+    var used = [];
+    for (var g = 0; g < A.chs.length; g++) {
+      if (A.chTot[g] <= 0) continue;
+      var gp = GROUP_OF[A.chs[g]] || '기타';
+      if (used.indexOf(gp) < 0) used.push(gp);
+    }
+    used.sort(function (a, b) { return GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b); });
+    document.getElementById('trendLegend').innerHTML =
+      '<span><i style="background:var(--ink);opacity:.82;height:3px;border-radius:2px"></i>일일 총액(선)</span>' +
+      used.map(function (gp) {
+        return '<span><i style="background:' + grpColor(gp) + '"></i>' + esc(gp) + '</span>';
+      }).join('');
   }
 
   function renderRank(A) {
