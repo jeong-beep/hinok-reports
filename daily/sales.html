@@ -222,6 +222,13 @@
             color: var(--serious); border-radius: 10px; padding: 14px 16px;
             font-size: 13px; margin-bottom: 16px; }
   .errbox b { display: block; margin-bottom: 4px; }
+  .errbox details { margin-top: 8px; }
+  .errbox summary { cursor: pointer; font-size: 12px; opacity: .8; }
+  .errbox code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 6px;
+                 background: var(--surface-2); color: var(--ink-2); font-size: 11.5px;
+                 line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+                 font-family: ui-monospace, Consolas, monospace; }
+  .errbox #retry { margin-top: 10px; }
 
   footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--hairline);
            color: var(--ink-muted); font-size: 11.5px; display: grid; gap: 4px; }
@@ -465,13 +472,40 @@
     }).then(function (r) {
       if (!r.ok) {
         return r.text().then(function (body) {
-          var msg = r.status + ' ' + r.statusText;
-          try { msg = JSON.parse(body).error.message || msg; } catch (e) {}
-          throw new Error(msg);
+          var msg = r.status + ' ' + r.statusText, reason = '';
+          try {
+            var j = JSON.parse(body);
+            if (j.error) {
+              msg = j.error.message || msg;
+              reason = j.error.status || '';
+              (j.error.details || []).forEach(function (d) { if (d.reason) reason = d.reason; });
+            }
+          } catch (e) {}
+          var err = new Error(msg);
+          err.status = r.status;
+          err.reason = reason;
+          throw err;
         });
       }
       return r.json();
     });
+  }
+
+  /** 오류 원인별로 실제로 할 일을 알려줍니다 */
+  function hintFor(e) {
+    var m = String(e && e.message || ''), s = (e && e.status) || 0, reason = (e && e.reason) || '';
+    if (reason === 'SERVICE_DISABLED' || /has not been used in project|API .*disabled/i.test(m)) {
+      return 'Google Cloud 프로젝트에서 Sheets API가 꺼져 있습니다. ' +
+             'console.cloud.google.com → API 및 서비스 → "Google Sheets API" 사용 설정 후 1~2분 뒤 새로고침하세요.';
+    }
+    if (s === 401) return '로그인 세션이 만료되었습니다. 페이지를 새로고침해 다시 로그인해 주세요.';
+    if (s === 403) return '이 계정에는 시트 열람 권한이 없습니다. 시트 소유자에게 뷰어 권한을 요청하세요.';
+    if (s === 404) return '시트를 찾을 수 없습니다. 파일 상단 CONFIG.SHEET_ID가 맞는지 확인해 주세요.';
+    if (s === 400 && /range|parse/i.test(m)) {
+      return '탭 이름이나 범위가 맞지 않습니다. CONFIG.DATA_RANGE의 탭 이름이 시트와 같은지 확인해 주세요.';
+    }
+    if (s === 429) return '잠시 요청이 몰렸습니다. 1분 뒤 "데이터 새로고침"을 눌러 주세요.';
+    return '잠시 후 다시 시도해 주세요. 계속되면 위 메시지를 그대로 공유해 주세요.';
   }
 
   function sheetValues(range) {
@@ -508,8 +542,7 @@
       render();
     }).catch(function (e) {
       showLoading(false);
-      showErr('데이터를 불러오지 못했습니다', e.message +
-        ' — 시트 접근 권한이 있는 계정인지, 시트 ID와 탭 이름이 맞는지 확인해 주세요.');
+      showErr('데이터를 불러오지 못했습니다', hintFor(e), e.message);
     });
   }
 
@@ -1015,9 +1048,13 @@
     document.getElementById('loading').style.display = on ? 'flex' : 'none';
     if (on) document.getElementById('dash').hidden = true;
   }
-  function showErr(title, body) {
+  function showErr(title, hint, raw) {
     document.getElementById('errSlot').innerHTML =
-      '<div class="errbox"><b>' + esc(title) + '</b>' + esc(body) + '</div>';
+      '<div class="errbox"><b>' + esc(title) + '</b>' + esc(hint) +
+      (raw ? '<details><summary>자세한 오류 메시지</summary><code>' + esc(raw) + '</code></details>' : '') +
+      '<button class="ghost" type="button" id="retry">다시 시도</button></div>';
+    var btn = document.getElementById('retry');
+    if (btn) btn.onclick = loadAll;
   }
   function clearErr() { document.getElementById('errSlot').innerHTML = ''; }
 })();
