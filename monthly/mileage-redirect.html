@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>적립금 현황 리포트로 이동 중...</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: #ffffff; color: #4c545c;
+  }
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #14171a; color: #c1c8ce; }
+    a { color: #3e8cc4; }
+  }
+  a { color: #1d6fa5; }
+  .box { text-align: center; padding: 24px; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <p>리포트로 이동 중입니다...</p>
+    <p><a href="https://jeong-beep.github.io/hinok-reports/monthly/mileage.html" target="_top">자동으로 이동하지 않으면 여기를 눌러주세요</a></p>
+  </div>
+  <script>
+    var TARGET = "https://jeong-beep.github.io/hinok-reports/monthly/mileage.html";
+    (window.top || window).location.href = TARGET;
+  </script>
+</body>
+</html>
