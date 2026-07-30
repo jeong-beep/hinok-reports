@@ -322,21 +322,6 @@
         </div>
       </section>
 
-      <section class="card" id="rankCard">
-        <div class="head">
-          <h2 id="rankTitle">판매처별 기간 합계</h2>
-          <span class="note">색상은 채널분류입니다.</span>
-        </div>
-        <div class="legend" id="rankLegend"></div>
-        <div class="body">
-          <div class="chartbox" id="rankBox">
-            <svg class="chart" id="rank" viewBox="0 0 1000 300" role="img"
-                 aria-label="판매처별 기간 합계"></svg>
-            <div class="tip" id="rankTip"></div>
-          </div>
-        </div>
-      </section>
-
       <section class="card" id="m1Card">
         <div class="head">
           <h2>판매처별 일일 총 주문금액 현황</h2>
@@ -383,7 +368,14 @@
     SHEET_ID:   '1TaUTDagfp3bl0e6vHDUNWkerPHIh1FBuH9ctiO6WEq4',
     DATA_RANGE: '시트1!A2:I',
     MEMO_RANGE: '메모!A2:C',          // 없으면 자동으로 건너뜁니다
-    RECENT_DAYS: 30
+    RECENT_DAYS: 30,
+
+    /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다.
+       두 리포트의 기록이 한 시트에 모이고, URL 칸으로 어느 페이지인지 구분됩니다. */
+    LOG_FORM:  'https://docs.google.com/forms/d/e/' +
+               '1FAIpQLSdxFBLKsClbQcpYbjJzi4iGFIErQC1tty7mz2wiIIzH-SQnvQ/formResponse',
+    LOG_EMAIL: 'entry.1550214245',
+    LOG_URL:   'entry.1208487914'
   };
 
   /* 판매처 표시 순서. 시트에 새 채널이 생기면 목록 끝에 자동으로 붙습니다. */
@@ -469,8 +461,25 @@
       }
       document.getElementById('whoEmail').textContent = me.email || '';
       document.documentElement.classList.add('auth-ok');
+      logVisit(me.email);
       loadAll();
     }).catch(function (e) { gateMsg('로그인 확인에 실패했습니다: ' + e.message); });
+  }
+
+  /**
+   * 방문 기록을 구글 폼에 남깁니다. 페이지를 열 때 한 번만 보냅니다.
+   * no-cors 라 응답을 읽을 수 없고, 실패해도 화면에는 영향이 없습니다.
+   */
+  var logged = false;
+  function logVisit(email) {
+    if (logged || !CONFIG.LOG_FORM) return;
+    logged = true;
+    try {
+      var p = new URLSearchParams();
+      p.append(CONFIG.LOG_EMAIL, email || '(알 수 없음)');
+      p.append(CONFIG.LOG_URL, location.href);
+      fetch(CONFIG.LOG_FORM, { method: 'POST', mode: 'no-cors', body: p });
+    } catch (e) { /* 기록 실패는 무시합니다 */ }
   }
 
   function api(url) {
@@ -758,15 +767,13 @@
 
     document.getElementById('trendTitle').textContent =
       (state.ch || '일일 총') + ' ' + unitTxt + ' 추이';
-    document.getElementById('rankTitle').textContent = '판매처별 기간 합계 (' + unitTxt + ')';
     document.getElementById('m2Title').textContent =
       (state.ch || '전체 판매처') + ' 일일 ' + unitTxt + ' 현황 (상품별)';
-    document.getElementById('rankCard').hidden = !!state.ch;
     document.getElementById('m1Card').hidden = !!state.ch;
 
     renderKpis(A, anchor);
     renderTrend(A);
-    if (!state.ch) { renderRank(A); renderM1(A, anchor); }
+    if (!state.ch) renderM1(A, anchor);
     renderM2(A);
     renderMemos(A);
 
@@ -967,52 +974,6 @@
       used.map(function (gp) {
         return '<span><i style="background:' + grpColor(gp) + '"></i>' + esc(gp) + '</span>';
       }).join('');
-  }
-
-  function renderRank(A) {
-    var svg = document.getElementById('rank');
-    var rows = A.chs.map(function (c, i) { return { c: c, i: i, v: A.chTot[i] }; })
-      .filter(function (r) { return r.v !== 0; })
-      .sort(function (a, b) { return b.v - a.v; });
-    var W = 1000, rowH = 26, ml = 118, mr = 96, mt = 6;
-    var H = Math.max(60, rows.length * rowH + mt + 6);
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    svg.removeAttribute('preserveAspectRatio');
-    var max = Math.max(1, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.v); })));
-    var o = '';
-    rows.forEach(function (r, k) {
-      var yy = mt + k * rowH, bw = Math.max(2, Math.abs(r.v) / max * (W - ml - mr));
-      o += '<rect x="' + ml + '" y="' + (yy + 5) + '" width="' + bw + '" height="' + (rowH - 12) +
-           '" rx="4" fill="' + grpColor(GROUP_OF[r.c] || '기타') + '" data-k="' + k + '"/>' +
-           '<text class="lbl" x="' + (ml - 10) + '" y="' + (yy + rowH / 2 + 1) +
-           '" text-anchor="end" style="fill:var(--ink-2)">' + esc(r.c) + '</text>' +
-           '<text x="' + (ml + bw + 8) + '" y="' + (yy + rowH / 2 + 1) + '">' + compact(r.v) + '</text>';
-    });
-    svg.innerHTML = o;
-
-    var tip = document.getElementById('rankTip');
-    var total = rows.reduce(function (s, r) { return s + r.v; }, 0);
-    svg.onpointermove = function (e) {
-      var t = e.target.closest('rect'); if (!t) { tip.style.opacity = '0'; return; }
-      var r = rows[+t.dataset.k], b = svg.getBoundingClientRect();
-      tip.innerHTML = '<div class="t-d">' + esc(GROUP_OF[r.c] || '기타') + '</div><strong>' + esc(r.c) +
-        '</strong> · <span class="num">' + nf.format(Math.round(r.v)) + '</span> · 비중 ' +
-        (total ? (r.v / total * 100).toFixed(1) : 0) + '%';
-      tip.style.left = (e.clientX - b.left) + 'px';
-      tip.style.top = (e.clientY - b.top - 8) + 'px';
-      tip.style.opacity = '1';
-    };
-    svg.onpointerleave = function () { tip.style.opacity = '0'; };
-
-    var used = [];
-    rows.forEach(function (r) {
-      var g = GROUP_OF[r.c] || '기타';
-      if (used.indexOf(g) < 0) used.push(g);
-    });
-    used.sort(function (a, b) { return GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b); });
-    document.getElementById('rankLegend').innerHTML = used.map(function (g) {
-      return '<span><i style="background:' + grpColor(g) + '"></i>' + esc(g) + '</span>';
-    }).join('');
   }
 
   function renderM1(A, anchor) {
