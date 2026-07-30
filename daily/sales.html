@@ -348,6 +348,7 @@
       </section>
 
       <footer>
+        <div id="colmap"></div>
         <div id="coverage"></div>
         <div id="caveat"></div>
       </footer>
@@ -366,7 +367,9 @@
     CLIENT_ID:  '490629671344-150ivr5s67rv02odtt5fo285us2ef6tp.apps.googleusercontent.com',
     DOMAIN:     'hinok.life',
     SHEET_ID:   '1TaUTDagfp3bl0e6vHDUNWkerPHIh1FBuH9ctiO6WEq4',
-    DATA_RANGE: '시트1!A2:I',
+    /* 첫 행(헤더)까지 함께 읽어 열을 "이름"으로 찾습니다.
+       열 순서가 바뀌거나 중간에 열이 추가돼도 화면이 깨지지 않습니다. */
+    DATA_RANGE: '시트1!A1:Z',
     MEMO_RANGE: '메모!A2:C',          // 없으면 자동으로 건너뜁니다
     RECENT_DAYS: 30,
 
@@ -510,6 +513,7 @@
   /** 오류 원인별로 실제로 할 일을 알려줍니다 */
   function hintFor(e) {
     var m = String(e && e.message || ''), s = (e && e.status) || 0, reason = (e && e.reason) || '';
+    if (e && e.kind === 'columns') return m + ' 열 이름을 원래대로 두거나, 옮기더라도 이름은 유지해 주세요.';
     if (reason === 'SERVICE_DISABLED' || /has not been used in project|API .*disabled/i.test(m)) {
       return 'Google Cloud 프로젝트에서 Sheets API가 꺼져 있습니다. ' +
              'console.cloud.google.com → API 및 서비스 → "Google Sheets API" 사용 설정 후 1~2분 뒤 새로고침하세요.';
@@ -562,26 +566,89 @@
     });
   }
 
+  /** 첫 행에서 열 위치를 이름으로 찾습니다. 별칭도 함께 받습니다. */
+  var COL_ALIASES = {
+    date: ['날짜', '주문일', '주문일자'],
+    line: ['제품라인', '라인', '제품군'],
+    code: ['상품코드', '코드', '품목코드'],
+    name: ['상품명', '제품명', '품목명'],
+    ch:   ['채널명', '판매처', '채널'],
+    qty:  ['수량', '주문수량', '판매수량'],
+    amt:  ['매출', '주문금액', '금액', '매출액']
+  };
+
+  function mapColumns(header) {
+    var pos = {}, c;
+    for (c = 0; c < header.length; c++) {
+      var nm = String(header[c] === undefined || header[c] === null ? '' : header[c]).replace(/\s+/g, '');
+      if (nm && pos[nm] === undefined) pos[nm] = c;
+    }
+    var C = {}, key, names, j;
+    for (key in COL_ALIASES) {
+      C[key] = -1;
+      names = COL_ALIASES[key];
+      for (j = 0; j < names.length; j++) {
+        if (pos[names[j]] !== undefined) { C[key] = pos[names[j]]; break; }
+      }
+    }
+    var missing = [];
+    ['date', 'ch', 'qty', 'amt'].forEach(function (k) {
+      if (C[k] < 0) missing.push(COL_ALIASES[k][0]);
+    });
+    if (missing.length) {
+      var err = new Error('시트 첫 행에 "' + missing.join('", "') +
+                          '" 열이 없습니다. 첫 행에서 찾은 열: ' + Object.keys(pos).join(', '));
+      err.kind = 'columns';
+      throw err;
+    }
+    return C;
+  }
+
+  var COLMAP = null;   // 화면 하단에 인식 결과를 표시합니다
+
+  /** A, B, … Z 로 표기 */
+  function colLetter(i) {
+    var s = '';
+    while (i >= 0) { s = String.fromCharCode(65 + (i % 26)) + s; i = Math.floor(i / 26) - 1; }
+    return s;
+  }
+  function colmapText() {
+    if (!COLMAP) return '';
+    var labels = { date: '날짜', ch: '채널명', qty: '수량', amt: '매출',
+                   line: '제품라인', code: '상품코드', name: '상품명' };
+    var parts = [];
+    ['date', 'ch', 'qty', 'amt', 'line', 'code', 'name'].forEach(function (k) {
+      parts.push(labels[k] + '=' + (COLMAP[k] < 0 ? '없음' : colLetter(COLMAP[k]) + '열'));
+    });
+    return '열 인식: ' + parts.join(' · ') + ' — 시트 첫 행의 이름으로 찾습니다.';
+  }
+
   function parseRows(values, memoVals) {
+    if (!values.length) throw new Error('시트가 비어 있습니다');
+    var C = mapColumns(values[0]);
+    COLMAP = C;
+
     var rows = [], dateSet = {}, chSet = {}, lineSet = {};
-    for (var i = 0; i < values.length; i++) {
+    var pick = function (r, i) { return i < 0 ? '' : r[i]; };
+
+    for (var i = 1; i < values.length; i++) {            // 0행은 헤더
       var r = values[i];
-      if (!r || typeof r[0] !== 'number') continue;          // 날짜가 없는 행은 건너뜀
-      var ds = serialToISO(r[0]);
+      if (!r || typeof r[C.date] !== 'number') continue;  // 날짜가 없는 행은 건너뜀
+      var ds = serialToISO(r[C.date]);
       var rec = {
         d: ds,
-        line: String(r[2] || '').trim(),
-        code: codeStr(r[3]),
-        name: String(r[4] || '').trim(),
-        ch: String(r[6] || '').trim() || '채널미입력',
-        qty: Number(r[7]) || 0,
-        amt: Number(r[8]) || 0
+        line: String(pick(r, C.line) || '').trim(),
+        code: codeStr(pick(r, C.code)),
+        name: String(pick(r, C.name) || '').trim(),
+        ch: String(r[C.ch] || '').trim() || '채널미입력',
+        qty: Number(r[C.qty]) || 0,
+        amt: Number(r[C.amt]) || 0
       };
       rows.push(rec);
       dateSet[ds] = 1; chSet[rec.ch] = 1;
       if (rec.line) lineSet[rec.line] = 1;
     }
-    if (!rows.length) throw new Error('읽을 수 있는 행이 없습니다');
+    if (!rows.length) throw new Error('읽을 수 있는 행이 없습니다 (날짜 열의 서식을 확인해 주세요)');
 
     var dates = Object.keys(dateSet).sort();
     var found = Object.keys(chSet);
@@ -777,6 +844,7 @@
     renderM2(A);
     renderMemos(A);
 
+    document.getElementById('colmap').textContent = colmapText();
     document.getElementById('coverage').textContent =
       '원본 ' + nf.format(DATA.rows.length) + '행 · 수록 기간 ' + DATA.dates[0] + ' ~ ' + DATA.maxDate +
       ' · 판매처 ' + DATA.channels.length + '곳';
