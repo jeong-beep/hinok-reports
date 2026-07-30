@@ -207,7 +207,8 @@
           width: max-content; min-width: 100%; }
   th, td { padding: 6px 10px; white-space: nowrap; border-bottom: 1px solid var(--hairline); }
   /* 제목 열과 날짜 행은 가운데 정렬 */
-  thead th { position: sticky; top: 0; z-index: 3; background: var(--surface-2);
+  /* 층 순서 : 제목행(6·7) > 통계행(4·5) > 본문 고정열(2) */
+  thead th { position: sticky; top: 0; z-index: 6; background: var(--surface-2);
              font-weight: 600; font-size: 11px; color: var(--ink-2); text-align: center;
              border-bottom: 1px solid var(--border); }
   tbody td { text-align: right; }
@@ -220,21 +221,23 @@
 
   #m1 .stick { position: sticky; left: 0; z-index: 2; background: var(--surface);
                border-right: 1px solid var(--hairline); min-width: 112px; }
-  #m1 thead .stick { z-index: 4; background: var(--surface-2); }
+  #m1 thead .stick { z-index: 7; background: var(--surface-2); }
   #m1 .totcol { font-weight: 620; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
   #m1 thead .totcol { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
 
-  /* 상품 매트릭스 : 좌측 5열 고정 (제품라인·상품코드·상품명·정상가·일평균) */
-  #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5 {
+  /* 상품 매트릭스 : 좌측 6열 고정 (제품라인·상품코드·상품명·정상가·일평균·합계) */
+  #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5, #m2 .p6 {
     position: sticky; z-index: 2; background: var(--surface); }
-  #m2 thead .p1, #m2 thead .p2, #m2 thead .p3, #m2 thead .p4, #m2 thead .p5 {
-    z-index: 4; background: var(--surface-2); }
+  #m2 thead .p1, #m2 thead .p2, #m2 thead .p3,
+  #m2 thead .p4, #m2 thead .p5, #m2 thead .p6 {
+    z-index: 7; background: var(--surface-2); }
   #m2 .p1 { left: 0;     min-width:  78px; max-width:  78px; }
   #m2 .p2 { left: 78px;  min-width: 116px; max-width: 116px; }
   #m2 .p3 { left: 194px; min-width: 240px; max-width: 240px;
             overflow: hidden; text-overflow: ellipsis; }
   #m2 .p4 { left: 434px; min-width:  92px; max-width:  92px; }
-  #m2 .p5 { left: 526px; min-width: 104px; max-width: 104px;
+  #m2 .p5 { left: 526px; min-width: 104px; max-width: 104px; }
+  #m2 .p6 { left: 630px; min-width: 110px; max-width: 110px;
             border-right: 1px solid var(--hairline); }
 
   tbody tr:hover td { background: var(--accent-soft); }
@@ -319,10 +322,14 @@
     #reload .icon { display: inline; }
     #reload .text { display: none; }
 
+    /* 범례와 CSV 버튼은 좁은 화면에서 자리만 차지합니다 */
+    .legend { display: none; }
+    [data-csv] { display: none; }
+
     /* 상품 매트릭스는 고정열을 풀어야 좌우로 스크롤됩니다 */
-    #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5 { position: static; }
+    #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5, #m2 .p6 { position: static; }
     #m2 .p3 { min-width: 180px; max-width: 180px; }
-    #m2 .p5 { border-right: 0; }
+    #m2 .p6 { border-right: 0; }
     .tablewrap { max-height: 70vh; overscroll-behavior-x: contain; }
     th, td { padding: 5px 8px; }
   }
@@ -902,6 +909,17 @@
 
   function zeros(n) { var a = new Array(n); for (var i = 0; i < n; i++) a[i] = 0; return a; }
 
+  /**
+   * 날짜 표시 순서.
+   * 최근 30일은 최신이 위(내림차순), 월 기준은 1일부터 아래로(오름차순)입니다.
+   */
+  function dateSeq(n) {
+    var a = [], i;
+    if (state.month) { for (i = 0; i < n; i++) a.push(i); }
+    else { for (i = n - 1; i >= 0; i--) a.push(i); }
+    return a;
+  }
+
   /** 실적이 있는 날만 평균 — 엑셀 피벗의 AVERAGE와 동일 */
   function avgOf(vals, has, n) {
     var s = 0, c = 0;
@@ -992,6 +1010,8 @@
       '일평균은 실적이 있는 날만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함). ' +
       '주황색 테두리가 있는 값은 메모가 달려 있습니다 — 누르면 열립니다.';
     document.getElementById('dash').hidden = false;
+    /* 숨겨진 동안에는 행 높이를 잴 수 없으므로 화면에 올린 뒤에 고정합니다 */
+    if (!state.ch) stickStatRows();
   }
 
   function renderKpis(A) {
@@ -1207,10 +1227,12 @@
         sums.map(function (v) { return '<td class="num' + al + '">' + val(v) + '</td>'; }).join('') + '</tr>';
     }
 
-    /* 날짜 행 — 항상 내림차순 */
+    /* 날짜 행 — 최근 30일은 내림차순, 월 기준은 오름차순 */
     var body = '';
     var csv = [['날짜', '합계'].concat(cols.map(function (i) { return A.chs[i]; }))];
-    for (var j = A.n - 1; j >= 0; j--) {
+    var seq = dateSeq(A.n);
+    for (var s = 0; s < seq.length; s++) {
+      var j = seq[s];
       var d = A.win[j];
       var tm = memoAt(d, TOTAL_KEY);
       body += '<tr class="' + (d === anchor ? 'today' : '') + '">' +
@@ -1244,7 +1266,8 @@
     });
     document.getElementById('m1Note').textContent =
       '단위: ' + (state.metric === 'amt' ? '원' : '개') +
-      ' · 날짜 내림차순 · 판매처 이름을 클릭하면 상세로 이동합니다';
+      ' · 날짜 ' + (isMonth ? '오름차순' : '내림차순') +
+      ' · 판매처 이름을 클릭하면 상세로 이동합니다';
 
     if (isMonth) {
       csv.push(['합계', grand].concat(sums));
@@ -1257,6 +1280,26 @@
     csvCache.m1 = { name: '판매처별_' + (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
   }
 
+  /**
+   * 최근 30일 화면에서 일평균·일평균 대비 행을 제목행 바로 아래에 붙여둡니다.
+   * 행 높이는 글꼴과 화면 폭에 따라 달라지므로 그릴 때마다 실측해서 오프셋을 잡습니다.
+   * (월 기준 화면은 통계 행이 맨 밑이라 고정하지 않습니다)
+   */
+  function stickStatRows() {
+    var tbl = document.getElementById('m1');
+    var headRow = tbl.querySelector('thead tr');
+    if (!headRow) return;
+    var off = headRow.getBoundingClientRect().height;
+    Array.prototype.forEach.call(tbl.querySelectorAll('tbody tr.stat.top'), function (tr) {
+      Array.prototype.forEach.call(tr.children, function (td) {
+        td.style.position = 'sticky';
+        td.style.top = off + 'px';
+        td.style.zIndex = td.classList.contains('stick') ? '5' : '4';
+      });
+      off += tr.getBoundingClientRect().height;
+    });
+  }
+
   /* ── 표2 : 상품 × 날짜 ──────────────────────────────────── */
   function renderM2(A, anchor) {
     var order = [];
@@ -1265,37 +1308,42 @@
     var al = alignCls();
     var chForMemo = state.ch;
 
+    var seq = dateSeq(A.n);
+
     var head = '<thead><tr>' +
       '<th class="p1">제품라인</th><th class="p2">상품코드</th>' +
-      '<th class="p3">상품명</th><th class="p4">정상가</th><th class="p5">일평균</th>';
-    var csvHead = ['제품라인', '상품코드', '상품명', '정상가', '일평균'];
-    for (var j = A.n - 1; j >= 0; j--) {
+      '<th class="p3">상품명</th><th class="p4">정상가</th>' +
+      '<th class="p5">일평균</th><th class="p6">합계</th>';
+    var csvHead = ['제품라인', '상품코드', '상품명', '정상가', '일평균', '합계'];
+    seq.forEach(function (j) {
       var d = A.win[j];
       var dm = chForMemo ? memoDateOnly(d, chForMemo) : null;
       head += '<th' + (dm ? ' class="hasmemo" data-md="' + d + '" data-mc="' + esc(chForMemo) +
               '" tabindex="0"' : '') + '>' + md(d) + '</th>';
       csvHead.push(d);
-    }
+    });
     head += '</tr></thead>';
 
     var body = '', csv = [csvHead];
     order.forEach(function (pi) {
       var p = A.prods[pi];
       var pavg = avgOf(A.pV[pi], A.pHas[pi], A.n);
+      var psum = A.pTot[pi];
       body += '<tr><td class="l p1"><span class="line-tag">' + esc(p[0] || '—') + '</span></td>' +
               '<td class="l p2 code num">' + esc(p[1]) + '</td>' +
               '<td class="l p3" title="' + esc(p[2]) + '">' + esc(p[2]) + '</td>' +
               '<td class="num p4">' + (p[3] ? '₩' + nf.format(p[3]) : '') + '</td>' +
-              '<td class="num p5' + al + '"><strong>' + val(pavg) + '</strong></td>';
-      var row = [p[0], p[1], p[2], p[3] || '', pavg];
-      for (var k = A.n - 1; k >= 0; k--) {
+              '<td class="num p5' + al + '">' + val(pavg) + '</td>' +
+              '<td class="num p6' + al + '"><strong>' + val(psum) + '</strong></td>';
+      var row = [p[0], p[1], p[2], p[3] || '', pavg, psum];
+      seq.forEach(function (k) {
         var v = A.pV[pi][k], dd = A.win[k];
         var cm = chForMemo ? memoAt(dd, chForMemo, p[1]) : null;
         body += '<td class="num' + al + (v ? '' : ' zero') + (cm ? ' hasmemo' : '') + '"' +
                 (cm ? ' data-md="' + dd + '" data-mc="' + esc(chForMemo) + '" data-mp="' + esc(p[1]) +
                       '" tabindex="0"' : '') + '>' + (v ? val(v) : '·') + '</td>';
         row.push(v || '');
-      }
+      });
       body += '</tr>';
       csv.push(row);
     });
@@ -1356,7 +1404,10 @@
       if (c === openCell) closeMemo(); else openMemo(c);
     }
   });
-  window.addEventListener('resize', closeMemo);
+  window.addEventListener('resize', function () {
+    closeMemo();
+    if (DATA) stickStatRows();     /* 폭이 바뀌면 행 높이도 바뀝니다 */
+  });
 
   /* ═══════════════════════════════════════════════════════
      CSV
