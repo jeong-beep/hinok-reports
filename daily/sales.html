@@ -276,7 +276,8 @@
   #m2 .p6 { left: 630px; min-width: 110px; max-width: 110px;
             border-right: 1px solid var(--hairline); }
 
-  tbody tr:hover td { background: var(--accent-soft); }
+  /* 호버 : 반투명 덮개. 인라인 배경(색 스케일) 위에 얹혀 색이 비쳐 보입니다. */
+  tbody tr:hover td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--accent) 10%, transparent); }
   td.zero { color: var(--ink-muted); opacity: .35; }
   tr.stat td { background: var(--surface-2); font-weight: 620; }
   tr.stat.top td { border-bottom: 1px solid var(--border); }
@@ -284,7 +285,6 @@
   /* 당일 강조는 배경을 덮지 않고 행 전체를 감싸는 테두리로 표시합니다.
      셀마다 위·아래를, 양 끝 셀에만 좌·우를 그려 한 줄을 두르는 사각형이 됩니다. */
   #m1 tbody tr.today td {
-    box-shadow: none;
     border-top: 2px solid var(--today-bd);
     border-bottom: 2px solid var(--today-bd);
   }
@@ -296,12 +296,13 @@
               border-radius: 5px; padding: 0 5px; }
 
   /* 메모가 달린 값 — 주황 굵은 테두리, 누르면 내용이 열립니다 */
-  td.hasmemo, th.hasmemo { position: relative; cursor: pointer;
-                           box-shadow: inset 0 0 0 2px var(--memo); border-radius: 3px; }
+  /* 메모 링은 outline 으로 그립니다 — box-shadow 는 호버 덮개가 쓰고 있어서요 */
+  td.hasmemo, th.hasmemo { position: relative; cursor: pointer; border-radius: 3px;
+                           outline: 2px solid var(--memo); outline-offset: -2px; }
   td.hasmemo::after, th.hasmemo::after {
     content: ''; position: absolute; top: 2px; right: 2px;
     width: 5px; height: 5px; border-radius: 50%; background: var(--memo); }
-  td.hasmemo.open, th.hasmemo.open { box-shadow: inset 0 0 0 3px var(--memo); }
+  td.hasmemo.open, th.hasmemo.open { outline-width: 3px; }
 
   .memopop { position: fixed; z-index: 200; max-width: min(340px, 88vw);
              background: var(--surface); color: var(--ink);
@@ -1432,9 +1433,17 @@
    * 행 높이는 글꼴과 화면 폭에 따라 달라지므로 그릴 때마다 실측해서 오프셋을 잡습니다.
    * (월 기준 화면은 통계 행이 맨 밑이라 고정하지 않습니다)
    */
+  /** 가로 스크롤이 걸린 상자인지 — 이 안에서는 top 오프셋의 기준이 화면이 아니라 상자입니다 */
+  function isScrollBox(el) {
+    if (!el) return false;
+    var o = getComputedStyle(el).overflowX;
+    return o === 'auto' || o === 'scroll';
+  }
+
   function stickStatRows() {
     var tbl = document.getElementById('m1');
     var headRow = tbl.querySelector('thead tr');
+    var box = document.querySelector('#m1Card .tablewrap');
 
     /* 상단에 이미 떠 있는 것들 아래로 붙여야 겹치지 않습니다 */
     var dock = document.querySelector('.controls-dock');
@@ -1443,23 +1452,36 @@
     note.style.top = dockH + 'px';
     var base = dockH + (note.hidden ? 0 : note.getBoundingClientRect().height + 14);
 
+    /* 표가 가로 스크롤 상자 안에 있으면(좁은 화면) 오프셋 기준이 상자로 바뀝니다.
+       그대로 두면 제목행과 통계행이 상자 안에서 그만큼 아래로 밀려
+       맨 위 날짜들을 덮어버립니다. 그때는 고정을 걸지 않습니다. */
+    var docked = !isScrollBox(box);
+
     if (headRow) {
-      Array.prototype.forEach.call(headRow.children, function (th) { th.style.top = base + 'px'; });
+      Array.prototype.forEach.call(headRow.children, function (th) {
+        th.style.top = docked ? base + 'px' : '0px';
+      });
     }
 
     var off = base + (headRow ? headRow.getBoundingClientRect().height : 0);
     Array.prototype.forEach.call(tbl.querySelectorAll('tbody tr.stat.top'), function (tr) {
       Array.prototype.forEach.call(tr.children, function (td) {
-        td.style.position = 'sticky';
-        td.style.top = off + 'px';
-        td.style.zIndex = td.classList.contains('stick') ? '5' : '4';
+        if (docked) {
+          td.style.position = 'sticky';
+          td.style.top = off + 'px';
+          td.style.zIndex = td.classList.contains('stick') ? '5' : '4';
+        } else {
+          td.style.position = '';
+          td.style.top = '';
+          td.style.zIndex = '';
+        }
       });
       off += tr.getBoundingClientRect().height;
     });
 
-    /* 상품표 제목행도 같은 높이에 맞춥니다 */
+    /* 상품표는 늘 가로 스크롤 상자 안이라 제목행이 상자 맨 위에 붙어야 합니다 */
     var h2 = document.querySelector('#m2 thead tr');
-    if (h2) Array.prototype.forEach.call(h2.children, function (th) { th.style.top = base + 'px'; });
+    if (h2) Array.prototype.forEach.call(h2.children, function (th) { th.style.top = '0px'; });
   }
 
   /* ── 표2 : 상품 × 날짜 ──────────────────────────────────── */
