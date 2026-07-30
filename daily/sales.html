@@ -23,9 +23,11 @@
     --serious:      #c1543a;
     --up:           #c1543a;   /* 국내 관행 : 상승 적색 */
     --down:         #1d6fa5;   /*            하락 청색 */
-    /* 판매처 색 — 순서는 CH_ORDER와 1:1로 고정됩니다.
-       자사몰·네이버·카카오·29cm는 브랜드 색을 지정받았고, 나머지는
-       인접 구간이 색각 이상에서 구분되도록 배치했습니다. */
+    --neg:          #c1543a;   /* 마이너스 금액 */
+    --memo:         #e07a1f;   /* 메모 표시 주황 */
+    /* 판매처 색 — CH_ORDER 위치와 1:1 고정.
+       자사몰·네이버·카카오·29cm는 지정 브랜드 색이고, 인접 구간이
+       색각 이상에서 구분되도록 명도 계단으로 배치했습니다. */
     --c1:#1B6B3A;   /* 자사몰       진한 초록 */
     --c2:#4E9A1F;   /* 네이버       연두 */
     --c3:#F7C500;   /* 카카오       노랑 */
@@ -41,7 +43,7 @@
     --c13:#0288A7;  /* HOS청담 */
     --c14:#6D7C1F;  /* 어메니티 */
     --c15:#D14A8F;  /* 페이히어 */
-    --c-other:#8b939c;   /* 목록에 없는 새 판매처 */
+    --c-other:#8b939c;
     --shadow: 0 1px 2px rgba(15,23,32,.05), 0 8px 24px -12px rgba(15,23,32,.16);
   }
   @media (prefers-color-scheme: dark) {
@@ -52,8 +54,8 @@
       --hairline:#2c3237; --border:rgba(255,255,255,0.10);
       --accent:#3e8cc4; --accent-soft:#1c2a3d;
       --good:#0ca30c; --serious:#c96a50;
-      --up:#c96a50; --down:#3e8cc4;
-      /* 어두운 배경용 — 29cm 검정은 흰색으로 반전됩니다 */
+      --up:#c96a50; --down:#3e8cc4; --neg:#e8877a; --memo:#f0a04b;
+      /* 29cm 검정은 어두운 배경에서 묻히므로 흰색으로 반전됩니다 */
       --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
       --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
       --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
@@ -68,7 +70,7 @@
     --hairline:#2c3237; --border:rgba(255,255,255,0.10);
     --accent:#3e8cc4; --accent-soft:#1c2a3d;
     --good:#0ca30c; --serious:#c96a50;
-    --up:#c96a50; --down:#3e8cc4;
+    --up:#c96a50; --down:#3e8cc4; --neg:#e8877a; --memo:#f0a04b;
     --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
     --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
     --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
@@ -86,6 +88,7 @@
   }
   .num { font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
          font-variant-numeric: tabular-nums; }
+  .neg { color: var(--neg); }
 
   /* ── 로그인 게이트 ──────────────────────────────────────── */
   .gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
@@ -119,30 +122,29 @@
   .who { text-align: right; font-size: 11.5px; color: var(--ink-muted); }
   .who strong { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
 
-  /* ── 컨트롤 ─────────────────────────────────────────────── */
-  /* 스크롤해도 화면 상단에 붙어 있습니다. 페이지 배경을 깔아
-     뒤로 지나가는 내용이 틈으로 비치지 않게 합니다. */
+  /* ── 컨트롤 : 스크롤해도 상단에 붙어 있습니다 ─────────────── */
   .controls-dock { position: sticky; top: 0; z-index: 60;
                    background: var(--plane); padding: 10px 0 6px; margin-bottom: 10px; }
   .controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end;
               background: var(--surface); border: 1px solid var(--hairline);
-              border-radius: 12px; padding: 12px 14px;
-              box-shadow: var(--shadow); }
+              border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
   .field { display: flex; flex-direction: column; gap: 5px; }
   .field > span { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
   select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2);
            border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 9px; min-height: 32px; }
-  select:focus-visible, button:focus-visible, a:focus-visible {
+  select:focus-visible, button:focus-visible, a:focus-visible, td:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px; }
   .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--hairline);
          border-radius: 8px; padding: 2px; gap: 2px; }
   .seg button { font: inherit; font-size: 12.5px; border: 0; background: transparent;
                 color: var(--ink-2); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+  .seg .short { display: none; }
   .ghost { font: inherit; font-size: 12.5px; background: var(--surface-2); color: var(--ink-2);
            border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   .ghost:hover { border-color: var(--accent); color: var(--accent); }
   .spacer { flex: 1 1 auto; }
+  #reload .icon { display: none; }
 
   /* ── KPI ────────────────────────────────────────────────── */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
@@ -150,8 +152,8 @@
   .kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
          padding: 14px 16px; box-shadow: var(--shadow); }
   .kpi .k { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
-  .kpi .v { font-size: 25px; font-weight: 620; margin-top: 4px; letter-spacing: -.02em; }
-  .kpi .v.long { font-size: 20px; }          /* 억 단위 누계가 넘치지 않도록 */
+  .kpi .v { font-size: 24px; font-weight: 620; margin-top: 4px; letter-spacing: -.02em; }
+  .kpi .v.long { font-size: 20px; }
   .kpi .v small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
   .kpi .d { font-size: 12px; margin-top: 5px; color: var(--ink-muted); }
   .chip { display: inline-flex; align-items: center; gap: 3px; font-weight: 620;
@@ -185,7 +187,6 @@
   .tip .t-d { font-size: 10.5px; opacity: .72; }
   .tip .t-m { font-size: 11px; margin-top: 3px; max-width: 300px; white-space: normal;
               border-top: 1px solid rgba(255,255,255,.2); padding-top: 3px; }
-  /* 날짜별 판매처 내역 */
   .tip .t-rows { margin-top: 5px; padding-top: 4px; font-size: 11px;
                  border-top: 1px solid rgba(255,255,255,.2); }
   .tip .t-rows div { display: grid; grid-template-columns: 9px 1fr auto 44px;
@@ -196,55 +197,75 @@
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 16px 0; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
   .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .legend i.dash { height: 0; width: 14px; border-radius: 0;
+                   border-top: 2px dashed var(--ink); opacity: .5; }
 
   /* ── 표 ─────────────────────────────────────────────────── */
-  .tablewrap { overflow: auto; max-height: 620px; }
+  .tablewrap { overflow: auto; max-width: 100%; max-height: 620px;
+               -webkit-overflow-scrolling: touch; }
   table { border-collapse: separate; border-spacing: 0; font-size: 12.5px;
           width: max-content; min-width: 100%; }
   th, td { padding: 6px 10px; white-space: nowrap; border-bottom: 1px solid var(--hairline); }
+  /* 제목 열과 날짜 행은 가운데 정렬 */
   thead th { position: sticky; top: 0; z-index: 3; background: var(--surface-2);
-             font-weight: 600; font-size: 11px; color: var(--ink-2); text-align: right;
+             font-weight: 600; font-size: 11px; color: var(--ink-2); text-align: center;
              border-bottom: 1px solid var(--border); }
-  thead th.l, tbody td.l { text-align: left; }
   tbody td { text-align: right; }
+  td.l, th.l { text-align: left; }
+  td.c, th.c { text-align: center; }
   th.chlink { cursor: pointer; }
   th.chlink span { color: var(--accent); text-decoration: underline;
                    text-underline-offset: 2px; text-decoration-thickness: 1px; }
   th.chlink:hover span { text-decoration-thickness: 2px; }
 
   #m1 .stick { position: sticky; left: 0; z-index: 2; background: var(--surface);
-               border-right: 1px solid var(--hairline); min-width: 106px; }
+               border-right: 1px solid var(--hairline); min-width: 112px; }
   #m1 thead .stick { z-index: 4; background: var(--surface-2); }
-  #m2 .c1, #m2 .c2, #m2 .c3 { position: sticky; z-index: 2; background: var(--surface); }
-  #m2 thead .c1, #m2 thead .c2, #m2 thead .c3 { z-index: 4; background: var(--surface-2); }
-  #m2 .c1 { left: 0;     min-width: 116px; max-width: 116px; }
-  #m2 .c2 { left: 116px; min-width:  74px; max-width:  74px; }
-  #m2 .c3 { left: 190px; min-width: 300px; max-width: 300px;
-            overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--hairline); }
+  #m1 .totcol { font-weight: 620; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+  #m1 thead .totcol { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
 
-  tbody tr:hover td, tbody tr:hover td.stick,
-  tbody tr:hover td.c1, tbody tr:hover td.c2, tbody tr:hover td.c3 { background: var(--accent-soft); }
+  /* 상품 매트릭스 : 좌측 5열 고정 (제품라인·상품코드·상품명·정상가·일평균) */
+  #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5 {
+    position: sticky; z-index: 2; background: var(--surface); }
+  #m2 thead .p1, #m2 thead .p2, #m2 thead .p3, #m2 thead .p4, #m2 thead .p5 {
+    z-index: 4; background: var(--surface-2); }
+  #m2 .p1 { left: 0;     min-width:  78px; max-width:  78px; }
+  #m2 .p2 { left: 78px;  min-width: 116px; max-width: 116px; }
+  #m2 .p3 { left: 194px; min-width: 240px; max-width: 240px;
+            overflow: hidden; text-overflow: ellipsis; }
+  #m2 .p4 { left: 434px; min-width:  92px; max-width:  92px; }
+  #m2 .p5 { left: 526px; min-width: 104px; max-width: 104px;
+            border-right: 1px solid var(--hairline); }
+
+  tbody tr:hover td { background: var(--accent-soft); }
   td.zero { color: var(--ink-muted); opacity: .35; }
-  tr.total td, tr.stat td { background: var(--surface-2); font-weight: 620;
-                            border-top: 1px solid var(--border); }
-  tr.total td.stick, tr.stat td.stick,
-  tr.total td.c1, tr.total td.c2, tr.total td.c3 { background: var(--surface-2); }
+  tr.stat td { background: var(--surface-2); font-weight: 620; }
+  tr.stat.top td { border-bottom: 1px solid var(--border); }
+  tr.stat.bottom td { border-top: 1px solid var(--border); }
   tr.today td { box-shadow: inset 0 0 0 9999px var(--accent-soft); }
   .code { font-size: 11px; color: var(--ink-muted); }
   .line-tag { display: inline-block; font-size: 10px; letter-spacing: .04em; color: var(--ink-2);
               background: var(--surface-2); border: 1px solid var(--hairline);
               border-radius: 5px; padding: 0 5px; }
-  .memo-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-              background: var(--accent); margin-left: 5px; vertical-align: middle; }
 
-  .memolist { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
-  .memo { display: grid; grid-template-columns: 84px 92px 1fr; gap: 10px;
-          font-size: 12.5px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); }
-  .memo:last-child { border-bottom: 0; }
-  .memo .m-d { color: var(--ink-muted); font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
-  .memo .m-c { color: var(--accent); font-weight: 600; font-size: 11.5px; }
-  .memo .m-t { color: var(--ink-2); white-space: pre-wrap; }
-  .empty { color: var(--ink-muted); font-size: 12.5px; padding: 8px 0; }
+  /* 메모가 달린 값 — 주황 굵은 테두리, 누르면 내용이 열립니다 */
+  td.hasmemo, th.hasmemo { position: relative; cursor: pointer;
+                           box-shadow: inset 0 0 0 2px var(--memo); border-radius: 3px; }
+  td.hasmemo::after, th.hasmemo::after {
+    content: ''; position: absolute; top: 2px; right: 2px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--memo); }
+  td.hasmemo.open, th.hasmemo.open { box-shadow: inset 0 0 0 3px var(--memo); }
+
+  .memopop { position: fixed; z-index: 200; max-width: min(340px, 88vw);
+             background: var(--surface); color: var(--ink);
+             border: 1px solid var(--memo); border-left-width: 4px; border-radius: 10px;
+             padding: 11px 13px; box-shadow: 0 8px 28px -8px rgba(0,0,0,.35);
+             font-size: 12.5px; line-height: 1.55; }
+  .memopop .mp-h { font-size: 10.5px; letter-spacing: .05em; color: var(--memo);
+                   font-weight: 700; margin-bottom: 5px; }
+  .memopop .mp-t { white-space: pre-wrap; color: var(--ink-2); }
+  .memopop .mp-t + .mp-t { margin-top: 7px; padding-top: 7px;
+                           border-top: 1px solid var(--hairline); }
 
   .status { display: flex; align-items: center; gap: 10px; padding: 40px 16px;
             justify-content: center; color: var(--ink-muted); font-size: 13px; }
@@ -268,29 +289,42 @@
            color: var(--ink-muted); font-size: 11.5px; display: grid; gap: 4px; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
-  @media print { .controls, .ghost, .who { display: none; }
+  @media print { .controls-dock, .ghost, .who { display: none; }
                  .tablewrap { max-height: none; overflow: visible; }
                  .card { break-inside: avoid; box-shadow: none; } }
+
   @media (max-width: 640px) {
     .wrap { padding: 16px 12px 56px; }
-    /* KPI 5장을 두 개씩, 마지막(기간 누계)은 한 줄을 다 씁니다 */
+    /* KPI는 두 개씩 */
     .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .kpis .kpi:last-child { grid-column: 1 / -1; }
     .kpi { padding: 12px 13px; }
     .kpi .v { font-size: 18px; }
-    .kpi .v.long { font-size: 16px; }
+    .kpi .v.long { font-size: 15px; }
     .kpi .v small { font-size: 12px; }
-    .kpi .k { font-size: 10px; letter-spacing: .06em; }
+    .kpi .k { font-size: 10px; letter-spacing: .04em; }
     .kpi .d, .chip { font-size: 11px; }
-    /* 고정 카드가 화면을 너무 먹지 않도록 조입니다 */
+
+    /* 고정바를 한 줄에 담습니다 : 라벨 숨김, 지표는 짧은 문구, 새로고침은 아이콘 */
     .controls-dock { padding: 6px 0 4px; margin-bottom: 8px; }
-    .controls { gap: 6px 8px; padding: 8px 10px; }
-    .field { gap: 2px; }
-    .field > span { font-size: 9.5px; letter-spacing: .05em; }
-    select { font-size: 12.5px; padding: 4px 6px; min-height: 28px; }
-    .seg button { font-size: 12px; padding: 4px 9px; }
-    .ghost { font-size: 12px; padding: 5px 9px; }
-    .spacer { flex-basis: 0; }
+    .controls { flex-wrap: nowrap; gap: 6px; padding: 7px 8px; align-items: center; }
+    .field { flex: 1 1 auto; min-width: 0; }
+    .field > span { display: none; }
+    select { font-size: 12px; padding: 3px 4px; min-height: 30px; width: 100%; }
+    .seg { flex: 0 0 auto; padding: 2px; }
+    .seg button { font-size: 11.5px; padding: 4px 7px; }
+    .seg .long { display: none; }
+    .seg .short { display: inline; }
+    .spacer { display: none; }
+    #reload { flex: 0 0 auto; padding: 5px 8px; font-size: 15px; line-height: 1; }
+    #reload .icon { display: inline; }
+    #reload .text { display: none; }
+
+    /* 상품 매트릭스는 고정열을 풀어야 좌우로 스크롤됩니다 */
+    #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5 { position: static; }
+    #m2 .p3 { min-width: 180px; max-width: 180px; }
+    #m2 .p5 { border-right: 0; }
+    .tablewrap { max-height: 70vh; overscroll-behavior-x: contain; }
+    th, td { padding: 5px 8px; }
   }
 </style>
 </head>
@@ -331,22 +365,24 @@
     <div id="errSlot"></div>
 
     <div class="controls-dock">
-    <div class="controls">
-      <label class="field"><span>기간</span>
-        <select id="period"></select>
-      </label>
-      <div class="field"><span>지표</span>
+      <div class="controls">
+        <label class="field"><span>기간</span>
+          <select id="period"></select>
+        </label>
         <div class="seg" id="metric" role="group" aria-label="지표 선택">
-          <button type="button" data-v="amt" aria-pressed="true">주문금액</button>
-          <button type="button" data-v="qty" aria-pressed="false">주문수량</button>
+          <button type="button" data-v="amt" aria-pressed="true">
+            <span class="long">주문금액</span><span class="short">금액</span></button>
+          <button type="button" data-v="qty" aria-pressed="false">
+            <span class="long">주문수량</span><span class="short">수량</span></button>
         </div>
+        <label class="field"><span>판매처</span>
+          <select id="channel"><option value="">전체 판매처</option></select>
+        </label>
+        <div class="spacer"></div>
+        <button class="ghost" type="button" id="reload" title="데이터 새로고침" aria-label="데이터 새로고침">
+          <span class="icon">🔄</span><span class="text">데이터 새로고침</span>
+        </button>
       </div>
-      <label class="field"><span>판매처</span>
-        <select id="channel"><option value="">전체 판매처</option></select>
-      </label>
-      <div class="spacer"></div>
-      <button class="ghost" type="button" id="reload">데이터 새로고침</button>
-    </div>
     </div>
 
     <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
@@ -357,7 +393,7 @@
       <section class="card">
         <div class="head">
           <h2 id="trendTitle">일일 총 주문금액 추이</h2>
-          <span class="note">막대 한 칸이 판매처 하나입니다 — 올리면 판매처·금액·비중이 나옵니다. 축 아래 점(●)은 메모.</span>
+          <span class="note">막대 한 칸이 판매처 하나입니다 — 올리면 판매처·금액·비중이 나옵니다.</span>
         </div>
         <div class="legend" id="trendLegend"></div>
         <div class="body">
@@ -389,11 +425,6 @@
         <div class="body flush"><div class="tablewrap"><table id="m2"></table></div></div>
       </section>
 
-      <section class="card">
-        <div class="head"><h2>기간 내 메모</h2><span class="note" id="memoNote"></span></div>
-        <div class="body"><div class="memolist" id="memos"></div></div>
-      </section>
-
       <footer>
         <div id="colmap"></div>
         <div id="coverage"></div>
@@ -417,11 +448,10 @@
     /* 첫 행(헤더)까지 함께 읽어 열을 "이름"으로 찾습니다.
        열 순서가 바뀌거나 중간에 열이 추가돼도 화면이 깨지지 않습니다. */
     DATA_RANGE: '시트1!A1:Z',
-    MEMO_RANGE: '메모!A2:C',          // 없으면 자동으로 건너뜁니다
+    MEMO_RANGE: 'memo!A1:D',          // 날짜 · 판매처 · 상품코드 · 메모
     RECENT_DAYS: 30,
 
-    /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다.
-       두 리포트의 기록이 한 시트에 모이고, URL 칸으로 어느 페이지인지 구분됩니다. */
+    /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다. */
     LOG_FORM:  'https://docs.google.com/forms/d/e/' +
                '1FAIpQLSdxFBLKsClbQcpYbjJzi4iGFIErQC1tty7mz2wiIIzH-SQnvQ/formResponse',
     LOG_EMAIL: 'entry.1550214245',
@@ -433,8 +463,13 @@
                   '롯데백화점(온)', '신세계면세점', '롯데면세점', '신라면세점',
                   '플래그쉽', 'HOS청담', '어메니티', '페이히어'];
 
-  /* 판매처 색은 CH_ORDER 위치에 고정됩니다.
-     순위나 필터로 목록이 줄어도 같은 판매처는 늘 같은 색입니다. */
+  /* memo 탭의 판매처 표기가 시트1과 다를 때 맞춰줍니다 */
+  var MEMO_CH_ALIAS = {
+    '롯데DFS': '롯데면세점', '신세계DFS': '신세계면세점', '신라DFS': '신라면세점',
+    '플래그십': '플래그쉽', '일일총주문금액': '합계', '총합계': '합계'
+  };
+  var TOTAL_KEY = '합계';
+
   function chColor(name) {
     var i = CH_ORDER.indexOf(name);
     return i >= 0 && i < 15 ? 'var(--c' + (i + 1) + ')' : 'var(--c-other)';
@@ -480,7 +515,6 @@
     try { tokenClient.requestAccessToken({ prompt: '' }); } catch (e) {}
   };
 
-  /* gsi/client 는 async 라 로드를 기다립니다 */
   (function waitGsi(n) {
     if (window.google && google.accounts && google.accounts.oauth2) return window.onGsiLoaded();
     if (n > 100) return gateMsg('구글 로그인 스크립트를 불러오지 못했습니다. 새로고침해 주세요.');
@@ -502,25 +536,29 @@
         gateMsg('@' + CONFIG.DOMAIN + ' 계정만 접근할 수 있습니다. (' + (me.email || '알 수 없음') + ')');
         return;
       }
-      document.getElementById('whoEmail').textContent = me.email || '';
+      viewerEmail = me.email || '';
+      document.getElementById('whoEmail').textContent = viewerEmail;
       document.documentElement.classList.add('auth-ok');
-      logVisit(me.email);
+      logVisit();
       loadAll();
     }).catch(function (e) { gateMsg('로그인 확인에 실패했습니다: ' + e.message); });
   }
 
   /**
-   * 방문 기록을 구글 폼에 남깁니다. 페이지를 열 때 한 번만 보냅니다.
+   * 방문 기록을 구글 폼에 남깁니다. 같은 화면은 한 번만 보냅니다.
+   * 페이지 안에서 판매처를 바꿔도 기록되므로, 어느 판매처를 보는지 남습니다.
    * no-cors 라 응답을 읽을 수 없고, 실패해도 화면에는 영향이 없습니다.
    */
-  var logged = false;
-  function logVisit(email) {
-    if (logged || !CONFIG.LOG_FORM) return;
-    logged = true;
+  var viewerEmail = '', loggedUrls = {};
+  function logVisit() {
+    if (!CONFIG.LOG_FORM) return;
+    var url = location.href;
+    if (loggedUrls[url]) return;
+    loggedUrls[url] = 1;
     try {
       var p = new URLSearchParams();
-      p.append(CONFIG.LOG_EMAIL, email || '(알 수 없음)');
-      p.append(CONFIG.LOG_URL, location.href);
+      p.append(CONFIG.LOG_EMAIL, viewerEmail || '(알 수 없음)');
+      p.append(CONFIG.LOG_URL, url);
       fetch(CONFIG.LOG_FORM, { method: 'POST', mode: 'no-cors', body: p });
     } catch (e) { /* 기록 실패는 무시합니다 */ }
   }
@@ -579,7 +617,7 @@
   /* ═══════════════════════════════════════════════════════
      데이터
      ═══════════════════════════════════════════════════════ */
-  var DATA = null;   // {rows, dates, channels, lines, memos, maxDate, months}
+  var DATA = null;
 
   function serialToISO(n) {
     return new Date(SHEET_EPOCH + Math.round(n) * 86400000).toISOString().slice(0, 10);
@@ -587,6 +625,62 @@
   function codeStr(v) {
     if (v === null || v === undefined || v === '') return '';
     return (typeof v === 'number') ? String(Math.round(v)) : String(v).trim();
+  }
+
+  var COL_ALIASES = {
+    date:  ['날짜', '주문일', '주문일자'],
+    line:  ['제품라인', '라인', '제품군'],
+    code:  ['상품코드', '코드', '품목코드'],
+    name:  ['상품명', '제품명', '품목명'],
+    price: ['정상가', '판매가', '단가'],
+    ch:    ['채널명', '판매처', '채널'],
+    qty:   ['수량', '주문수량', '판매수량'],
+    amt:   ['매출', '주문금액', '금액', '매출액']
+  };
+
+  function mapColumns(header, required) {
+    var pos = {}, c;
+    for (c = 0; c < header.length; c++) {
+      var nm = String(header[c] === undefined || header[c] === null ? '' : header[c]).replace(/\s+/g, '');
+      if (nm && pos[nm] === undefined) pos[nm] = c;
+    }
+    var C = {}, key, names, j;
+    for (key in COL_ALIASES) {
+      C[key] = -1;
+      names = COL_ALIASES[key];
+      for (j = 0; j < names.length; j++) {
+        if (pos[names[j]] !== undefined) { C[key] = pos[names[j]]; break; }
+      }
+    }
+    var missing = [];
+    (required || ['date', 'ch', 'qty', 'amt']).forEach(function (k) {
+      if (C[k] < 0) missing.push(COL_ALIASES[k][0]);
+    });
+    if (missing.length) {
+      var err = new Error('시트 첫 행에 "' + missing.join('", "') +
+                          '" 열이 없습니다. 첫 행에서 찾은 열: ' + Object.keys(pos).join(', '));
+      err.kind = 'columns';
+      throw err;
+    }
+    return C;
+  }
+
+  var COLMAP = null;
+
+  function colLetter(i) {
+    var s = '';
+    while (i >= 0) { s = String.fromCharCode(65 + (i % 26)) + s; i = Math.floor(i / 26) - 1; }
+    return s;
+  }
+  function colmapText() {
+    if (!COLMAP) return '';
+    var labels = { date: '날짜', ch: '채널명', qty: '수량', amt: '매출',
+                   line: '제품라인', code: '상품코드', name: '상품명', price: '정상가' };
+    var parts = [];
+    ['date', 'ch', 'qty', 'amt', 'line', 'code', 'name', 'price'].forEach(function (k) {
+      parts.push(labels[k] + '=' + (COLMAP[k] < 0 ? '없음' : colLetter(COLMAP[k]) + '열'));
+    });
+    return '열 인식: ' + parts.join(' · ') + ' — 시트 첫 행의 이름으로 찾습니다.';
   }
 
   function loadAll() {
@@ -606,87 +700,30 @@
     });
   }
 
-  /** 첫 행에서 열 위치를 이름으로 찾습니다. 별칭도 함께 받습니다. */
-  var COL_ALIASES = {
-    date: ['날짜', '주문일', '주문일자'],
-    line: ['제품라인', '라인', '제품군'],
-    code: ['상품코드', '코드', '품목코드'],
-    name: ['상품명', '제품명', '품목명'],
-    ch:   ['채널명', '판매처', '채널'],
-    qty:  ['수량', '주문수량', '판매수량'],
-    amt:  ['매출', '주문금액', '금액', '매출액']
-  };
-
-  function mapColumns(header) {
-    var pos = {}, c;
-    for (c = 0; c < header.length; c++) {
-      var nm = String(header[c] === undefined || header[c] === null ? '' : header[c]).replace(/\s+/g, '');
-      if (nm && pos[nm] === undefined) pos[nm] = c;
-    }
-    var C = {}, key, names, j;
-    for (key in COL_ALIASES) {
-      C[key] = -1;
-      names = COL_ALIASES[key];
-      for (j = 0; j < names.length; j++) {
-        if (pos[names[j]] !== undefined) { C[key] = pos[names[j]]; break; }
-      }
-    }
-    var missing = [];
-    ['date', 'ch', 'qty', 'amt'].forEach(function (k) {
-      if (C[k] < 0) missing.push(COL_ALIASES[k][0]);
-    });
-    if (missing.length) {
-      var err = new Error('시트 첫 행에 "' + missing.join('", "') +
-                          '" 열이 없습니다. 첫 행에서 찾은 열: ' + Object.keys(pos).join(', '));
-      err.kind = 'columns';
-      throw err;
-    }
-    return C;
-  }
-
-  var COLMAP = null;   // 화면 하단에 인식 결과를 표시합니다
-
-  /** A, B, … Z 로 표기 */
-  function colLetter(i) {
-    var s = '';
-    while (i >= 0) { s = String.fromCharCode(65 + (i % 26)) + s; i = Math.floor(i / 26) - 1; }
-    return s;
-  }
-  function colmapText() {
-    if (!COLMAP) return '';
-    var labels = { date: '날짜', ch: '채널명', qty: '수량', amt: '매출',
-                   line: '제품라인', code: '상품코드', name: '상품명' };
-    var parts = [];
-    ['date', 'ch', 'qty', 'amt', 'line', 'code', 'name'].forEach(function (k) {
-      parts.push(labels[k] + '=' + (COLMAP[k] < 0 ? '없음' : colLetter(COLMAP[k]) + '열'));
-    });
-    return '열 인식: ' + parts.join(' · ') + ' — 시트 첫 행의 이름으로 찾습니다.';
-  }
-
   function parseRows(values, memoVals) {
     if (!values.length) throw new Error('시트가 비어 있습니다');
     var C = mapColumns(values[0]);
     COLMAP = C;
 
-    var rows = [], dateSet = {}, chSet = {}, lineSet = {};
+    var rows = [], dateSet = {}, chSet = {};
     var pick = function (r, i) { return i < 0 ? '' : r[i]; };
 
-    for (var i = 1; i < values.length; i++) {            // 0행은 헤더
+    for (var i = 1; i < values.length; i++) {
       var r = values[i];
-      if (!r || typeof r[C.date] !== 'number') continue;  // 날짜가 없는 행은 건너뜀
+      if (!r || typeof r[C.date] !== 'number') continue;
       var ds = serialToISO(r[C.date]);
       var rec = {
         d: ds,
         line: String(pick(r, C.line) || '').trim(),
         code: codeStr(pick(r, C.code)),
         name: String(pick(r, C.name) || '').trim(),
+        price: Number(pick(r, C.price)) || 0,
         ch: String(r[C.ch] || '').trim() || '채널미입력',
         qty: Number(r[C.qty]) || 0,
         amt: Number(r[C.amt]) || 0
       };
       rows.push(rec);
       dateSet[ds] = 1; chSet[rec.ch] = 1;
-      if (rec.line) lineSet[rec.line] = 1;
     }
     if (!rows.length) throw new Error('읽을 수 있는 행이 없습니다 (날짜 열의 서식을 확인해 주세요)');
 
@@ -698,19 +735,63 @@
     var months = {};
     dates.forEach(function (d) { months[d.slice(0, 7)] = 1; });
 
-    var memos = [];
-    (memoVals || []).forEach(function (m) {
-      if (!m || typeof m[0] !== 'number') return;
-      memos.push([serialToISO(m[0]), String(m[1] || '').trim(), String(m[2] || '').trim()]);
-    });
-
     return {
       rows: rows, dates: dates, channels: channels,
-      lines: Object.keys(lineSet).sort(),
       months: Object.keys(months).sort(),
       maxDate: dates[dates.length - 1],
-      memos: memos
+      memos: parseMemos(memoVals)
     };
+  }
+
+  /** memo 탭 → [{d, ch, code, text}] */
+  function parseMemos(vals) {
+    if (!vals || !vals.length) return [];
+    var C;
+    try { C = mapColumns(vals[0], ['date']); } catch (e) { return []; }
+    var chI = C.ch, codeI = C.code, txtI = -1;
+    var head = vals[0];
+    for (var c = 0; c < head.length; c++) {
+      var nm = String(head[c] || '').replace(/\s+/g, '');
+      if (nm === '메모' || nm === '비고' || nm === '내용') { txtI = c; break; }
+    }
+    if (txtI < 0) txtI = head.length - 1;
+
+    var out = [];
+    for (var i = 1; i < vals.length; i++) {
+      var r = vals[i];
+      if (!r || typeof r[C.date] !== 'number') continue;
+      var text = String(r[txtI] === undefined || r[txtI] === null ? '' : r[txtI]).trim();
+      if (!text) continue;
+      var ch = String(chI >= 0 ? (r[chI] || '') : '').trim();
+      out.push({
+        d: serialToISO(r[C.date]),
+        ch: MEMO_CH_ALIAS[ch] || ch,
+        code: codeStr(codeI >= 0 ? r[codeI] : ''),
+        text: text
+      });
+    }
+    return out;
+  }
+
+  /* 메모 조회용 색인 */
+  var memoIdx = {};
+  function buildMemoIndex() {
+    memoIdx = {};
+    (DATA.memos || []).forEach(function (m) {
+      var keys = ['d:' + m.d + '|c:' + m.ch];
+      if (m.code) keys.push('d:' + m.d + '|c:' + m.ch + '|p:' + m.code);
+      keys.forEach(function (k) { (memoIdx[k] = memoIdx[k] || []).push(m); });
+    });
+  }
+  function memoAt(d, ch, code) {
+    return memoIdx['d:' + d + '|c:' + ch + (code ? '|p:' + code : '')] || null;
+  }
+  /** 해당 판매처·날짜의 메모 중 상품코드가 없는 것 (m2 날짜 헤더용) */
+  function memoDateOnly(d, ch) {
+    var all = memoIdx['d:' + d + '|c:' + ch];
+    if (!all) return null;
+    var only = all.filter(function (m) { return !m.code; });
+    return only.length ? only : null;
   }
 
   /* ═══════════════════════════════════════════════════════
@@ -761,12 +842,12 @@
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
     document.getElementById('channel').value = state.ch;
     document.getElementById('period').value = state.month;
+    logVisit();                      /* 판매처를 바꾼 것도 방문 기록에 남습니다 */
   }
 
   /* ═══════════════════════════════════════════════════════
      집계
      ═══════════════════════════════════════════════════════ */
-  /* 로컬 시간대 기준 yyyy-mm-dd. toISOString()은 UTC로 바꿔 하루가 밀립니다. */
   function isoLocal(d) {
     var m = d.getMonth() + 1, day = d.getDate();
     return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
@@ -793,7 +874,7 @@
     var chHas = chs.map(function () { return zeros(n); });
     var chTot = zeros(chs.length);
     var dayTot = zeros(n);
-    var pIdx = {}, prods = [], pV = [], pTot = [];
+    var pIdx = {}, prods = [], pV = [], pHas = [], pTot = [];
 
     for (var k = 0; k < DATA.rows.length; k++) {
       var r = DATA.rows[k];
@@ -805,19 +886,29 @@
       if (c !== undefined) { chV[c][j] += v; chHas[c][j] = 1; chTot[c] += v; }
       dayTot[j] += v;
 
-      var key = r.code + '\u0000' + r.name;
+      var key = r.code + ' ' + r.name;
       var p = pIdx[key];
       if (p === undefined) {
         p = prods.length; pIdx[key] = p;
-        prods.push([r.code, r.line, r.name]); pV.push(zeros(n)); pTot.push(0);
+        prods.push([r.line, r.code, r.name, r.price]);
+        pV.push(zeros(n)); pHas.push(zeros(n)); pTot.push(0);
       }
-      pV[p][j] += v; pTot[p] += v;
+      pV[p][j] += v; pHas[p][j] = 1; pTot[p] += v;
+      if (!prods[p][3] && r.price) prods[p][3] = r.price;
     }
     return { win: win, n: n, chs: chs, chV: chV, chHas: chHas, chTot: chTot,
-             dayTot: dayTot, prods: prods, pV: pV, pTot: pTot };
+             dayTot: dayTot, prods: prods, pV: pV, pHas: pHas, pTot: pTot };
   }
 
   function zeros(n) { var a = new Array(n); for (var i = 0; i < n; i++) a[i] = 0; return a; }
+
+  /** 실적이 있는 날만 평균 — 엑셀 피벗의 AVERAGE와 동일 */
+  function avgOf(vals, has, n) {
+    var s = 0, c = 0;
+    for (var j = 0; j < n; j++) if (has[j]) { s += vals[j]; c++; }
+    return c ? s / c : 0;
+  }
+  function sumOf(vals, n) { var s = 0; for (var j = 0; j < n; j++) s += vals[j]; return s; }
 
   /* ═══════════════════════════════════════════════════════
      포맷
@@ -827,10 +918,26 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function md(ds) { return ds.slice(5) + '(' + WD[new Date(ds + 'T00:00:00').getDay()] + ')'; }
-  function fmt(v) { return v ? nf.format(Math.round(v)) : ''; }
+
+  /** 금액 : ₩ 접두, 마이너스는 빨간색 */
+  function money(v) {
+    if (!v) return '';
+    var s = '₩' + nf.format(Math.abs(Math.round(v)));
+    return v < 0 ? '<span class="neg">-' + s + '</span>' : s;
+  }
+  function qtyFmt(v) {
+    if (!v) return '';
+    var s = nf.format(Math.abs(Math.round(v)));
+    return v < 0 ? '<span class="neg">-' + s + '</span>' : s;
+  }
+  function val(v) { return state.metric === 'amt' ? money(v) : qtyFmt(v); }
+  /** 수량은 가운데, 금액은 우측 정렬 */
+  function alignCls() { return state.metric === 'amt' ? '' : ' c'; }
+  function unitTxt() { return state.metric === 'amt' ? '주문금액' : '주문수량'; }
+
   function compact(v) {
     var a = Math.abs(v);
-    if (state.metric === 'qty') return nf.format(Math.round(v)) + '개';
+    if (state.metric === 'qty') return nf.format(Math.round(v));
     if (a >= 1e8) return (v / 1e8).toFixed(2) + '억';
     if (a >= 1e4) return nf.format(Math.round(v / 1e4)) + '만';
     return nf.format(Math.round(v));
@@ -842,25 +949,19 @@
     return '<span class="chip ' + c + '">' + m + ' ' + (r > 0 ? '+' : '') + (r * 100).toFixed(1) + '%</span>';
   }
 
-  var memoBy = {};
-  function indexMemos() {
-    memoBy = {};
-    DATA.memos.forEach(function (m) { (memoBy[m[0]] = memoBy[m[0]] || []).push(m); });
-  }
-
   /* ═══════════════════════════════════════════════════════
      렌더
      ═══════════════════════════════════════════════════════ */
   var csvCache = {};
 
   function render() {
-    indexMemos();
+    buildMemoIndex();
+    closeMemo();
     var A = aggregate();
-    var anchor = A.win.length ? A.win[A.win.length - 1] : DATA.maxDate;
-    var unitTxt = state.metric === 'amt' ? '주문금액' : '주문수량';
+    var anchor = A.win.length ? A.win[A.n - 1] : DATA.maxDate;
 
     document.getElementById('pageTitle').textContent =
-      (state.ch || '전체 판매처') + ' 일일' + unitTxt + '현황';
+      (state.ch || '전체 판매처') + ' 일일' + unitTxt() + '현황';
     document.getElementById('crumb').innerHTML = state.ch
       ? '<a href="#" id="backAll">← 전체 판매처</a> · ' + esc(state.ch)
       : '주문일 기준 · 배송비 미포함 · 취소/교환/반품/환불 미반영';
@@ -873,89 +974,73 @@
         : '최근 ' + A.n + '일');
 
     document.getElementById('trendTitle').textContent =
-      (state.ch || '일일 총') + ' ' + unitTxt + ' 추이';
+      (state.ch || '일일 총') + ' ' + unitTxt() + ' 추이';
     document.getElementById('m2Title').textContent =
-      (state.ch || '전체 판매처') + ' 일일 ' + unitTxt + ' 현황 (상품별)';
+      (state.ch || '전체 판매처') + ' 일일 ' + unitTxt() + ' 현황 (상품별)';
     document.getElementById('m1Card').hidden = !!state.ch;
 
-    renderKpis(A, anchor);
+    renderKpis(A);
     renderTrend(A);
     if (!state.ch) renderM1(A, anchor);
-    renderM2(A);
-    renderMemos(A);
+    renderM2(A, anchor);
 
     document.getElementById('colmap').textContent = colmapText();
     document.getElementById('coverage').textContent =
       '원본 ' + nf.format(DATA.rows.length) + '행 · 수록 기간 ' + DATA.dates[0] + ' ~ ' + DATA.maxDate +
-      ' · 판매처 ' + DATA.channels.length + '곳';
+      ' · 판매처 ' + DATA.channels.length + '곳 · 메모 ' + (DATA.memos || []).length + '건';
     document.getElementById('caveat').textContent =
-      '일평균은 실적행이 있는 날만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함).';
+      '일평균은 실적이 있는 날만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함). ' +
+      '주황색 테두리가 있는 값은 메모가 달려 있습니다 — 누르면 열립니다.';
     document.getElementById('dash').hidden = false;
   }
 
-  function renderKpis(A, anchor) {
+  function renderKpis(A) {
     var last = A.n - 1;
     var today = A.n ? A.dayTot[last] : 0;
-    var sum = A.dayTot.reduce(function (s, v) { return s + v; }, 0);
+    var sum = sumOf(A.dayTot, A.n);
     var avg = A.n ? sum / A.n : 0;
     var prev = last - 7 >= 0 ? A.dayTot[last - 7] : null;
+    var prevDate = last - 7 >= 0 ? A.win[last - 7] : null;
 
     var bi = -1, bv = -Infinity;
     for (var i = 0; i < A.chs.length; i++) {
       var v = A.n ? A.chV[i][last] : 0;
       if (v > bv) { bv = v; bi = i; }
     }
-    var unit = state.metric === 'amt' ? '원' : '개';
-    var prevDate = last - 7 >= 0 ? A.win[last - 7] : null;
-    var won = function (v) { return nf.format(Math.round(v)); };
+    var isAmt = state.metric === 'amt';
+    var fig = function (v) { return (isAmt ? '₩' : '') + nf.format(Math.round(v)); };
+    var unit = isAmt ? '' : '개';
 
-    /* 카드의 큰 숫자는 반드시 그 카드의 제목이 말하는 값이어야 합니다.
-       (이전 버전은 "전주 동요일 대비" 자리에 지난주 금액을 그대로 띄웠습니다) */
     var t = [
-      ['당일 ' + (state.metric === 'amt' ? '총 주문금액' : '총 주문수량'),
-       won(today), unit,
+      ['당일 총 ' + (isAmt ? '주문금액' : '주문수량'), fig(today), unit,
        '일평균 대비 ' + chip(avg ? (today - avg) / avg : null)],
-
-      ['기간 일평균', won(avg), unit,
-       '<span class="chip flat">' + A.n + '일 평균</span>'],
-
+      ['기간 일평균', fig(avg), unit, '<span class="chip flat">' + A.n + '일 평균</span>'],
       ['전주 동요일 대비',
        prev ? ((today - prev) / prev > 0 ? '+' : '') + ((today - prev) / prev * 100).toFixed(1) + '%' : '—', '',
-       prev != null
-         ? '<span class="chip flat">' + md(prevDate) + ' ' + won(prev) + unit + '</span>'
-         : '<span class="chip flat">기간 밖</span>'],
-
+       prev != null ? '<span class="chip flat">' + md(prevDate) + ' ' + fig(prev) + unit + '</span>'
+                    : '<span class="chip flat">기간 밖</span>'],
       ['당일 1위 판매처', bi >= 0 && bv > 0 ? A.chs[bi] : '—', '',
        bi >= 0 && bv > 0
-         ? '<span class="chip flat">' + won(bv) + unit + ' · 비중 ' +
+         ? '<span class="chip flat">' + fig(bv) + unit + ' · 비중 ' +
            (today ? (bv / today * 100).toFixed(0) : 0) + '%</span>'
-         : '<span class="chip flat">주문 없음</span>'],
-
-      ['기간 누계', won(sum), unit,
-       '<span class="chip flat">' + (A.n ? md(A.win[0]) + ' ~ ' + md(A.win[last]) : '—') + '</span>']
+         : '<span class="chip flat">주문 없음</span>']
     ];
     document.getElementById('kpis').innerHTML = t.map(function (x) {
       var big = String(x[1]);
-      var cls = 'v num' + (big.length > 10 ? ' long' : '');
-      return '<div class="kpi"><div class="k">' + esc(x[0]) + '</div><div class="' + cls + '">' +
-             esc(big) + (x[2] ? '<small>' + x[2] + '</small>' : '') +
+      return '<div class="kpi"><div class="k">' + esc(x[0]) + '</div><div class="v num' +
+             (big.length > 10 ? ' long' : '') + '">' + esc(big) +
+             (x[2] ? '<small>' + x[2] + '</small>' : '') +
              '</div><div class="d">' + x[3] + '</div></div>';
     }).join('');
   }
 
-  /**
-   * 판매처별 누적막대 + 일일 총액 선.
-   * 막대 한 칸이 판매처 하나이고, 색은 채널분류를 따릅니다. 면세 3사처럼 같은 분류가
-   * 이어질 때는 2px 간격으로 나뉘며, 어느 판매처인지는 마우스를 올리면 나옵니다.
-   */
+  /* ── 추이 : 판매처 누적막대 + 총액 선 + 일평균 점선 ─────── */
   function renderTrend(A) {
     var svg = document.getElementById('trend');
     var W = 1000, H = 300, ml = 74, mr = 16, mt = 16, mb = 38;
     if (!A.n) { svg.innerHTML = ''; return; }
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 
-    /* 반품이 있는 날은 판매처 값이 음수입니다. 버리지 않고 기준선 아래로 그려야
-       막대와 표의 숫자가 어긋나지 않습니다. */
     var posMax = 1, negMin = 0, k2, i2, v2, ps, ns;
     for (k2 = 0; k2 < A.n; k2++) {
       ps = 0; ns = 0;
@@ -981,7 +1066,6 @@
            compact(top * t / 4) + '</text>';
     }
 
-    /* 누적막대 — 판매처 순서는 표와 동일하게 유지 */
     var segs = [];
     for (var k = 0; k < A.n; k++) {
       var accP = 0, accN = 0, total = A.dayTot[k];
@@ -991,7 +1075,7 @@
         var y0, y1;
         if (v > 0) { y0 = y(accP); y1 = y(accP + v); accP += v; }
         else       { y1 = y(accN); y0 = y(accN + v); accN += v; }
-        var h = Math.max(1.5, Math.abs(y0 - y1) - 2);     // 세그먼트 사이 2px 간격
+        var h = Math.max(1.5, Math.abs(y0 - y1) - 2);
         segs.push({ k: k, i: i, v: v, total: total });
         o += '<rect x="' + (cx(k) - bw / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) +
              '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) +
@@ -1000,65 +1084,68 @@
              ' data-s="' + (segs.length - 1) + '"></rect>';
       }
     }
-    if (negMin < 0) {                                     /* 0 기준선 */
+    if (negMin < 0) {
       o += '<line x1="' + ml + '" y1="' + y(0).toFixed(1) + '" x2="' + (W - mr) +
            '" y2="' + y(0).toFixed(1) + '" stroke="var(--border)" stroke-width="1"/>';
     }
 
-    /* 일일 총액 선 — 계열색이 아닌 잉크색이라 판매처와 섞이지 않습니다 */
+    /* 일일 총액 선 */
     var pts = A.dayTot.map(function (v, k) { return cx(k).toFixed(1) + ',' + y(v).toFixed(1); });
     o += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ink)" stroke-width="2" ' +
          'stroke-linejoin="round" stroke-linecap="round" opacity=".82" pointer-events="none"/>';
     o += '<circle cx="' + cx(A.n - 1).toFixed(1) + '" cy="' + y(A.dayTot[A.n - 1]).toFixed(1) +
          '" r="4.5" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" pointer-events="none"/>';
+
+    /* 일평균 점선 (투명도 50%) */
+    var avg = A.n ? sumOf(A.dayTot, A.n) / A.n : 0;
+    var ay = y(avg);
+    o += '<line x1="' + ml + '" y1="' + ay.toFixed(1) + '" x2="' + (W - mr) + '" y2="' + ay.toFixed(1) +
+         '" stroke="var(--ink)" stroke-width="2" stroke-dasharray="6 4" opacity=".5" pointer-events="none"/>';
+    o += '<text x="' + (W - mr - 2) + '" y="' + (ay - 6).toFixed(1) + '" text-anchor="end" ' +
+         'opacity=".75">일평균 ' + compact(avg) + '</text>';
+
     o += '<line class="axis" x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '"/>';
 
     var step = Math.max(1, Math.ceil(A.n / 12));
     A.win.forEach(function (d, k) {
       if (k % step === 0 || k === A.n - 1)
         o += '<text x="' + cx(k).toFixed(1) + '" y="' + (H - mb + 15) + '" text-anchor="middle">' + md(d) + '</text>';
-      if (memoBy[d]) o += '<circle cx="' + cx(k).toFixed(1) + '" cy="' + (H - mb + 24) + '" r="3" fill="var(--accent)"/>';
     });
     svg.innerHTML = o;
 
     var tip = document.getElementById('trendTip');
-    var unit = state.metric === 'amt' ? '원' : '개';
+    var uu = state.metric === 'amt' ? '원' : '개';
+    var plain = function (v) { return nf.format(Math.round(v)) + uu; };
 
     svg.onpointermove = function (e) {
       var box = svg.getBoundingClientRect();
       var rect = e.target.closest('rect[data-s]');
       var html, px, py;
 
-      if (rect) {                                    // 막대 한 칸 → 판매처 상세
+      if (rect) {
         var s = segs[+rect.dataset.s], d = A.win[s.k];
         html = '<div class="t-d">' + d + ' ' + md(d) + '</div><strong>' + esc(A.chs[s.i]) +
-               '</strong> · <span class="num">' + nf.format(Math.round(s.v)) + unit +
+               '</strong> · <span class="num">' + plain(s.v) +
                '</span> · 비중 ' + (s.total ? (s.v / s.total * 100).toFixed(1) : '0.0') + '%' +
-               '<div class="t-m">일일 총 ' + nf.format(Math.round(s.total)) + unit + '</div>';
+               '<div class="t-m">일일 총 ' + plain(s.total) + '</div>';
         var rb = rect.getBoundingClientRect();
         px = rb.left - box.left + rb.width / 2;
         py = rb.top - box.top;
       } else {
-        /* 빈 곳 → 그날 판매처 내역 전체. 막대가 1~2px인 작은 판매처도 여기서 보입니다. */
         var kk = Math.floor(((e.clientX - box.left) / box.width * W - ml) / band);
         kk = Math.max(0, Math.min(A.n - 1, kk));
-        var dd = A.win[kk], ms = memoBy[dd] || [], dt = A.dayTot[kk];
-
+        var dd = A.win[kk], dt = A.dayTot[kk];
         var list = [];
         for (var q = 0; q < A.chs.length; q++) {
           if (A.chV[q][kk]) list.push({ c: A.chs[q], v: A.chV[q][kk] });
         }
         list.sort(function (a, b) { return b.v - a.v; });
-
-        html = '<div class="t-d">' + dd + ' ' + md(dd) + '</div><strong class="num">' +
-               nf.format(Math.round(dt)) + unit + '</strong>' +
+        html = '<div class="t-d">' + dd + ' ' + md(dd) + '</div><strong class="num">' + plain(dt) + '</strong>' +
                '<div class="t-rows">' + list.map(function (r) {
-                 return '<div><i style="background:' + chColor(r.c) + '"></i>' +
-                        '<span>' + esc(r.c) + '</span><b class="num">' + nf.format(Math.round(r.v)) + '</b>' +
-                        '<em>' + (dt ? (r.v / dt * 100).toFixed(1) : '0.0') + '%</em></div>';
-               }).join('') + '</div>' +
-               (ms.length ? '<div class="t-m">' + ms.map(function (m) {
-                 return '· [' + esc(m[1]) + '] ' + esc(m[2]); }).join('<br>') + '</div>' : '');
+                 return '<div><i style="background:' + chColor(r.c) + '"></i><span>' + esc(r.c) +
+                        '</span><b class="num">' + nf.format(Math.round(r.v)) + '</b><em>' +
+                        (dt ? (r.v / dt * 100).toFixed(1) : '0.0') + '%</em></div>';
+               }).join('') + '</div>';
         px = cx(kk) / W * box.width;
         py = y(Math.max(0, dt)) / H * box.height - 10;
       }
@@ -1069,8 +1156,6 @@
     };
     svg.onpointerleave = function () { tip.style.opacity = '0'; };
 
-    /* 범례 — 판매처 순서(CH_ORDER)를 그대로 따르고, 일일총주문금액을 맨 뒤에 둡니다.
-       A.chs 는 이미 CH_ORDER 순서라 정렬이 필요 없습니다. */
     var items = [];
     for (var g = 0; g < A.chs.length; g++) {
       if (!A.chTot[g]) continue;
@@ -1078,115 +1163,200 @@
     }
     items.push('<span><i style="background:var(--ink);opacity:.82;height:3px;border-radius:2px"></i>' +
                '일일총주문금액</span>');
+    items.push('<span><i class="dash"></i>일평균</span>');
     document.getElementById('trendLegend').innerHTML = items.join('');
   }
 
+  /* ── 표1 : 날짜 × 판매처 (합계 열이 맨 앞) ───────────────── */
   function renderM1(A, anchor) {
     var cols = [];
     for (var i = 0; i < A.chs.length; i++) if (A.chTot[i] !== 0) cols.push(i);
 
-    var avg = cols.map(function (i) {
-      var s = 0, n = 0;
-      for (var j = 0; j < A.n; j++) if (A.chHas[i][j]) { s += A.chV[i][j]; n++; }
-      return n ? s / n : 0;
-    });
-    var totAvg = A.n ? A.dayTot.reduce(function (s, v) { return s + v; }, 0) / A.n : 0;
-    var last = A.n - 1;
+    var isMonth = !!state.month;
+    var lastIdx = A.n - 1;
+    var al = alignCls();
 
-    var h = '<thead><tr><th class="l stick">날짜</th>' + cols.map(function (i) {
-      return '<th class="chlink" data-ch="' + esc(A.chs[i]) + '" title="클릭하면 상세로 이동합니다">' +
-             '<span>' + esc(A.chs[i]) + '</span></th>';
-    }).join('') + '<th>합계</th></tr></thead><tbody>';
+    var avg = cols.map(function (i) { return avgOf(A.chV[i], A.chHas[i], A.n); });
+    var totAvg = A.n ? sumOf(A.dayTot, A.n) / A.n : 0;
+    var sums = cols.map(function (i) { return sumOf(A.chV[i], A.n); });
+    var grand = sumOf(A.dayTot, A.n);
 
-    var csv = [['날짜'].concat(cols.map(function (i) { return A.chs[i]; })).concat(['합계'])];
-    for (var j = 0; j < A.n; j++) {
-      var d = A.win[j];
-      h += '<tr class="' + (d === anchor ? 'today' : '') + '"><td class="l stick num">' + d.slice(5) +
-           ' <span style="color:var(--ink-muted)">' + md(d).slice(-3) + '</span>' +
-           (memoBy[d] ? '<span class="memo-dot" title="메모 있음"></span>' : '') + '</td>';
-      var line = [d];
-      cols.forEach(function (i) {
-        var has = A.chHas[i][j], v = A.chV[i][j];
-        h += has ? '<td class="num">' + nf.format(Math.round(v)) + '</td>' : '<td class="num zero">·</td>';
-        line.push(has ? v : '');
-      });
-      h += '<td class="num"><strong>' + fmt(A.dayTot[j]) + '</strong></td></tr>';
-      line.push(A.dayTot[j]); csv.push(line);
+    var head = '<thead><tr><th class="stick">날짜</th>' +
+      '<th class="totcol">합계</th>' +
+      cols.map(function (i) {
+        return '<th class="chlink" data-ch="' + esc(A.chs[i]) + '" title="클릭하면 상세로 이동합니다">' +
+               '<span>' + esc(A.chs[i]) + '</span></th>';
+      }).join('') + '</tr></thead>';
+
+    /* 통계 행 */
+    function rowAvg(pos) {
+      return '<tr class="stat ' + pos + '"><td class="c stick">일평균</td>' +
+        '<td class="num totcol' + al + '">' + val(totAvg) + '</td>' +
+        avg.map(function (v) { return '<td class="num' + al + '">' + val(v) + '</td>'; }).join('') + '</tr>';
     }
-    h += '<tr class="stat"><td class="l stick">일평균</td>' +
-         avg.map(function (v) { return '<td class="num">' + fmt(v) + '</td>'; }).join('') +
-         '<td class="num">' + fmt(totAvg) + '</td></tr>';
-    h += '<tr class="stat"><td class="l stick">일평균 대비</td>' +
-         avg.map(function (v, k) {
-           return '<td>' + chip(v ? (A.chV[cols[k]][last] - v) / v : null) + '</td>';
-         }).join('') +
-         '<td>' + chip(totAvg ? (A.dayTot[last] - totAvg) / totAvg : null) + '</td></tr></tbody>';
+    function rowDelta(pos) {
+      return '<tr class="stat ' + pos + '"><td class="c stick">일평균 대비</td>' +
+        '<td class="totcol c">' + chip(totAvg ? (A.dayTot[lastIdx] - totAvg) / totAvg : null) + '</td>' +
+        avg.map(function (v, k) {
+          return '<td class="c">' + chip(v ? (A.chV[cols[k]][lastIdx] - v) / v : null) + '</td>';
+        }).join('') + '</tr>';
+    }
+    function rowSum(pos) {
+      return '<tr class="stat ' + pos + '"><td class="c stick">합계</td>' +
+        '<td class="num totcol' + al + '">' + val(grand) + '</td>' +
+        sums.map(function (v) { return '<td class="num' + al + '">' + val(v) + '</td>'; }).join('') + '</tr>';
+    }
+
+    /* 날짜 행 — 항상 내림차순 */
+    var body = '';
+    var csv = [['날짜', '합계'].concat(cols.map(function (i) { return A.chs[i]; }))];
+    for (var j = A.n - 1; j >= 0; j--) {
+      var d = A.win[j];
+      var tm = memoAt(d, TOTAL_KEY);
+      body += '<tr class="' + (d === anchor ? 'today' : '') + '">' +
+              '<td class="c stick num">' + d.slice(5) +
+              ' <span style="color:var(--ink-muted)">' + md(d).slice(-3) + '</span></td>' +
+              '<td class="num totcol' + al + (tm ? ' hasmemo' : '') + '"' +
+              (tm ? ' data-md="' + d + '" data-mc="' + TOTAL_KEY + '" tabindex="0"' : '') +
+              '><strong>' + val(A.dayTot[j]) + '</strong></td>';
+      var line = [d, A.dayTot[j]];
+      for (var q = 0; q < cols.length; q++) {
+        var ci = cols[q], v = A.chV[ci][j], has = A.chHas[ci][j];
+        var m = memoAt(d, A.chs[ci]);
+        body += '<td class="num' + al + (has ? '' : ' zero') + (m ? ' hasmemo' : '') + '"' +
+                (m ? ' data-md="' + d + '" data-mc="' + esc(A.chs[ci]) + '" tabindex="0"' : '') + '>' +
+                (has ? (v ? val(v) : '0') : '·') + '</td>';
+        line.push(has ? v : '');
+      }
+      body += '</tr>';
+      csv.push(line);
+    }
+
+    /* 최근 30일 : 일평균·일평균대비를 맨 위 / 월 기준 : 합계·일평균을 맨 밑 */
+    var html = head + '<tbody>' +
+      (isMonth ? body + rowSum('bottom') + rowAvg('bottom')
+               : rowAvg('top') + rowDelta('top') + body) + '</tbody>';
 
     var m1 = document.getElementById('m1');
-    m1.innerHTML = h;
+    m1.innerHTML = html;
     Array.prototype.forEach.call(m1.querySelectorAll('th.chlink'), function (th) {
       th.onclick = function () { state.ch = th.dataset.ch; syncUrl(); render(); window.scrollTo(0, 0); };
     });
     document.getElementById('m1Note').textContent =
-      '단위: ' + (state.metric === 'amt' ? '원' : '개') + ' · 판매처 이름을 클릭하면 상세로 이동합니다';
+      '단위: ' + (state.metric === 'amt' ? '원' : '개') +
+      ' · 날짜 내림차순 · 판매처 이름을 클릭하면 상세로 이동합니다';
 
-    csv.push(['일평균'].concat(avg).concat([totAvg]));
-    csv.push(['일평균대비'].concat(avg.map(function (v, k) {
-      return v ? (A.chV[cols[k]][last] - v) / v : ''; })).concat([totAvg ? (A.dayTot[last] - totAvg) / totAvg : '']));
+    if (isMonth) {
+      csv.push(['합계', grand].concat(sums));
+      csv.push(['일평균', totAvg].concat(avg));
+    } else {
+      csv.unshift(['일평균', totAvg].concat(avg));
+      csv.unshift(['일평균대비', totAvg ? (A.dayTot[lastIdx] - totAvg) / totAvg : ''].concat(
+        avg.map(function (v, k) { return v ? (A.chV[cols[k]][lastIdx] - v) / v : ''; })));
+    }
     csvCache.m1 = { name: '판매처별_' + (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
   }
 
-  function renderM2(A) {
+  /* ── 표2 : 상품 × 날짜 ──────────────────────────────────── */
+  function renderM2(A, anchor) {
     var order = [];
     for (var i = 0; i < A.prods.length; i++) if (A.pTot[i] !== 0) order.push(i);
     order.sort(function (a, b) { return A.pTot[b] - A.pTot[a]; });
-    var days = A.win.slice().reverse();                 // 최근순
-    var map = {}; A.win.forEach(function (d, k) { map[d] = k; });
+    var al = alignCls();
+    var chForMemo = state.ch;
 
-    var h = '<thead><tr><th class="l c1">상품코드</th><th class="l c2">제품라인</th>' +
-            '<th class="l c3">상품명</th>' +
-            days.map(function (d) { return '<th>' + md(d) + '</th>'; }).join('') +
-            '<th>총합계</th></tr></thead><tbody>';
-    var csv = [['상품코드', '제품라인', '상품명'].concat(days).concat(['총합계'])];
-    var colTot = days.map(function () { return 0; });
+    var head = '<thead><tr>' +
+      '<th class="p1">제품라인</th><th class="p2">상품코드</th>' +
+      '<th class="p3">상품명</th><th class="p4">정상가</th><th class="p5">일평균</th>';
+    var csvHead = ['제품라인', '상품코드', '상품명', '정상가', '일평균'];
+    for (var j = A.n - 1; j >= 0; j--) {
+      var d = A.win[j];
+      var dm = chForMemo ? memoDateOnly(d, chForMemo) : null;
+      head += '<th' + (dm ? ' class="hasmemo" data-md="' + d + '" data-mc="' + esc(chForMemo) +
+              '" tabindex="0"' : '') + '>' + md(d) + '</th>';
+      csvHead.push(d);
+    }
+    head += '</tr></thead>';
 
+    var body = '', csv = [csvHead];
     order.forEach(function (pi) {
-      var p = A.prods[pi], row = [p[0], p[1], p[2]];
-      h += '<tr><td class="l c1 code num">' + esc(p[0]) + '</td>' +
-           '<td class="l c2"><span class="line-tag">' + esc(p[1] || '—') + '</span></td>' +
-           '<td class="l c3" title="' + esc(p[2]) + '">' + esc(p[2]) + '</td>';
-      days.forEach(function (d, k) {
-        var v = A.pV[pi][map[d]]; colTot[k] += v;
-        h += v ? '<td class="num">' + nf.format(Math.round(v)) + '</td>' : '<td class="num zero">·</td>';
+      var p = A.prods[pi];
+      var pavg = avgOf(A.pV[pi], A.pHas[pi], A.n);
+      body += '<tr><td class="l p1"><span class="line-tag">' + esc(p[0] || '—') + '</span></td>' +
+              '<td class="l p2 code num">' + esc(p[1]) + '</td>' +
+              '<td class="l p3" title="' + esc(p[2]) + '">' + esc(p[2]) + '</td>' +
+              '<td class="num p4">' + (p[3] ? '₩' + nf.format(p[3]) : '') + '</td>' +
+              '<td class="num p5' + al + '"><strong>' + val(pavg) + '</strong></td>';
+      var row = [p[0], p[1], p[2], p[3] || '', pavg];
+      for (var k = A.n - 1; k >= 0; k--) {
+        var v = A.pV[pi][k], dd = A.win[k];
+        var cm = chForMemo ? memoAt(dd, chForMemo, p[1]) : null;
+        body += '<td class="num' + al + (v ? '' : ' zero') + (cm ? ' hasmemo' : '') + '"' +
+                (cm ? ' data-md="' + dd + '" data-mc="' + esc(chForMemo) + '" data-mp="' + esc(p[1]) +
+                      '" tabindex="0"' : '') + '>' + (v ? val(v) : '·') + '</td>';
         row.push(v || '');
-      });
-      h += '<td class="num"><strong>' + fmt(A.pTot[pi]) + '</strong></td></tr>';
-      row.push(A.pTot[pi]); csv.push(row);
+      }
+      body += '</tr>';
+      csv.push(row);
     });
-    var grand = colTot.reduce(function (s, v) { return s + v; }, 0);
-    h += '<tr class="total"><td class="l c1">총합계</td><td class="c2"></td><td class="c3"></td>' +
-         colTot.map(function (v) { return '<td class="num">' + fmt(v) + '</td>'; }).join('') +
-         '<td class="num">' + fmt(grand) + '</td></tr></tbody>';
-    document.getElementById('m2').innerHTML = h;
-    csv.push(['총합계', '', ''].concat(colTot).concat([grand]));
-    csvCache.m2 = { name: (state.ch || '전체') + '_상품별_' + (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
+
+    document.getElementById('m2').innerHTML = head + '<tbody>' + body + '</tbody>';
+    csvCache.m2 = { name: (state.ch || '전체') + '_상품별_' + (state.metric === 'amt' ? '금액' : '수량'),
+                    rows: csv };
   }
 
-  function renderMemos(A) {
-    if (!A.n) return;
-    var from = A.win[0], to = A.win[A.n - 1];
-    var ms = DATA.memos.filter(function (m) { return m[0] >= from && m[0] <= to; });
-    if (state.ch) ms = ms.filter(function (m) { return m[1] === state.ch || m[1] === '일일총주문금액'; });
-    ms.sort(function (a, b) { return b[0] < a[0] ? -1 : 1; });
-    document.getElementById('memos').innerHTML = ms.length
-      ? ms.map(function (m) {
-          return '<div class="memo"><div class="m-d">' + m[0].slice(5) + ' ' + md(m[0]).slice(-3) +
-                 '</div><div class="m-c">' + esc(m[1]) + '</div><div class="m-t">' + esc(m[2]) + '</div></div>';
-        }).join('')
-      : '<div class="empty">이 기간에 등록된 메모가 없습니다.' +
-        (DATA.memos.length ? '' : ' (시트에 "메모" 탭을 만들면 여기에 표시됩니다 — 날짜 / 판매처 / 메모)') + '</div>';
-    document.getElementById('memoNote').textContent = ms.length + '건';
+  /* ═══════════════════════════════════════════════════════
+     메모 팝업 — 셀을 누르면 열리고 다시 누르면 닫힙니다
+     ═══════════════════════════════════════════════════════ */
+  var openCell = null, popEl = null;
+
+  function closeMemo() {
+    if (popEl) { popEl.remove(); popEl = null; }
+    if (openCell) { openCell.classList.remove('open'); openCell = null; }
   }
+
+  function openMemo(cell) {
+    var d = cell.dataset.md, ch = cell.dataset.mc, code = cell.dataset.mp || '';
+    var list = memoAt(d, ch, code) || memoAt(d, ch) || [];
+    if (!list.length) return;
+
+    closeMemo();
+    openCell = cell;
+    cell.classList.add('open');
+
+    popEl = document.createElement('div');
+    popEl.className = 'memopop';
+    popEl.innerHTML = '<div class="mp-h">' + md(d) + ' · ' + esc(ch) +
+      (code ? ' · ' + esc(code) : '') + '</div>' +
+      list.map(function (m) { return '<div class="mp-t">' + esc(m.text) + '</div>'; }).join('');
+    document.body.appendChild(popEl);
+
+    var r = cell.getBoundingClientRect(), pr = popEl.getBoundingClientRect();
+    var left = Math.min(Math.max(8, r.left), window.innerWidth - pr.width - 8);
+    var top = r.bottom + 6;
+    if (top + pr.height > window.innerHeight - 8) top = Math.max(8, r.top - pr.height - 6);
+    popEl.style.left = left + 'px';
+    popEl.style.top = top + 'px';
+  }
+
+  document.addEventListener('click', function (e) {
+    var cell = e.target.closest('.hasmemo');
+    if (cell) {
+      if (cell === openCell) closeMemo(); else openMemo(cell);
+      return;
+    }
+    if (popEl && !e.target.closest('.memopop')) closeMemo();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMemo();
+    if ((e.key === 'Enter' || e.key === ' ') && document.activeElement &&
+        document.activeElement.classList.contains('hasmemo')) {
+      e.preventDefault();
+      var c = document.activeElement;
+      if (c === openCell) closeMemo(); else openMemo(c);
+    }
+  });
+  window.addEventListener('resize', closeMemo);
 
   /* ═══════════════════════════════════════════════════════
      CSV
@@ -1201,7 +1371,6 @@
         return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
       }).join(',');
     }).join('\r\n');
-    // BOM(U+FEFF)을 붙여야 엑셀에서 한글이 깨지지 않습니다
     var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
