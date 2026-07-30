@@ -29,6 +29,9 @@
     --noteflo-bd:   #f3c6ba;
     --noteflo-ink:  #c0561a;   /* 진한 주황 */
     --today-hl:     #f2f542;   /* TODAY 형광 노랑 */
+    /* 열별 색 스케일의 가장 진한 단계. 농도는 알파로만 조절해
+       글자가 흰색으로 바뀔 만큼 어두워지지 않습니다. */
+    --scale-rgb:    122, 179, 230;
     /* 판매처 색 — CH_ORDER 위치와 1:1 고정.
        자사몰·네이버·카카오·29cm는 지정 브랜드 색이고, 인접 구간이
        색각 이상에서 구분되도록 명도 계단으로 배치했습니다. */
@@ -60,7 +63,7 @@
       --good:#0ca30c; --serious:#c96a50;
       --up:#c96a50; --down:#3e8cc4; --neg:#e8877a; --memo:#f0a04b;
       --noteflo-bg:#3b211b; --noteflo-bd:#5d3529; --noteflo-ink:#f0a86b;
-      --today-hl:#d8dc22;
+      --today-hl:#d8dc22; --scale-rgb:122, 179, 230;
       /* 29cm 검정은 어두운 배경에서 묻히므로 흰색으로 반전됩니다 */
       --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
       --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
@@ -78,7 +81,7 @@
     --good:#0ca30c; --serious:#c96a50;
     --up:#c96a50; --down:#3e8cc4; --neg:#e8877a; --memo:#f0a04b;
     --noteflo-bg:#3b211b; --noteflo-bd:#5d3529; --noteflo-ink:#f0a86b;
-    --today-hl:#d8dc22;
+    --today-hl:#d8dc22; --scale-rgb:122, 179, 230;
     --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
     --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
     --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
@@ -277,7 +280,8 @@
   tr.stat td { background: var(--surface-2); font-weight: 620; }
   tr.stat.top td { border-bottom: 1px solid var(--border); }
   tr.stat.bottom td { border-top: 1px solid var(--border); }
-  tr.today td { box-shadow: inset 0 0 0 9999px var(--accent-soft); }
+  /* 당일 강조는 반투명으로 덮어 아래 색 스케일이 그대로 보이게 합니다 */
+  tr.today td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--accent) 9%, transparent); }
   .code { font-size: 11px; color: var(--ink-muted); }
   .line-tag { display: inline-block; font-size: 10px; letter-spacing: .04em; color: var(--ink-2);
               background: var(--surface-2); border: 1px solid var(--hairline);
@@ -969,7 +973,7 @@
       if (c !== undefined) { chV[c][j] += v; chHas[c][j] = 1; chTot[c] += v; }
       dayTot[j] += v;
 
-      var key = r.code + ' ' + r.name;
+      var key = r.code + '|@|' + r.name;
       var p = pIdx[key];
       if (p === undefined) {
         p = prods.length; pIdx[key] = p;
@@ -1314,6 +1318,22 @@
     var lastIdx = A.n - 1;
     var al = alignCls();
 
+    /* 열별 색 스케일 — 각 판매처 열의 최대값이 가장 진한 단계입니다.
+       농도는 알파(최대 0.5)로만 올리므로 글자가 흰색으로 바뀔 일이 없습니다.
+       합계 열과 통계 행은 비교 대상이 아니라 기준선이라 칠하지 않고,
+       판매처를 하나만 골랐을 때도 비교 대상이 없어 칠하지 않습니다. */
+    var scaleOn = (state.ch === '');
+    var colMax = cols.map(function (i) {
+      var m = 0, j;
+      for (j = 0; j < A.n; j++) if (A.chV[i][j] > m) m = A.chV[i][j];
+      return m;
+    });
+    function scaleStyle(v, ci) {
+      if (!scaleOn || !(v > 0) || !colMax[ci]) return '';
+      return ' style="background-color:rgba(var(--scale-rgb),' +
+             ((v / colMax[ci]) * 0.5).toFixed(3) + ')"';
+    }
+
     var avg = cols.map(function (i) { return avgOf(A.chV[i], A.chHas[i], A.n); });
     var totAvg = A.n ? sumOf(A.dayTot, A.n) / A.n : 0;
     var sums = cols.map(function (i) { return sumOf(A.chV[i], A.n); });
@@ -1364,7 +1384,8 @@
         var ci = cols[q], v = A.chV[ci][j], has = A.chHas[ci][j];
         var m = memoAt(d, A.chs[ci]);
         body += '<td class="num' + al + (has ? '' : ' zero') + (m ? ' hasmemo' : '') + '"' +
-                (m ? ' data-md="' + d + '" data-mc="' + esc(A.chs[ci]) + '" tabindex="0"' : '') + '>' +
+                (m ? ' data-md="' + d + '" data-mc="' + esc(A.chs[ci]) + '" tabindex="0"' : '') +
+                scaleStyle(v, q) + '>' +
                 (has ? (v ? val(v) : '0') : '·') + '</td>';
         line.push(has ? v : '');
       }
