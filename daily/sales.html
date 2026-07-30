@@ -23,9 +23,25 @@
     --serious:      #c1543a;
     --up:           #c1543a;   /* 국내 관행 : 상승 적색 */
     --down:         #1d6fa5;   /*            하락 청색 */
-    /* 판매처 분류 8색 — 색각 이상 검증 통과 (흰 배경 기준) */
-    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
-    --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+    /* 판매처 색 — 순서는 CH_ORDER와 1:1로 고정됩니다.
+       자사몰·네이버·카카오·29cm는 브랜드 색을 지정받았고, 나머지는
+       인접 구간이 색각 이상에서 구분되도록 배치했습니다. */
+    --c1:#1B6B3A;   /* 자사몰       진한 초록 */
+    --c2:#4E9A1F;   /* 네이버       연두 */
+    --c3:#F7C500;   /* 카카오       노랑 */
+    --c4:#B5457B;   /* 캐리마켓(온) */
+    --c5:#1A1A1A;   /* 29cm        검정 */
+    --c6:#9A5F2B;   /* 제네시스 */
+    --c7:#2A78D6;   /* 현대M몰 */
+    --c8:#C0392B;   /* 롯데백화점(온) */
+    --c9:#5C5FBF;   /* 신세계면세점 */
+    --c10:#DE5F2A;  /* 롯데면세점 */
+    --c11:#008B7A;  /* 신라면세점 */
+    --c12:#7B3FA0;  /* 플래그쉽 */
+    --c13:#0288A7;  /* HOS청담 */
+    --c14:#6D7C1F;  /* 어메니티 */
+    --c15:#D14A8F;  /* 페이히어 */
+    --c-other:#8b939c;   /* 목록에 없는 새 판매처 */
     --shadow: 0 1px 2px rgba(15,23,32,.05), 0 8px 24px -12px rgba(15,23,32,.16);
   }
   @media (prefers-color-scheme: dark) {
@@ -37,8 +53,11 @@
       --accent:#3e8cc4; --accent-soft:#1c2a3d;
       --good:#0ca30c; --serious:#c96a50;
       --up:#c96a50; --down:#3e8cc4;
-      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
-      --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+      /* 어두운 배경용 — 29cm 검정은 흰색으로 반전됩니다 */
+      --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
+      --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
+      --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
+      --c-other:#8b939c;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
     }
   }
@@ -50,8 +69,10 @@
     --accent:#3e8cc4; --accent-soft:#1c2a3d;
     --good:#0ca30c; --serious:#c96a50;
     --up:#c96a50; --down:#3e8cc4;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
-    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
+    --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
+    --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
+    --c-other:#8b939c;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
   }
 
@@ -99,9 +120,13 @@
   .who strong { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
 
   /* ── 컨트롤 ─────────────────────────────────────────────── */
+  /* 스크롤해도 화면 상단에 붙어 있습니다. 페이지 배경을 깔아
+     뒤로 지나가는 내용이 틈으로 비치지 않게 합니다. */
+  .controls-dock { position: sticky; top: 0; z-index: 60;
+                   background: var(--plane); padding: 10px 0 6px; margin-bottom: 10px; }
   .controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end;
               background: var(--surface); border: 1px solid var(--hairline);
-              border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;
+              border-radius: 12px; padding: 12px 14px;
               box-shadow: var(--shadow); }
   .field { display: flex; flex-direction: column; gap: 5px; }
   .field > span { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
@@ -246,7 +271,27 @@
   @media print { .controls, .ghost, .who { display: none; }
                  .tablewrap { max-height: none; overflow: visible; }
                  .card { break-inside: avoid; box-shadow: none; } }
-  @media (max-width: 640px) { .wrap { padding: 16px 12px 56px; } .kpi .v { font-size: 21px; } }
+  @media (max-width: 640px) {
+    .wrap { padding: 16px 12px 56px; }
+    /* KPI 5장을 두 개씩, 마지막(기간 누계)은 한 줄을 다 씁니다 */
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .kpis .kpi:last-child { grid-column: 1 / -1; }
+    .kpi { padding: 12px 13px; }
+    .kpi .v { font-size: 18px; }
+    .kpi .v.long { font-size: 16px; }
+    .kpi .v small { font-size: 12px; }
+    .kpi .k { font-size: 10px; letter-spacing: .06em; }
+    .kpi .d, .chip { font-size: 11px; }
+    /* 고정 카드가 화면을 너무 먹지 않도록 조입니다 */
+    .controls-dock { padding: 6px 0 4px; margin-bottom: 8px; }
+    .controls { gap: 6px 8px; padding: 8px 10px; }
+    .field { gap: 2px; }
+    .field > span { font-size: 9.5px; letter-spacing: .05em; }
+    select { font-size: 12.5px; padding: 4px 6px; min-height: 28px; }
+    .seg button { font-size: 12px; padding: 4px 9px; }
+    .ghost { font-size: 12px; padding: 5px 9px; }
+    .spacer { flex-basis: 0; }
+  }
 </style>
 </head>
 <body>
@@ -285,6 +330,7 @@
 
     <div id="errSlot"></div>
 
+    <div class="controls-dock">
     <div class="controls">
       <label class="field"><span>기간</span>
         <select id="period"></select>
@@ -300,6 +346,7 @@
       </label>
       <div class="spacer"></div>
       <button class="ghost" type="button" id="reload">데이터 새로고침</button>
+    </div>
     </div>
 
     <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
@@ -386,18 +433,11 @@
                   '롯데백화점(온)', '신세계면세점', '롯데면세점', '신라면세점',
                   '플래그쉽', 'HOS청담', '어메니티', '페이히어'];
 
-  /* 채널분류 — 차트 색이 이 분류를 따릅니다 */
-  var GROUP_OF = {
-    '자사몰': '자사몰', '네이버': '네이버', '카카오': '카카오', '29cm': '29cm',
-    '제네시스': '기타온몰', '현대M몰': '기타온몰', '롯데백화점(온)': '기타온몰',
-    '신세계면세점': '면세', '롯데면세점': '면세', '신라면세점': '면세',
-    '플래그쉽': '플래그쉽', 'HOS청담': '기타', '어메니티': '기타',
-    '캐리마켓(온)': '기타온몰', '페이히어': '기타'
-  };
-  var GROUP_ORDER = ['자사몰', '카카오', '플래그쉽', '면세', '네이버', '29cm', '기타온몰', '기타'];
-  function grpColor(g) {
-    var i = GROUP_ORDER.indexOf(g);
-    return 'var(--s' + ((i < 0 ? 7 : i) + 1) + ')';
+  /* 판매처 색은 CH_ORDER 위치에 고정됩니다.
+     순위나 필터로 목록이 줄어도 같은 판매처는 늘 같은 색입니다. */
+  function chColor(name) {
+    var i = CH_ORDER.indexOf(name);
+    return i >= 0 && i < 15 ? 'var(--c' + (i + 1) + ')' : 'var(--c-other)';
   }
 
   var SCOPES = 'openid email https://www.googleapis.com/auth/spreadsheets.readonly';
@@ -955,7 +995,7 @@
         segs.push({ k: k, i: i, v: v, total: total });
         o += '<rect x="' + (cx(k) - bw / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) +
              '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) +
-             '" fill="' + grpColor(GROUP_OF[A.chs[i]] || '기타') + '"' +
+             '" fill="' + chColor(A.chs[i]) + '"' +
              (v < 0 ? ' opacity=".55"' : '') +
              ' data-s="' + (segs.length - 1) + '"></rect>';
       }
@@ -1013,7 +1053,7 @@
         html = '<div class="t-d">' + dd + ' ' + md(dd) + '</div><strong class="num">' +
                nf.format(Math.round(dt)) + unit + '</strong>' +
                '<div class="t-rows">' + list.map(function (r) {
-                 return '<div><i style="background:' + grpColor(GROUP_OF[r.c] || '기타') + '"></i>' +
+                 return '<div><i style="background:' + chColor(r.c) + '"></i>' +
                         '<span>' + esc(r.c) + '</span><b class="num">' + nf.format(Math.round(r.v)) + '</b>' +
                         '<em>' + (dt ? (r.v / dt * 100).toFixed(1) : '0.0') + '%</em></div>';
                }).join('') + '</div>' +
@@ -1029,19 +1069,16 @@
     };
     svg.onpointerleave = function () { tip.style.opacity = '0'; };
 
-    /* 범례 — 이 기간에 실제로 실적이 있는 분류만 */
-    var used = [];
+    /* 범례 — 판매처 순서(CH_ORDER)를 그대로 따르고, 일일총주문금액을 맨 뒤에 둡니다.
+       A.chs 는 이미 CH_ORDER 순서라 정렬이 필요 없습니다. */
+    var items = [];
     for (var g = 0; g < A.chs.length; g++) {
-      if (A.chTot[g] <= 0) continue;
-      var gp = GROUP_OF[A.chs[g]] || '기타';
-      if (used.indexOf(gp) < 0) used.push(gp);
+      if (!A.chTot[g]) continue;
+      items.push('<span><i style="background:' + chColor(A.chs[g]) + '"></i>' + esc(A.chs[g]) + '</span>');
     }
-    used.sort(function (a, b) { return GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b); });
-    document.getElementById('trendLegend').innerHTML =
-      '<span><i style="background:var(--ink);opacity:.82;height:3px;border-radius:2px"></i>일일 총액(선)</span>' +
-      used.map(function (gp) {
-        return '<span><i style="background:' + grpColor(gp) + '"></i>' + esc(gp) + '</span>';
-      }).join('');
+    items.push('<span><i style="background:var(--ink);opacity:.82;height:3px;border-radius:2px"></i>' +
+               '일일총주문금액</span>');
+    document.getElementById('trendLegend').innerHTML = items.join('');
   }
 
   function renderM1(A, anchor) {
