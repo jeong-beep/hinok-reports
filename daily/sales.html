@@ -368,9 +368,11 @@
     .seg .long { display: none; }
     .seg .short { display: inline; }
     .spacer { display: none; }
-    #reload { flex: 0 0 auto; padding: 5px 8px; font-size: 15px; line-height: 1; }
-    #reload .icon { display: inline; }
-    #reload .text { display: none; }
+    /* 좁은 화면에서는 담당자에게도 숨깁니다 — 새로고침(F5)으로 대체되고,
+       그 자리에 promotion 드롭다운이 들어가야 한 줄이 유지됩니다. */
+    html.is-admin #reload { display: none; }
+    .controls .field { flex: 1 1 0; min-width: 0; }
+    select { text-overflow: ellipsis; }
 
     /* 범례와 CSV 버튼은 좁은 화면에서 자리만 차지합니다 */
     .legend { display: none; }
@@ -441,6 +443,9 @@
         </div>
         <label class="field"><span>판매처</span>
           <select id="channel"><option value="">전체 판매처</option></select>
+        </label>
+        <label class="field"><span>promotion</span>
+          <select id="promo"><option value="">전체</option></select>
         </label>
         <div class="spacer"></div>
         <button class="ghost" type="button" id="reload"
@@ -521,6 +526,13 @@
     /* 한 줄 코멘트 탭. 지금 시트의 탭 이름에 오타(flaoting)가 있어
        두 표기를 모두 시도합니다 — 나중에 고치셔도 그대로 동작합니다. */
     NOTE_RANGES: ["'flaoting comments'!A1:B", "'floating comments'!A1:B"],
+    /* 제품군 정의 탭 (이름 · 제품라인 · 구분). 없으면 아래 기본값을 씁니다.
+       기획전은 시트1의 promo 열에서 자동으로 읽으므로 여기 적을 필요가 없습니다. */
+    PROMO_RANGE: "'promotion'!A1:C",
+    제품군_기본: [
+      { 이름: '캄 앤 밸런스 오일', 제품라인: 'OIL', 구분: '진행 중' },
+      { 이름: '룸 스프레이',       제품라인: 'RSP', 구분: '제품군' }
+    ],
     RECENT_DAYS: 30,
 
     /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다. */
@@ -712,6 +724,7 @@
     name:  ['상품명', '제품명', '품목명'],
     price: ['정상가', '판매가', '단가'],
     ch:    ['채널명', '판매처', '채널'],
+    promo: ['promo', '기획', '프로모션', '행사'],
     qty:   ['수량', '주문수량', '판매수량'],
     amt:   ['매출', '주문금액', '금액', '매출액']
   };
@@ -777,9 +790,10 @@
     Promise.all([
       sheetValues(CONFIG.DATA_RANGE),
       sheetValues(CONFIG.MEMO_RANGE).catch(function () { return []; }),
-      firstAvailable(CONFIG.NOTE_RANGES)
+      firstAvailable(CONFIG.NOTE_RANGES),
+      sheetValues(CONFIG.PROMO_RANGE).catch(function () { return []; })
     ]).then(function (res) {
-      DATA = parseRows(res[0], res[1], res[2]);
+      DATA = parseRows(res[0], res[1], res[2], res[3]);
       var now = new Date();
       document.getElementById('whoFetched').textContent =
         ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ' 조회';
@@ -792,7 +806,7 @@
     });
   }
 
-  function parseRows(values, memoVals, noteVals) {
+  function parseRows(values, memoVals, noteVals, promoVals) {
     if (!values.length) throw new Error('시트가 비어 있습니다');
     var C = mapColumns(values[0]);
     COLMAP = C;
@@ -811,6 +825,7 @@
         name: String(pick(r, C.name) || '').trim(),
         price: Number(pick(r, C.price)) || 0,
         ch: String(r[C.ch] || '').trim() || '채널미입력',
+        promo: String(pick(r, C.promo) || '').trim(),
         qty: Number(r[C.qty]) || 0,
         amt: Number(r[C.amt]) || 0
       };
@@ -832,8 +847,74 @@
       months: Object.keys(months).sort(),
       maxDate: dates[dates.length - 1],
       memos: parseMemos(memoVals),
-      notes: parseNotes(noteVals)
+      notes: parseNotes(noteVals),
+      promos: buildPromos(rows, promoVals, dates[dates.length - 1])
     };
+  }
+
+  /**
+   * promotion 목록을 만듭니다.
+   *  · 기획전 — 시트1의 promo 열에서 자동으로 모읍니다. 새 기획을 적으면 바로 나타납니다.
+   *  · 제품군 — 'promotion' 탭(이름·제품라인·구분)에서 읽고, 탭이 없으면 기본값을 씁니다.
+   * 마지막 매출일이 기준일로부터 7일 이내면 '진행 중'으로 올립니다.
+   */
+  function buildPromos(rows, promoVals, maxDate) {
+    var 진행기준 = new Date(maxDate + 'T00:00:00');
+    진행기준.setDate(진행기준.getDate() - 7);
+    진행기준 = isoLocal(진행기준);
+
+    var out = [];
+
+    /* 제품군 */
+    var 정의 = [];
+    if (promoVals && promoVals.length > 1) {
+      for (var i = 1; i < promoVals.length; i++) {
+        var r = promoVals[i] || [];
+        var 이름 = String(r[0] || '').trim(), 라인 = String(r[1] || '').trim();
+        if (!이름 || !라인) continue;
+        정의.push({ 이름: 이름, 제품라인: 라인, 구분: String(r[2] || '').trim() || '제품군' });
+      }
+    }
+    /* 탭을 잘못 읽었거나 비어 있으면 기본값으로 돌아갑니다.
+       한 줄도 실제 데이터에 걸리지 않으면 정의가 잘못된 것으로 보고 기본값을 씁니다. */
+    function 제품군담기(목록) {
+      var 담김 = [];
+      목록.forEach(function (d) {
+        var 해당 = rows.filter(function (x) { return x.line.indexOf(d.제품라인) >= 0; });
+        if (!해당.length) return;
+        담김.push({ 키: 'line:' + d.제품라인, 이름: d.이름, 구분: d.구분,
+                    첫날: 해당[0].d,
+                    끝날: 해당.reduce(function (m, x) { return x.d > m ? x.d : m; }, '') });
+      });
+      return 담김;
+    }
+    var 제품군 = 정의.length ? 제품군담기(정의) : [];
+    if (!제품군.length) 제품군 = 제품군담기(CONFIG.제품군_기본);
+    제품군.forEach(function (x) { out.push(x); });
+
+    /* 기획전 — promo 열 자동 수집 */
+    var 묶음 = {};
+    rows.forEach(function (x) {
+      if (!x.promo) return;
+      var g = 묶음[x.promo] || (묶음[x.promo] = { 첫날: x.d, 끝날: x.d });
+      if (x.d < g.첫날) g.첫날 = x.d;
+      if (x.d > g.끝날) g.끝날 = x.d;
+    });
+    Object.keys(묶음).forEach(function (name) {
+      var g = 묶음[name];
+      out.push({ 키: 'promo:' + name, 이름: name,
+                 구분: g.끝날 >= 진행기준 ? '진행 중' : '지난 기획전',
+                 첫날: g.첫날, 끝날: g.끝날 });
+    });
+
+    /* 진행 중 → 제품군 → 지난 기획전, 그 안에서는 최근 시작일 순 */
+    var 순서 = { '진행 중': 0, '제품군': 1, '지난 기획전': 2 };
+    out.sort(function (a, b) {
+      var x = (순서[a.구분] === undefined ? 1 : 순서[a.구분]);
+      var y = (순서[b.구분] === undefined ? 1 : 순서[b.구분]);
+      return x - y || (a.첫날 < b.첫날 ? 1 : -1);
+    });
+    return out;
   }
 
   /** 'flaoting comments' 탭 → { 날짜: 코멘트 } */
@@ -913,7 +994,8 @@
   var state = {
     ch: qs.get('ch') || '',
     metric: qs.get('metric') === 'qty' ? 'qty' : 'amt',
-    month: qs.get('month') || ''
+    month: qs.get('month') || '',
+    promo: qs.get('promo') || ''          // 'promo:이름' 또는 'line:문자열'
   };
 
   function buildControls() {
@@ -934,6 +1016,26 @@
     c.value = state.ch;
     c.onchange = function () { state.ch = c.value; syncUrl(); render(); };
 
+    var pr = document.getElementById('promo');
+    var 그룹 = [], 담김 = {};
+    (DATA.promos || []).forEach(function (x) {
+      if (!담김[x.구분]) { 담김[x.구분] = []; 그룹.push(x.구분); }
+      담김[x.구분].push(x);
+    });
+    pr.innerHTML = '<option value="">전체</option>' + 그룹.map(function (g) {
+      return '<optgroup label="' + esc(g) + '">' + 담김[g].map(function (x) {
+        var 기간 = x.구분 === '지난 기획전'
+          ? ' · ' + x.첫날.slice(5).replace('-', '/') + '~' + x.끝날.slice(5).replace('-', '/')
+          : '';
+        return '<option value="' + esc(x.키) + '">' + esc(x.이름 + 기간) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+    if (state.promo && !pr.querySelector('option[value="' + state.promo.replace(/"/g, '') + '"]')) {
+      state.promo = '';
+    }
+    pr.value = state.promo;
+    pr.onchange = function () { state.promo = pr.value; syncUrl(); render(); };
+
     document.getElementById('metric').onclick = function (e) {
       var b = e.target.closest('button[data-v]'); if (!b) return;
       state.metric = b.dataset.v;
@@ -950,10 +1052,12 @@
     if (state.ch) p.set('ch', state.ch);
     if (state.month) p.set('month', state.month);
     if (state.metric !== 'amt') p.set('metric', state.metric);
+    if (state.promo) p.set('promo', state.promo);
     var q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
     document.getElementById('channel').value = state.ch;
     document.getElementById('period').value = state.month;
+    document.getElementById('promo').value = state.promo;
     logVisit();                      /* 판매처를 바꾼 것도 방문 기록에 남습니다 */
   }
 
@@ -992,6 +1096,7 @@
       var r = DATA.rows[k];
       var j = di[r.d]; if (j === undefined) continue;
       if (state.ch && r.ch !== state.ch) continue;
+      if (!promoMatch(r)) continue;
       var v = state.metric === 'amt' ? r.amt : r.qty;
 
       var c = ci[r.ch];
@@ -1013,6 +1118,23 @@
   }
 
   function zeros(n) { var a = new Array(n); for (var i = 0; i < n; i++) a[i] = 0; return a; }
+
+  /** promotion 선택에 맞는 행인지 — 기획전은 promo 열, 제품군은 제품라인 포함 여부 */
+  function promoMatch(r) {
+    if (!state.promo) return true;
+    var i = state.promo.indexOf(':');
+    var 종류 = state.promo.slice(0, i), 값 = state.promo.slice(i + 1);
+    if (종류 === 'promo') return r.promo === 값;
+    if (종류 === 'line') return r.line.indexOf(값) >= 0;
+    return true;
+  }
+
+  /** 지금 고른 promotion 의 이름 */
+  function promoName() {
+    if (!state.promo) return '';
+    var f = (DATA.promos || []).filter(function (x) { return x.키 === state.promo; })[0];
+    return f ? f.이름 : '';
+  }
 
   /**
    * 날짜 표시 순서.
@@ -1095,11 +1217,13 @@
     var A = aggregate();
     var anchor = A.win.length ? A.win[A.n - 1] : DATA.maxDate;
 
+    var pName = promoName();
     document.getElementById('pageTitle').textContent =
-      (state.ch || '전체 판매처') + ' 일일' + unitTxt() + '현황';
-    document.getElementById('crumb').innerHTML = state.ch
-      ? '<a href="#" id="backAll">← 전체 판매처</a> · ' + esc(state.ch)
-      : '주문일 기준 · 배송비 미포함 · 취소/교환/반품/환불 미반영';
+      (pName || state.ch || '전체 판매처') + ' 일일' + unitTxt() + '현황';
+    document.getElementById('crumb').innerHTML =
+      (state.ch ? '<a href="#" id="backAll">← 전체 판매처</a> · ' + esc(state.ch) : '') +
+      (pName ? (state.ch ? ' · ' : '') + '<strong>' + esc(pName) + '</strong>' : '') +
+      (!state.ch && !pName ? '주문일 기준 · 배송비 미포함 · 취소/교환/반품/환불 미반영' : '');
     var back = document.getElementById('backAll');
     if (back) back.onclick = function (e) { e.preventDefault(); state.ch = ''; syncUrl(); render(); };
 
@@ -1111,7 +1235,7 @@
     document.getElementById('trendTitle').textContent =
       (state.ch || '일일 총') + ' ' + unitTxt() + ' 추이';
     document.getElementById('m2Title').textContent =
-      (state.ch || '전체 판매처') + ' 일일 ' + unitTxt() + ' 현황 (상품별)';
+      (pName || state.ch || '전체 판매처') + ' 일일 ' + unitTxt() + ' 현황 (상품별)';
     document.getElementById('m1Card').hidden = !!state.ch;
 
     renderNote(anchor);
