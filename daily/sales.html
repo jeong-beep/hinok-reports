@@ -187,6 +187,32 @@
   .chip.down { color: var(--down); background: color-mix(in srgb, var(--down) 12%, transparent); }
   .chip.flat { color: var(--ink-muted); background: var(--surface-2); }
 
+  /* 누적 실적 — promotion 을 골랐을 때만 */
+  .promosum { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+              gap: 8px; margin-bottom: 14px; }
+  .promosum[hidden] { display: none; }
+  .promosum .s { background: var(--surface); border: 1px solid var(--hairline);
+                 border-radius: 10px; padding: 9px 11px; text-align: center;
+                 box-shadow: var(--shadow); }
+  .promosum .s .k { font-size: 9.5px; letter-spacing: .05em; color: var(--ink-muted); }
+  .promosum .s .v { font-size: 16px; font-weight: 650; margin-top: 2px; }
+  .promosum .s .v small { font-size: 11px; font-weight: 500; color: var(--ink-2); }
+
+  /* 판매처 × 상품 × 날짜 : 좌측 4열 고정 */
+  #x .x1, #x .x2, #x .x3, #x .x4 { position: sticky; z-index: 2; background: var(--surface); }
+  #x thead .x1, #x thead .x2, #x thead .x3, #x thead .x4 { z-index: 7; background: var(--surface-2); }
+  #x .x1 { left: 0;    min-width: 76px; max-width: 76px; }
+  #x .x2 { left: 76px; }                    /* 상품명은 잘리지 않게 내용만큼 */
+  #x .x3 { min-width: 96px; }
+  #x .x4 { min-width: 90px; border-right: 1px solid var(--hairline); }
+  #x tr.chrow td { background: var(--surface-2); font-weight: 700;
+                   border-top: 1px solid var(--border); }
+  #x tr.chrow .x1, #x tr.chrow .x2, #x tr.chrow .x3, #x tr.chrow .x4 { background: var(--surface-2); }
+  #x .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  #x .pcode { font-size: 9.5px; color: var(--ink-muted); margin-left: 4px; }
+  #x tr.total td { background: var(--surface-2); font-weight: 700;
+                   border-top: 1px solid var(--border); }
+
   /* ── 카드 ───────────────────────────────────────────────── */
   .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
           box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
@@ -386,6 +412,11 @@
 
     /* 상품 매트릭스는 고정열을 풀어야 좌우로 스크롤됩니다 */
     #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5, #m2 .p6 { position: static; }
+    #x .x1, #x .x2, #x .x3, #x .x4 { position: static; }
+    #x .x4 { border-right: 0; }
+    .promosum { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .promosum .s { padding: 7px 8px; }
+    .promosum .s .v { font-size: 14px; }
     #m2 .p3 { min-width: 180px; max-width: 180px; }
     #m2 .p6 { border-right: 0; }
     .tablewrap { overscroll-behavior-x: contain; }
@@ -458,6 +489,7 @@
     <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
 
     <div id="dash" hidden>
+      <div class="promosum" id="promoSum" hidden></div>
       <div class="kpis" id="kpis"></div>
 
       <div class="noteflo" id="noteFlo" hidden></div>
@@ -477,6 +509,16 @@
             <div class="tip" id="trendTip"></div>
           </div>
         </div>
+      </section>
+
+      <section class="card" id="xCard" hidden>
+        <div class="head">
+          <h2 id="xTitle">판매처 × 상품</h2>
+          <span class="note" id="xNote"></span>
+          <span class="spacer"></span>
+          <button class="ghost" type="button" data-csv="x">CSV 다운로드</button>
+        </div>
+        <div class="body flush"><div class="tablewrap"><table id="x"></table></div></div>
       </section>
 
       <section class="card" id="m1Card">
@@ -1239,8 +1281,10 @@
     document.getElementById('m1Card').hidden = !!state.ch;
 
     renderNote(anchor);
+    renderPromoSum();
     renderKpis(A);
     renderTrend(A);
+    renderCross(A);
     if (!state.ch) renderM1(A, anchor);
     renderM2(A, anchor);
 
@@ -1252,8 +1296,9 @@
       '일평균은 실적이 있는 날만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함). ' +
       '주황색 테두리가 있는 값은 메모가 달려 있습니다 — 누르면 열립니다.';
     document.getElementById('dash').hidden = false;
-    /* 숨겨진 동안에는 행 높이를 잴 수 없으므로 화면에 올린 뒤에 고정합니다 */
+    /* 숨겨진 동안에는 크기를 잴 수 없으므로 화면에 올린 뒤에 고정합니다 */
     stickStatRows();
+    fitCrossSticky();
   }
 
   /**
@@ -1263,10 +1308,146 @@
    */
   function renderNote(anchor) {
     var el = document.getElementById('noteFlo');
-    var txt = (state.month === '' && state.ch === '') ? (DATA.notes || {})[anchor] : '';
+    var txt = (state.month === '' && state.ch === '' && state.promo === '')
+      ? (DATA.notes || {})[anchor] : '';
     if (!txt) { el.hidden = true; el.textContent = ''; return; }
     el.textContent = txt;
     el.hidden = false;
+  }
+
+  /**
+   * 누적 실적 — 기간 필터와 무관하게 그 promotion 의 전체 기간을 봅니다.
+   * 런칭 이후 지금까지 얼마나 팔렸는지는 최근 30일 창과 별개의 질문이라서요.
+   */
+  function renderPromoSum() {
+    var el = document.getElementById('promoSum');
+    if (!state.promo) { el.hidden = true; el.innerHTML = ''; return; }
+
+    var amt = 0, qty = 0, days = {}, chs = {}, first = '';
+    DATA.rows.forEach(function (r) {
+      if (!promoMatch(r)) return;
+      if (state.ch && r.ch !== state.ch) return;
+      amt += r.amt; qty += r.qty;
+      days[r.d] = 1; chs[r.ch] = 1;
+      if (!first || r.d < first) first = r.d;
+    });
+    var n = Object.keys(days).length;
+    if (!n) { el.hidden = true; el.innerHTML = ''; return; }
+
+    var isAmt = state.metric === 'amt';
+    var 값 = isAmt ? amt : qty;
+    var fig = function (v) { return (isAmt ? '₩' : '') + nf.format(Math.round(v)); };
+    var t = [
+      ['누적 ' + (isAmt ? '매출' : '수량'), fig(값), isAmt ? '' : '개'],
+      ['시작일', first.slice(5).replace('-', '/'), ''],
+      ['판매 일수', nf.format(n), '일'],
+      ['일평균', fig(값 / n), isAmt ? '' : '개'],
+      ['판매 채널', String(Object.keys(chs).length), '곳']
+    ];
+    el.innerHTML = t.map(function (x) {
+      return '<div class="s"><div class="k">' + esc(x[0]) + '</div><div class="v num">' +
+             esc(x[1]) + (x[2] ? '<small>' + x[2] + '</small>' : '') + '</div></div>';
+    }).join('');
+    el.hidden = false;
+  }
+
+  /**
+   * 판매처 × 상품 × 날짜.
+   * 판매처를 묶고 그 아래에 상품을 놓습니다 (기존 구글시트 런칭 탭과 같은 배치).
+   * promotion 을 골랐을 때만 나옵니다 — 전체 매출에서는 줄 수가 감당이 안 됩니다.
+   */
+  function renderCross(A) {
+    var card = document.getElementById('xCard');
+    if (!state.promo) { card.hidden = true; return; }
+    card.hidden = false;
+
+    var al = alignCls();
+    var di = {}; A.win.forEach(function (d, i) { di[d] = i; });
+
+    /* 판매처 → 상품 → 날짜별 값 */
+    var 묶음 = {}, 순서 = [];
+    DATA.rows.forEach(function (r) {
+      var j = di[r.d]; if (j === undefined) return;
+      if (state.ch && r.ch !== state.ch) return;
+      if (!promoMatch(r)) return;
+      var g = 묶음[r.ch];
+      if (!g) { g = 묶음[r.ch] = { 합: zeros(A.n), has: zeros(A.n), 상품: {}, 목록: [] }; 순서.push(r.ch); }
+      var key = r.code + '|@|' + r.name;
+      var p = g.상품[key];
+      if (!p) { p = g.상품[key] = { code: r.code, name: r.name, v: zeros(A.n), has: zeros(A.n) }; g.목록.push(p); }
+      var v = state.metric === 'amt' ? r.amt : r.qty;
+      p.v[j] += v; p.has[j] = 1;
+      g.합[j] += v; g.has[j] = 1;
+    });
+
+    순서.sort(function (a, b) {
+      return sumOf(묶음[b].합, A.n) - sumOf(묶음[a].합, A.n);
+    });
+
+    /* 런칭 전 날짜까지 빈 칸으로 늘어놓지 않도록, 실적이 있는 날만 열로 둡니다 */
+    var 살아있는날 = zeros(A.n);
+    순서.forEach(function (ch) {
+      묶음[ch].has.forEach(function (v, j) { if (v) 살아있는날[j] = 1; });
+    });
+    var seq = dateSeq(A.n).filter(function (j) { return 살아있는날[j]; });
+
+    var head = '<thead><tr><th class="l x1">판매처</th><th class="l x2">상품</th>' +
+      '<th class="x3">합계</th><th class="x4">일평균</th>' +
+      seq.map(function (j) { return '<th>' + md(A.win[j]) + '</th>'; }).join('') + '</tr></thead>';
+
+    var body = '', 전체 = zeros(A.n), 전체has = zeros(A.n);
+    var csv = [['판매처', '상품코드', '상품명', '합계', '일평균'].concat(seq.map(function (j) { return A.win[j]; }))];
+
+    순서.forEach(function (ch) {
+      var g = 묶음[ch];
+      var 합 = sumOf(g.합, A.n), 평 = avgOf(g.합, g.has, A.n);
+      body += '<tr class="chrow"><td class="l x1"><span class="dot" style="background:' +
+        chColor(ch) + '"></span>' + esc(ch) + '</td>' +
+        '<td class="l x2">소계</td>' +
+        '<td class="num x3' + al + '">' + val(합) + '</td>' +
+        '<td class="num x4' + al + '">' + val(평) + '</td>' +
+        seq.map(function (j) {
+          return g.has[j] ? '<td class="num' + al + '">' + val(g.합[j]) + '</td>'
+                          : '<td class="num zero">·</td>';
+        }).join('') + '</tr>';
+      csv.push([ch, '', '소계', 합, 평].concat(seq.map(function (j) { return g.has[j] ? g.합[j] : ''; })));
+
+      g.목록.sort(function (a, b) { return sumOf(b.v, A.n) - sumOf(a.v, A.n); });
+      g.목록.forEach(function (p) {
+        var s = sumOf(p.v, A.n), av = avgOf(p.v, p.has, A.n);
+        body += '<tr><td class="l x1"></td>' +
+          '<td class="l x2" title="' + esc(p.name) + '">' + esc(p.name) +
+          '<span class="pcode">' + esc(p.code) + '</span></td>' +
+          '<td class="num x3' + al + '">' + val(s) + '</td>' +
+          '<td class="num x4' + al + '">' + val(av) + '</td>' +
+          seq.map(function (j) {
+            return p.v[j] ? '<td class="num' + al + '">' + val(p.v[j]) + '</td>'
+                          : '<td class="num zero">·</td>';
+          }).join('') + '</tr>';
+        csv.push([ch, p.code, p.name, s, av].concat(seq.map(function (j) { return p.v[j] || ''; })));
+      });
+
+      for (var j = 0; j < A.n; j++) { 전체[j] += g.합[j]; if (g.has[j]) 전체has[j] = 1; }
+    });
+
+    var 총합 = sumOf(전체, A.n), 총평 = avgOf(전체, 전체has, A.n);
+    body += '<tr class="total"><td class="l x1"></td><td class="l x2">전체 합계</td>' +
+      '<td class="num x3' + al + '">' + val(총합) + '</td>' +
+      '<td class="num x4' + al + '">' + val(총평) + '</td>' +
+      seq.map(function (j) {
+        return 전체has[j] ? '<td class="num' + al + '">' + val(전체[j]) + '</td>'
+                          : '<td class="num zero">·</td>';
+      }).join('') + '</tr>';
+    csv.push(['', '', '전체 합계', 총합, 총평].concat(seq.map(function (j) { return 전체has[j] ? 전체[j] : ''; })));
+
+    document.getElementById('x').innerHTML = head + '<tbody>' + body + '</tbody>';
+    document.getElementById('xTitle').textContent = (promoName() || '') + ' 판매처 × 상품';
+    document.getElementById('xNote').textContent =
+      '판매처 ' + 순서.length + '곳 · 상품 ' +
+      순서.reduce(function (s, c) { return s + 묶음[c].목록.length; }, 0) + '줄 · ' +
+      seq.length + '일 (실적이 있는 날만) · 단위 ' + (state.metric === 'amt' ? '원' : '개');
+    csvCache.x = { name: (promoName() || '기획') + '_판매처×상품_' +
+                          (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
   }
 
   function renderKpis(A) {
@@ -1624,6 +1805,26 @@
     if (h2) Array.prototype.forEach.call(h2.children, function (th) { th.style.top = '0px'; });
   }
 
+  /**
+   * 교차표의 좌측 고정 4열 위치를 실측해서 맞춥니다.
+   * 상품명 폭을 고정하지 않아(잘리면 안 되므로) 뒤 열의 left 를 미리 못 박을 수 없습니다.
+   */
+  function fitCrossSticky() {
+    var tbl = document.getElementById('x');
+    var row = tbl.querySelector('tbody tr');
+    if (!row || row.children.length < 4) return;
+    if (getComputedStyle(row.children[0]).position !== 'sticky') return;   /* 좁은 화면 */
+
+    var w = [];
+    for (var i = 0; i < 4; i++) w.push(row.children[i].getBoundingClientRect().width);
+    var left = [0, w[0], w[0] + w[1], w[0] + w[1] + w[2]];
+    ['x1', 'x2', 'x3', 'x4'].forEach(function (cls, i) {
+      Array.prototype.forEach.call(tbl.querySelectorAll('.' + cls), function (c) {
+        c.style.left = left[i] + 'px';
+      });
+    });
+  }
+
   /* ── 표2 : 상품 × 날짜 ──────────────────────────────────── */
   function renderM2(A, anchor) {
     var order = [];
@@ -1738,7 +1939,7 @@
   });
   window.addEventListener('resize', function () {
     closeMemo();
-    if (DATA) stickStatRows();     /* 폭이 바뀌면 행 높이도 바뀝니다 */
+    if (DATA) { stickStatRows(); fitCrossSticky(); }   /* 폭이 바뀌면 크기도 바뀝니다 */
   });
 
   /* ═══════════════════════════════════════════════════════
