@@ -156,7 +156,12 @@
            border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   .ghost:hover { border-color: var(--accent); color: var(--accent); }
   .spacer { flex: 1 1 auto; }
+  /* 다시 불러오기는 원본을 올리는 담당자에게만 보이면 됩니다.
+     다른 분들은 새로고침(F5)으로 같은 결과를 얻습니다. */
+  #reload { display: none; }
+  html.is-admin #reload { display: inline-flex; align-items: center; }
   #reload .icon { display: none; }
+  .who #whoFetched { display: block; }
 
   /* ── 한 줄 코멘트 : 첫 카드 위에 떠 있습니다 ────────────── */
   .noteflo { position: sticky; top: 74px; z-index: 40; margin-bottom: 14px;
@@ -417,6 +422,7 @@
       <div class="who">
         <strong id="whoEmail">—</strong>
         <span id="whoAsOf">—</span>
+        <span id="whoFetched"></span>
       </div>
     </header>
 
@@ -437,8 +443,9 @@
           <select id="channel"><option value="">전체 판매처</option></select>
         </label>
         <div class="spacer"></div>
-        <button class="ghost" type="button" id="reload" title="데이터 새로고침" aria-label="데이터 새로고침">
-          <span class="icon">🔄</span><span class="text">데이터 새로고침</span>
+        <button class="ghost" type="button" id="reload"
+                title="시트에서 다시 불러옵니다" aria-label="다시 불러오기">
+          <span class="icon">🔄</span><span class="text">다시 불러오기</span>
         </button>
       </div>
     </div>
@@ -520,7 +527,10 @@
     LOG_FORM:  'https://docs.google.com/forms/d/e/' +
                '1FAIpQLSdxFBLKsClbQcpYbjJzi4iGFIErQC1tty7mz2wiIIzH-SQnvQ/formResponse',
     LOG_EMAIL: 'entry.1550214245',
-    LOG_URL:   'entry.1208487914'
+    LOG_URL:   'entry.1208487914',
+
+    /* '다시 불러오기' 버튼을 보는 사람. 원본을 올리는 담당자만 있으면 됩니다. */
+    관리자: ['jeong@hinok.life']
   };
 
   /* 판매처 표시 순서. 시트에 새 채널이 생기면 목록 끝에 자동으로 붙습니다. */
@@ -603,6 +613,9 @@
       }
       viewerEmail = me.email || '';
       document.getElementById('whoEmail').textContent = viewerEmail;
+      if (CONFIG.관리자.indexOf(viewerEmail.toLowerCase()) >= 0) {
+        document.documentElement.classList.add('is-admin');
+      }
       document.documentElement.classList.add('auth-ok');
       logVisit();
       loadAll();
@@ -767,6 +780,9 @@
       firstAvailable(CONFIG.NOTE_RANGES)
     ]).then(function (res) {
       DATA = parseRows(res[0], res[1], res[2]);
+      var now = new Date();
+      document.getElementById('whoFetched').textContent =
+        ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ' 조회';
       buildControls();
       showLoading(false);
       render();
