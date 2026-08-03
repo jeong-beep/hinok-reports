@@ -2762,19 +2762,68 @@
              천당: (유입 === null || !발신) ? null : 유입 / 발신 * 1000 };
   }
 
-  /** 비교대상 칸에 적힌 이름을 리뷰 시트에서 찾습니다 */
-  function rvFindPromo(name) {
+  /* 이름이 같은 묶음이 이만큼 안에 붙어 있으면 한 프로모션으로 봅니다.
+     선런칭을 따로 적어 전략시작일이 갈린 경우를 하나로 되돌리기 위한 값입니다.
+     해를 건너뛴 같은 이름(작년 런칭 · 올해 런칭)까지 합치지 않을 만큼은 짧아야 합니다. */
+  var RV_MERGE_GAP = 60;
+
+  /** 이름이 같은 묶음들을 기간이 붙은 것끼리 갈라 놓습니다 — 오래된 것부터 */
+  function rvClusters(list) {
+    var s = list.slice().sort(function (a, b) { return a.시작 < b.시작 ? -1 : 1; });
+    var out = [], 끝 = null;
+    s.forEach(function (p) {
+      var 종료 = p.종료 || p.시작;
+      if (out.length && calDays(끝, p.시작) - 1 <= RV_MERGE_GAP) {
+        out[out.length - 1].push(p);
+      } else {
+        out.push([p]);
+      }
+      if (!끝 || 종료 > 끝) 끝 = 종료;
+    });
+    return out;
+  }
+
+  /**
+   * 묶음 여럿을 한 프로모션처럼 봅니다 — 기간은 처음 시작부터 마지막 종료까지,
+   * 발신은 모두 이어 붙입니다. 개요 항목은 최근 묶음 값을 먼저 씁니다.
+   */
+  function rvMergePromos(list) {
+    if (list.length === 1) return list[0];
+    var s = list.slice().sort(function (a, b) { return a.시작 < b.시작 ? -1 : 1; });
+    var p = { 키: s.map(function (x) { return x.키; }).join('+'),
+              이름: s[0].이름, 시작: s[0].시작, 종료: s[0].종료 || s[0].시작,
+              정보: {}, 발신: [], 묶음: s.length };
+    s.forEach(function (x) {
+      p.발신 = p.발신.concat(x.발신);
+      var 종료 = x.종료 || x.시작;
+      if (종료 > p.종료) p.종료 = 종료;
+    });
+    for (var i = s.length - 1; i >= 0; i--) rvFill(p.정보, s[i].정보);
+    return p;
+  }
+
+  /**
+   * 비교대상 칸에 적힌 이름을 리뷰 시트에서 찾습니다.
+   * 같은 이름이 여러 묶음으로 나뉘어 있으면 기간이 붙은 것끼리 합쳐 돌려줍니다.
+   * 지금 보고 있는 프로모션이 든 묶음은 건너뜁니다 — 자기 자신과는 비교하지 않고,
+   * 같은 이름의 지난 런칭이 있으면 그쪽을 잡습니다.
+   */
+  function rvFindPromo(name, 제외키) {
     var want = rvNorm(splitName(name).이름);
     if (!want || !REVIEW) return null;
-    var i, 후보 = null;
-    for (i = 0; i < REVIEW.length; i++) {
-      if (rvNorm(REVIEW[i].이름) === want) return REVIEW[i];
-    }
-    for (i = 0; i < REVIEW.length; i++) {       /* 못 찾으면 부분일치로 한 번 더 */
-      var got = rvNorm(REVIEW[i].이름);
-      if (got.indexOf(want) >= 0 || want.indexOf(got) >= 0) { 후보 = 후보 || REVIEW[i]; }
-    }
-    return 후보;
+    var 정확 = [], 부분 = [];
+    REVIEW.forEach(function (p) {
+      var got = rvNorm(p.이름);
+      if (got === want) 정확.push(p);
+      else if (got.indexOf(want) >= 0 || want.indexOf(got) >= 0) 부분.push(p);
+    });
+    var 후보 = 정확.length ? 정확 : 부분;
+    if (!후보.length) return null;
+    var 덩어리 = rvClusters(후보).filter(function (c) {
+      return !제외키 || c.every(function (p) { return p.키 !== 제외키; });
+    });
+    if (!덩어리.length) return null;
+    return rvMergePromos(덩어리[덩어리.length - 1]);   /* 가장 최근 덩어리 */
   }
 
   /**
@@ -2788,11 +2837,13 @@
       .filter(function (s) { return s; });
     if (!적힌것.length) return '';
 
-    var 열 = [{ ctx: ctx, 이름: ctx.p.이름 }], 못찾음 = [];
+    var 열 = [{ ctx: ctx, 이름: ctx.p.이름 }], 못찾음 = [], 합친것 = [];
     적힌것.forEach(function (nm) {
-      var p = rvFindPromo(nm);
-      if (!p || p.키 === ctx.p.키) { if (!p) 못찾음.push(nm); return; }
-      열.push({ ctx: rvContext(p), 이름: p.이름 });
+      var p = rvFindPromo(nm, ctx.p.키);
+      if (!p) { 못찾음.push(nm); return; }
+      var c = rvContext(p);
+      열.push({ ctx: c, 이름: p.이름 });
+      if (p.묶음 > 1) 합친것.push({ 이름: p.이름, 묶음: p.묶음, ctx: c });
     });
     if (열.length < 2) {
       return rvCard('프로모션 비교', '리뷰 시트 비교대상 열',
@@ -2885,8 +2936,18 @@
              '리뷰 시트 입력값입니다.',
              '추가구매 배수 = 행사품목+추가구매품목매출 ÷ 행사품목매출 — 1에 가까울수록 ' +
              '행사품목만 사 갔다는 뜻입니다.'];
+    합친것.forEach(function (x) {
+      /* 선런칭을 따로 적어 전략시작일이 갈린 경우 — 조용히 합치지 않고 밝힙니다 */
+      n.push('<b>' + esc(x.이름) + '</b> 은(는) 리뷰 시트에 전략시작일이 다른 묶음 ' +
+             x.묶음 + '건으로 나뉘어 있어 하나로 합쳐 봤습니다 — 기간은 ' +
+             x.ctx.from.replace(/-/g, '.') + '~' + x.ctx.to.replace(/-/g, '.') + ', 발신 ' +
+             x.ctx.p.발신.length + '건을 모두 더했습니다.' +
+             (x.ctx.주문 ? '' : ' 매출·고객수는 리뷰 시트 입력값이라 <b>최근 묶음 값만</b> ' +
+              '들어갑니다 — 주문 원장이 이 기간을 덮으면 전체 기간으로 다시 셉니다.'));
+    });
     if (못찾음.length) {
-      n.push('<b>' + esc(못찾음.join(' · ')) + '</b> 은(는) 리뷰 시트에서 찾지 못해 뺐습니다.');
+      n.push('<b>' + esc(못찾음.join(' · ')) + '</b> 은(는) 리뷰 시트에서 찾지 못해 뺐습니다 — ' +
+             '이름이 다르거나, 그 이름이 지금 보고 있는 프로모션 하나뿐입니다.');
     }
     return rvCard('프로모션 비교', '비교대상 ' + (열.length - 1) + '건과 나란히',
       '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvVs">' +
