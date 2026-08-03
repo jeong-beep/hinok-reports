@@ -275,15 +275,9 @@
   .rv-h .sp { flex: 1 1 auto; }
   .rv-more { margin-top: 26px; text-align: center; font-size: 12.5px; color: var(--ink-muted); }
 
-  /* 효율 분해·프로모션 비교는 표가 넓어 PC 에서만 봅니다 */
-  .rv-pconly { display: none; background: var(--surface); border: 1px dashed var(--hairline);
-               border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
-               font-size: 12.5px; color: var(--ink-muted); text-align: center; }
-  #rvEff td.g, #rvVs td.g { background: var(--surface-2); font-weight: 620; }
-  #rvEff tr.total td, #rvVs tr.total td { background: var(--surface-2); font-weight: 700;
-                                          border-top: 1px solid var(--border); }
-  #rvEff td.k, #rvVs td.k { width: 190px; }
-  #rvEff th.grp { border-left: 1px solid var(--hairline); }
+  /* 프로모션 비교 — 지표가 행, 프로모션이 열. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
+  #rvVs td.g, #rvVs th.g { background: var(--surface-2); font-weight: 620; }
+  #rvVs td.k { width: 190px; }
   #rvVs td.c, #rvVs td.num { min-width: 150px; }
   #rvVs .src { display: inline-block; margin-left: 5px; font-size: 10px; font-weight: 600;
                color: var(--ink-muted); border: 1px solid var(--hairline);
@@ -506,10 +500,13 @@
     [data-csv] { display: none; }
     html.is-admin [data-csv] { display: inline-block; }
 
-    /* 효율 분해·프로모션 비교는 좌우로 넓어 좁은 화면에서 읽히지 않습니다.
-       숨기는 대신 안내 한 줄을 띄워, 없어진 게 아니라 PC에서 본다는 걸 알립니다. */
-    .rv-report { display: none; }
-    .rv-pconly { display: block; }
+    /* 프로모션 비교는 좁은 화면에서도 봅니다 — 열 폭을 줄이고 가로로 흘리되,
+       항목 이름 칸은 왼쪽에 붙여 두어야 옆으로 밀어도 무슨 줄인지 보입니다. */
+    #rvVs td.c, #rvVs td.num { min-width: 118px; }
+    #rvVs td.k { position: sticky; left: 0; z-index: 2; background: var(--surface);
+                 max-width: 96px; white-space: normal; word-break: keep-all; }
+    #rvVs th.k { position: sticky; left: 0; z-index: 3; background: var(--surface-2); }
+    #rvVs .src { margin-left: 0; margin-top: 2px; }
     .noteflo { font-size: 12.5px; padding: 9px 12px; margin-bottom: 10px; }
     .card > .head .headavg { font-size: 11px; }
     /* 좁은 화면에서는 판매처 표도 가로로 스크롤합니다 (행 고정은 이때 동작하지 않습니다) */
@@ -2467,34 +2464,16 @@
     return ctx;
   }
 
-  /**
-   * 프로모션 하나의 상세 — 기준 띠 + 카드들.
-   * 효율 분해와 프로모션 비교는 표가 넓어 좁은 화면에서 읽기 어렵습니다.
-   * .rv-report 로 감싸 PC 에서만 보이게 하고, 모바일에는 안내 한 줄만 남깁니다.
-   * CSV 에는 화면과 상관없이 둘 다 들어갑니다.
-   */
+  /** 프로모션 하나의 상세 — 기준 띠 + 카드 여섯 장 */
   function rvDetail(ctx, csv) {
     csv.push([]);
     csv.push(['[' + ctx.p.이름 + ']',
               ctx.마감 ? '마감 (자사몰주문RAWDATA · 취소·환불 반영)'
                        : '잠정 (일일매출RAWDATA · 취소·환불 미반영)']);
-    /* CSV 가 화면 순서를 그대로 따르도록 순서대로 만들어 둡니다 */
-    var 개요 = rvOverviewCard(ctx, csv);
-    var 발신 = rvSendCard(ctx, csv);
-    var 효율 = rvEffCard(ctx, csv);
-    var 구매 = rvBuyerCard(ctx, csv);
-    var 증감 = rvSalesCard(ctx, csv);
-    var 객단가 = rvAovCard(ctx, csv);
-    var 비교 = rvVsCard(ctx, csv);
-
-    function pc(inner) { return inner ? '<div class="rv-report">' + inner + '</div>' : ''; }
-    var 넓은표 = [효율 ? '효율 분해' : '', 비교 ? '프로모션 비교' : ''].filter(Boolean);
-    var 안내 = 넓은표.length
-      ? '<div class="rv-pconly">' + 넓은표.join(' · ') +
-        '는 표가 넓어 PC 화면에서 보입니다. CSV 에는 그대로 들어 있습니다.</div>'
-      : '';
-    return rvSourceStrip(ctx) + 안내 +
-           개요 + 발신 + pc(효율) + 구매 + 증감 + 객단가 + pc(비교);
+    return rvSourceStrip(ctx) +
+           rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
+           rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv) +
+           rvVsCard(ctx, csv);
   }
 
   /** 프로모션 하나만 그립니다 — 테스트에서 씁니다 */
@@ -2765,108 +2744,22 @@
       '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
   }
 
-  /* ── 발신을 묶어서 보는 두 표 (PC 전용) ─────────────────── */
+  /* ── 프로모션 비교 ──────────────────────────────────────── */
 
-  /** 발신 여러 건의 발신모수·유입을 더합니다. 값이 하나도 없으면 null 로 둡니다. */
+  /**
+   * 발신 여러 건의 발신모수·유입을 더합니다. 값이 하나도 없으면 null 로 둡니다.
+   * 1,000건당 유입의 분모는 그 묶음의 발신모수 전부입니다 — 유입이 비어 있는 발신이
+   * 섞여 있어도 분모에서 빼지 않습니다. 합산 유입이 그 발신까지 함께 가리키는
+   * 경우가 많아서요. 대신 비어 있으면 각주로 알립니다.
+   */
   function rvEffSum(list) {
     var 발신 = null, 유입 = null;
     list.forEach(function (r) {
       if (r.발신모수 !== null && r.발신모수 !== undefined) 발신 = (발신 || 0) + r.발신모수;
       if (r.유입 !== null && r.유입 !== undefined) 유입 = (유입 || 0) + r.유입;
     });
-    /* 1,000건당 유입의 분모는 그 묶음의 발신모수 전부입니다 — 유입이 비어 있는 발신이
-       섞여 있어도 분모에서 빼지 않습니다. 합산 유입이 그 발신까지 함께 가리키는
-       경우가 많아서요. 대신 비어 있으면 각주로 알립니다. */
     return { 발신: 발신, 유입: 유입,
              천당: (유입 === null || !발신) ? null : 유입 / 발신 * 1000 };
-  }
-
-  /**
-   * 효율 분해 — 발신 대상 × 발신 채널 교차표.
-   * 발신 성과 표는 발신 하나하나를 보여줄 뿐이라, 묶어 보면 어디서 갈리는지가
-   * 안 보입니다. 발신이 한 건뿐이면 발신 성과와 같은 말이므로 그리지 않습니다.
-   */
-  function rvEffCard(ctx, csv) {
-    var CH = ['카카오톡', '카카오', '알림톡', 'SMS문자', 'SMS', '문자'];
-    var 발신 = ctx.p.발신.filter(function (r) {
-      return r.발신모수 !== null && r.발신모수 !== undefined;
-    });
-    if (발신.length < 2) return '';
-
-    var 타겟들 = [], 채널들 = [], 본타겟 = {}, 본채널 = {};
-    발신.forEach(function (r) {
-      var t = r.발신타겟 || '(대상 미입력)', c = r.발신채널 || '(채널 미입력)';
-      if (!본타겟[t]) { 본타겟[t] = 1; 타겟들.push(t); }
-      if (!본채널[c]) { 본채널[c] = 1; 채널들.push(c); }
-    });
-    if (타겟들.length < 2 && 채널들.length < 2) return '';
-
-    function 고르기(t, c) {
-      return 발신.filter(function (r) {
-        return (t === null || (r.발신타겟 || '(대상 미입력)') === t) &&
-               (c === null || (r.발신채널 || '(채널 미입력)') === c);
-      });
-    }
-    /* 모수가 큰 대상을 위에, 채널은 카카오 → 문자 순으로 세웁니다 */
-    타겟들.sort(function (a, b) {
-      return (rvEffSum(고르기(b, null)).발신 || 0) - (rvEffSum(고르기(a, null)).발신 || 0);
-    });
-    채널들.sort(function (a, b) {
-      var i = CH.indexOf(a), j = CH.indexOf(b);
-      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
-    });
-
-    var 합계열 = 채널들.length > 1, 합계행 = 타겟들.length > 1;
-    var 열 = 채널들.slice();
-    if (합계열) 열.push(null);            /* null = 채널 합계 */
-
-    var h1 = '<tr><th class="k"></th>' + 열.map(function (c) {
-      return '<th class="c grp" colspan="3">' + esc(c === null ? '합계' : c) + '</th>';
-    }).join('') + '</tr>';
-    var h2 = '<tr><th class="k"></th>' + 열.map(function (c, ci) {
-      return ['발신', '유입', '1천건당 유입'].map(function (nm, k) {
-        return '<th class="c' + (ci && !k ? ' grp' : '') + '">' + nm + '</th>';
-      }).join('');
-    }).join('') + '</tr>';
-
-    csv.push([]); csv.push(['[효율 분해]']);
-    csv.push([''].concat(열.reduce(function (a, c) {
-      return a.concat([(c === null ? '합계' : c) + ' 발신',
-                       (c === null ? '합계' : c) + ' 유입',
-                       (c === null ? '합계' : c) + ' 1천건당 유입']);
-    }, [])));
-
-    var 줄들 = 타겟들.slice();
-    if (합계행) 줄들.push(null);           /* null = 대상 합계 */
-    var body = 줄들.map(function (t) {
-      var 값 = 열.map(function (c) { return rvEffSum(고르기(t, c)); });
-      csv.push([t === null ? '합계' : t].concat(값.reduce(function (a, v) {
-        return a.concat([rvPlain(rvCnt(v.발신)), rvPlain(rvCnt(v.유입)),
-                         rvPlain(rvCnt(v.천당))]);
-      }, [])));
-      return '<tr' + (t === null ? ' class="total"' : '') + '>' +
-        '<td class="k">' + esc(t === null ? '합계' : t) + '</td>' +
-        값.map(function (v, ci) {
-          return '<td class="num' + (ci && 합계열 && ci === 열.length - 1 ? ' g' : '') + '">' +
-                 rvCnt(v.발신) + '</td>' +
-                 '<td class="num' + (합계열 && ci === 열.length - 1 ? ' g' : '') + '">' +
-                 rvCnt(v.유입) + '</td>' +
-                 '<td class="num' + (합계열 && ci === 열.length - 1 ? ' g' : '') + '">' +
-                 rvCnt(v.천당) + '</td>';
-        }).join('') + '</tr>';
-    }).join('');
-
-    var n = ['1천건당 유입 = 유입고객수 ÷ 발신모수 × 1,000 — 발신 한 건이 아니라 ' +
-             '<b>묶음 전체</b>의 발신모수로 나눕니다.'];
-    if (발신.some(function (r) { return r.유입 === null || r.유입 === undefined; })) {
-      n.push('유입이 비어 있는 발신이 있습니다 — 그 칸의 1천건당 유입은 <b>—</b>로 두고, ' +
-             '합계 칸은 발신모수를 모두 분모로 잡아 <b>낮게</b> 나옵니다. ' +
-             '유입을 잴 수 없는 채널이 섞이면 그만큼 눌립니다.');
-    }
-    return rvCard('효율 분해', '발신 대상 × 발신 채널 · 리뷰 시트 값으로 자동계산',
-      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvEff">' +
-      '<thead>' + h1 + h2 + '</thead><tbody>' + body + '</tbody></table></div></div>',
-      n.join('<br>'));
   }
 
   /** 비교대상 칸에 적힌 이름을 리뷰 시트에서 찾습니다 */
