@@ -198,6 +198,52 @@
   .promosum .s .v { font-size: 16px; font-weight: 650; margin-top: 2px; }
   .promosum .s .v small { font-size: 11px; font-weight: 500; color: var(--ink-2); }
 
+  /* ── 탭 : 판매 현황 / 프로모션 리뷰 ─────────────────────── */
+  .tabs { display: flex; align-items: center; gap: 2px; margin-bottom: 14px;
+          border-bottom: 1px solid var(--hairline); }
+  .tabs button { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-muted);
+                 background: transparent; border: 0; border-bottom: 2px solid transparent;
+                 margin-bottom: -1px; padding: 9px 14px; border-radius: 7px 7px 0 0; cursor: pointer; }
+  .tabs button:hover:not([disabled]) { color: var(--ink-2); background: var(--surface-2); }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs button[disabled] { opacity: .38; cursor: not-allowed; }
+  .tabs .hint { margin-left: auto; font-size: 11.5px; color: var(--ink-muted); padding-right: 2px; }
+
+  /* ── 프로모션 리뷰 ──────────────────────────────────────── */
+  /* 개요 : 이름 → 값 두 칸짜리 줄을 화면 폭에 맞춰 여러 단으로 흘립니다 */
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+           gap: 0 26px; }
+  .facts > div { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px;
+                 padding: 7px 0; border-bottom: 1px solid var(--hairline); font-size: 12.5px; }
+  .facts .k { color: var(--ink-muted); text-align: right; }
+  .facts .v { color: var(--ink); font-weight: 550; overflow-wrap: anywhere; }
+  .facts .v.none { color: var(--ink-muted); font-weight: 400; }
+
+  /* 리뷰 표 : 항목 이름은 우측, 값은 좌측 — 기존 시트 리뷰와 같은 배치 */
+  table.rv { width: 100%; min-width: 0; }
+  table.rv thead th { font-size: 10.5px; }
+  table.rv th.k, table.rv td.k { text-align: right; color: var(--ink-2); white-space: nowrap; }
+  table.rv td.k { width: 210px; }
+  table.rv tr.sub td.k { color: var(--ink-muted); font-size: 12px; }
+  table.rv tr.head td { background: var(--surface-2); font-weight: 700; }
+  table.rv td.v { text-align: left; font-weight: 620; }
+  table.rv td.d { text-align: center; width: 132px; font-size: 12px; }
+  .na { color: var(--ink-muted); font-weight: 400; }
+
+  /* 발신 성과 : 발신일 묶음마다 채널 열이 붙습니다 */
+  #rvSend td.k { width: 168px; }
+  #rvSend td.g { text-align: center; background: var(--surface-2); font-weight: 620; }
+  #rvSend td.s { text-align: center; }
+  #rvSend tr.em td.s { font-weight: 700; }
+  #rvSend tr.chline td.s { background: var(--surface-2); font-weight: 620; }
+
+  .rv-note { font-size: 11.5px; color: var(--ink-muted); line-height: 1.7;
+             padding: 11px 16px 14px; border-top: 1px solid var(--hairline); }
+  .rv-empty { background: var(--surface); border: 1px dashed var(--hairline);
+              border-radius: 12px; padding: 26px 20px; text-align: center;
+              color: var(--ink-muted); font-size: 13px; line-height: 1.7; }
+  .rv-empty b { display: block; color: var(--ink-2); font-size: 14px; margin-bottom: 6px; }
+
   /* 판매처 × 상품 × 날짜 : 좌측 4열 고정 */
   #x .x1, #x .x2, #x .x3, #x .x4 { position: sticky; z-index: 2; background: var(--surface); }
   #x thead .x1, #x thead .x2, #x thead .x3, #x thead .x4 { z-index: 7; background: var(--surface-2); }
@@ -421,6 +467,14 @@
     #m2 .p6 { border-right: 0; }
     .tablewrap { overscroll-behavior-x: contain; }
     th, td { padding: 5px 8px; }
+
+    /* 탭과 리뷰 : 좁은 화면에서는 항목 이름 칸을 줄이고 표는 가로로 흘립니다 */
+    .tabs button { font-size: 12.5px; padding: 8px 10px; }
+    .tabs .hint { display: none; }
+    .facts > div { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; font-size: 12px; }
+    table.rv { width: max-content; }
+    table.rv td.k, table.rv th.k { width: auto; }
+    table.rv td.d { width: auto; }
   }
 </style>
 </head>
@@ -488,6 +542,12 @@
 
     <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
 
+    <div class="tabs" id="tabs" role="tablist" hidden>
+      <button type="button" role="tab" data-tab="sales" aria-selected="true">판매 현황</button>
+      <button type="button" role="tab" data-tab="review" aria-selected="false">프로모션 리뷰</button>
+      <span class="hint" id="tabHint"></span>
+    </div>
+
     <div id="dash" hidden>
       <div class="promosum" id="promoSum" hidden></div>
       <div class="kpis" id="kpis"></div>
@@ -547,6 +607,20 @@
         <div id="caveat"></div>
       </footer>
     </div>
+
+    <!-- 프로모션 리뷰 : 발신·고객 데이터는 리뷰 시트, 매출은 원본에서 계산합니다 -->
+    <div id="reviewPane" hidden>
+      <div class="controls-dock" id="rvPickDock" hidden>
+        <div class="controls">
+          <label class="field"><span>리뷰 대상</span>
+            <select id="rvPick"></select>
+          </label>
+          <div class="spacer"></div>
+          <button class="ghost" type="button" data-csv="rv">CSV 다운로드</button>
+        </div>
+      </div>
+      <div id="rvBody"></div>
+    </div>
   </div>
 </div>
 
@@ -576,6 +650,14 @@
       { 이름: '룸 스프레이',       제품라인: 'RSP', 구분: '제품군' }
     ],
     RECENT_DAYS: 30,
+
+    /* 프로모션 리뷰 — 발신·고객 데이터를 적어 두는 시트입니다.
+       "리뷰 - 카카오톡 발신 데이터 및 프로모션 성과 (PROMO)"
+       탭은 이름 대신 gid 로 찾습니다. 탭 이름을 바꾸셔도 그대로 동작합니다. */
+    REVIEW_SHEET_ID: '1VFbnF-K5FoUFtmqZVSQ-4QF3e5nsq9Fo_kq5oyEWppk',
+    REVIEW_GID: 1355839859,
+    /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
+    비교기준: [7, 30],
 
     /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다. */
     LOG_FORM:  'https://docs.google.com/forms/d/e/' +
@@ -738,12 +820,30 @@
     return '잠시 후 다시 시도해 주세요. 계속되면 위 메시지를 그대로 공유해 주세요.';
   }
 
-  function sheetValues(range) {
-    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.SHEET_ID +
+  function sheetValuesOf(sheetId, range) {
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId +
               '/values/' + encodeURIComponent(range) +
               '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE' +
               '&dateTimeRenderOption=SERIAL_NUMBER';
     return api(url).then(function (j) { return j.values || []; });
+  }
+  function sheetValues(range) { return sheetValuesOf(CONFIG.SHEET_ID, range); }
+
+  /** gid 로 탭 이름을 찾습니다 — 탭 이름이 바뀌어도 gid 는 그대로라서요 */
+  function tabNameByGid(sheetId, gid) {
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId +
+              '?fields=' + encodeURIComponent('sheets.properties(sheetId,title)');
+    return api(url).then(function (j) {
+      var found = (j.sheets || []).filter(function (s) {
+        return s.properties && s.properties.sheetId === gid;
+      })[0];
+      if (!found) throw new Error('gid ' + gid + ' 에 해당하는 탭이 없습니다');
+      return found.properties.title;
+    });
+  }
+  /** 탭 이름을 A1 표기의 범위로 감쌉니다 (이름 안의 작은따옴표는 두 번 적습니다) */
+  function quoteTab(name, span) {
+    return "'" + String(name).replace(/'/g, "''") + "'!" + span;
   }
 
   /* ═══════════════════════════════════════════════════════
@@ -1037,7 +1137,9 @@
     ch: qs.get('ch') || '',
     metric: qs.get('metric') === 'qty' ? 'qty' : 'amt',
     month: qs.get('month') || '',
-    promo: qs.get('promo') || ''          // 'promo:이름' 또는 'line:문자열'
+    promo: qs.get('promo') || '',         // 'promo:이름' 또는 'line:문자열'
+    tab: qs.get('tab') === 'review' ? 'review' : 'sales',
+    rv: qs.get('rv') || ''                // 리뷰 탭에서 고른 프로모션 키
   };
 
   function buildControls() {
@@ -1076,7 +1178,21 @@
       state.promo = '';
     }
     pr.value = state.promo;
-    pr.onchange = function () { state.promo = pr.value; syncUrl(); render(); };
+    pr.onchange = function () {
+      state.promo = pr.value;
+      state.rv = '';                 /* 프로모션이 바뀌면 리뷰 선택도 다시 잡습니다 */
+      syncUrl(); render();
+    };
+
+    document.getElementById('tabs').onclick = function (e) {
+      var b = e.target.closest('button[data-tab]');
+      if (!b || b.disabled) return;
+      state.tab = b.dataset.tab;
+      syncUrl(); render();
+    };
+    document.getElementById('rvPick').onchange = function () {
+      state.rv = this.value; syncUrl(); renderReview();
+    };
 
     document.getElementById('metric').onclick = function (e) {
       var b = e.target.closest('button[data-v]'); if (!b) return;
@@ -1095,6 +1211,8 @@
     if (state.month) p.set('month', state.month);
     if (state.metric !== 'amt') p.set('metric', state.metric);
     if (state.promo) p.set('promo', state.promo);
+    if (state.tab === 'review') p.set('tab', 'review');
+    if (state.tab === 'review' && state.rv) p.set('rv', state.rv);
     var q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
     document.getElementById('channel').value = state.ch;
@@ -1253,9 +1371,24 @@
      ═══════════════════════════════════════════════════════ */
   var csvCache = {};
 
+  /** 탭 모양을 상태에 맞춥니다. 리뷰는 promotion 을 골랐을 때만 열립니다. */
+  function syncTabs() {
+    var bar = document.getElementById('tabs');
+    var 가능 = !!state.promo;
+    if (!가능 && state.tab === 'review') state.tab = 'sales';
+    bar.hidden = false;
+    Array.prototype.forEach.call(bar.querySelectorAll('button[data-tab]'), function (b) {
+      b.setAttribute('aria-selected', String(b.dataset.tab === state.tab));
+      b.disabled = (b.dataset.tab === 'review' && !가능);
+    });
+    document.getElementById('tabHint').textContent =
+      가능 ? '' : 'promotion 을 고르면 리뷰를 볼 수 있습니다';
+  }
+
   function render() {
     buildMemoIndex();
     closeMemo();
+    syncTabs();
     var A = aggregate();
     var anchor = A.win.length ? A.win[A.n - 1] : DATA.maxDate;
 
@@ -1295,7 +1428,10 @@
     document.getElementById('caveat').textContent =
       '일평균은 실적이 있는 날만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함). ' +
       '주황색 테두리가 있는 값은 메모가 달려 있습니다 — 누르면 열립니다.';
-    document.getElementById('dash').hidden = false;
+    var 리뷰중 = state.tab === 'review';
+    document.getElementById('dash').hidden = 리뷰중;
+    document.getElementById('reviewPane').hidden = !리뷰중;
+    if (리뷰중) { ensureReview(); return; }
     /* 숨겨진 동안에는 크기를 잴 수 없으므로 화면에 올린 뒤에 고정합니다 */
     stickStatRows();
     fitCrossSticky();
@@ -1448,6 +1584,611 @@
       seq.length + '일 (실적이 있는 날만) · 단위 ' + (state.metric === 'amt' ? '원' : '개');
     csvCache.x = { name: (promoName() || '기획') + '_판매처×상품_' +
                           (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     프로모션 리뷰
+     ── 발신·고객 데이터는 리뷰 시트에서 읽고,
+        매출·수량은 원본(시트1)에서 그때그때 계산합니다.
+     ═══════════════════════════════════════════════════════ */
+  var REVIEW = null;
+  var reviewState = 'idle';        /* idle · loading · ready · error */
+  var reviewError = null;
+
+  /* 리뷰 시트의 열 이름입니다. 시트에서 이름이 바뀌면 여기에 표기만 더해 주세요. */
+  var RV_COLS = {
+    이름:     ['프로모션명'],
+    대상:     ['대상'],
+    시작:     ['전략시작일'],
+    종료:     ['전략종료일'],
+    기간:     ['행사기간'],
+    라인:     ['제품라인'],
+    제품:     ['제품'],
+    발신타겟: ['발신타겟'],
+    구매채널: ['구매채널'],
+    전략:     ['전략'],
+    타입:     ['전략타입'],
+    타입세부: ['전략타입(세부)'],
+    적립금:   ['적립금중복사용가능여부'],
+    타겟모수: ['타겟모수'],
+    발신채널: ['발신채널'],
+    발신일:   ['발신일'],
+    발신시각: ['발신시각'],
+    발신모수: ['발신모수'],
+    열람수:   ['열람수'],
+    클릭수:   ['클릭수'],
+    유입:     ['유입고객수'],
+    구매고객: ['구매고객수'],
+    신규고객: ['-신규고객수', '신규고객수'],
+    기존고객: ['-기존고객수', '기존고객수'],
+    전략수량: ['판매상품수량(전략상품)'],
+    추가매출: ['행사품목+추가구매품목매출']
+  };
+
+  /* 시트에 이렇게 적혀 있으면 '값 없음'으로 봅니다 */
+  var RV_BLANK = { '': 1, '-': 1, '–': 1, '—': 1, 'err': 1, '알수없음': 1, '해당없음': 1,
+                   '#VALUE!': 1, '#DIV/0!': 1, '#N/A': 1, '#REF!': 1,
+                   '#NAME?': 1, '#NUM!': 1, '#ERROR!': 1 };
+
+  function rvNorm(v) {
+    return String(v === undefined || v === null ? '' : v).replace(/\s+/g, '');
+  }
+  function rvMapCols(header) {
+    var pos = {}, c, key, names, j;
+    for (c = 0; c < header.length; c++) {
+      var nm = rvNorm(header[c]);
+      if (nm && pos[nm] === undefined) pos[nm] = c;
+    }
+    var C = {};
+    for (key in RV_COLS) {
+      C[key] = -1;
+      names = RV_COLS[key];
+      for (j = 0; j < names.length; j++) {
+        var want = rvNorm(names[j]);
+        if (pos[want] !== undefined) { C[key] = pos[want]; break; }
+      }
+    }
+    return C;
+  }
+  function rvText(row, i) {
+    if (i < 0) return '';
+    var raw = row[i];
+    if (raw === undefined || raw === null) return '';
+    var s = String(raw).trim();
+    return RV_BLANK[rvNorm(s)] ? '' : s;
+  }
+  /** 숫자 : ₩·쉼표·'일' 같은 꾸밈을 걷어냅니다. 끝이 % 면 비율로 바꿉니다. */
+  function rvNum(row, i) {
+    if (i < 0) return null;
+    var raw = row[i];
+    if (typeof raw === 'number') return isFinite(raw) ? raw : null;
+    var s = rvText(row, i);
+    if (!s || !/[0-9]/.test(s)) return null;
+    var pct = /%\s*$/.test(s);
+    var n = Number(s.replace(/[^0-9.\-]/g, ''));
+    if (!isFinite(n)) return null;
+    return pct ? n / 100 : n;
+  }
+  function rvISO(y, m, d) {
+    return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+  }
+  /** 2026.03.30 (월) · 24/1/8(월) · 2026-03-30 · 시트 시리얼 넘버를 모두 받습니다 */
+  function rvDate(row, i) {
+    if (i < 0) return '';
+    var raw = row[i];
+    if (typeof raw === 'number') return raw > 0 ? serialToISO(raw) : '';
+    var s = rvText(row, i);
+    if (!s) return '';
+    var m = s.match(/(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
+    if (m) return rvISO(+m[1], +m[2], +m[3]);
+    m = s.match(/(\d{2})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
+    if (m) return rvISO(2000 + (+m[1]), +m[2], +m[3]);
+    return '';
+  }
+
+  function rvReadRow(row, C) {
+    return {
+      이름: rvText(row, C.이름), 대상: rvText(row, C.대상),
+      시작: rvDate(row, C.시작), 종료: rvDate(row, C.종료), 기간: rvText(row, C.기간),
+      라인: rvText(row, C.라인), 제품: rvText(row, C.제품),
+      발신타겟: rvText(row, C.발신타겟), 구매채널: rvText(row, C.구매채널),
+      전략: rvText(row, C.전략), 타입: rvText(row, C.타입), 타입세부: rvText(row, C.타입세부),
+      적립금: rvText(row, C.적립금),
+      발신채널: rvText(row, C.발신채널),
+      발신일: rvDate(row, C.발신일), 발신일원문: rvText(row, C.발신일),
+      발신시각: rvText(row, C.발신시각),
+      타겟모수: rvNum(row, C.타겟모수), 발신모수: rvNum(row, C.발신모수),
+      열람수: rvNum(row, C.열람수), 클릭수: rvNum(row, C.클릭수),
+      유입: rvNum(row, C.유입), 구매고객: rvNum(row, C.구매고객),
+      신규고객: rvNum(row, C.신규고객), 기존고객: rvNum(row, C.기존고객),
+      전략수량: rvNum(row, C.전략수량), 추가매출: rvNum(row, C.추가매출)
+    };
+  }
+  /** 빈 칸만 채웁니다 — 이미 값이 들어 있으면 건드리지 않습니다 */
+  function rvFill(dst, src) {
+    for (var k in src) {
+      if (dst[k] === undefined || dst[k] === null || dst[k] === '') dst[k] = src[k];
+    }
+    return dst;
+  }
+
+  /**
+   * 리뷰 탭 파싱.
+   * 그 탭에는 '프로모션명'으로 시작하는 헤더 줄이 여러 번 나오고 표가 세로로 쌓여 있습니다.
+   * 헤더를 만날 때마다 열 위치를 다시 잡고, 같은 발신은 하나로 합칩니다.
+   */
+  function parseReview(vals) {
+    var heads = [], i;
+    for (i = 0; i < vals.length; i++) {
+      if (rvNorm(vals[i] && vals[i][0]) === '프로모션명') heads.push(i);
+    }
+    var byKey = {}, order = [];
+    heads.forEach(function (h, bi) {
+      var C = rvMapCols(vals[h] || []);
+      if (C.이름 < 0 || C.시작 < 0) return;
+      var end = (bi + 1 < heads.length) ? heads[bi + 1] : vals.length;
+      for (var r = h + 1; r < end; r++) {
+        var rec = rvReadRow(vals[r] || [], C);
+        if (!rec.이름 || !rec.시작) continue;
+        var k = [rec.이름, rec.시작, rec.발신채널, rec.발신일, rec.발신시각].join('|');
+        if (byKey[k]) rvFill(byKey[k], rec);
+        else { byKey[k] = rec; order.push(k); }
+      }
+    });
+
+    /* 프로모션명 + 전략시작일로 묶습니다 — 한 프로모션에 발신이 여러 번 있어서요 */
+    var map = {}, list = [];
+    order.forEach(function (k) {
+      var rec = byKey[k], pk = rec.이름 + '|' + rec.시작, p = map[pk];
+      if (!p) {
+        p = map[pk] = { 키: pk, 이름: rec.이름, 시작: rec.시작, 종료: rec.종료,
+                        정보: {}, 발신: [] };
+        list.push(p);
+      }
+      p.발신.push(rec);
+      if (rec.종료 && (!p.종료 || rec.종료 > p.종료)) p.종료 = rec.종료;
+      rvFill(p.정보, rec);        /* 개요 항목은 행마다 반복되므로 빈칸만 채웁니다 */
+    });
+    list.sort(function (a, b) { return a.시작 < b.시작 ? 1 : a.시작 > b.시작 ? -1 : 0; });
+    return list;
+  }
+
+  /** 지금 고른 promotion 에 해당하는 리뷰인지 */
+  function rvMatches(p) {
+    if (!state.promo) return false;
+    var i = state.promo.indexOf(':');
+    var 종류 = state.promo.slice(0, i), 값 = state.promo.slice(i + 1);
+    if (종류 === 'promo') return p.이름 === 값;
+    if (종류 === 'line') {
+      var up = String(값).toUpperCase();
+      return p.발신.some(function (r) {
+        return String(r.라인).toUpperCase().indexOf(up) >= 0;
+      });
+    }
+    return false;
+  }
+
+  /* ── 원본에서 기간 합계를 냅니다 ─────────────────────────── */
+  function dayShift(ds, n) {
+    var d = new Date(ds + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return isoLocal(d);
+  }
+  function calDays(from, to) {
+    return Math.round((new Date(to + 'T00:00:00') - new Date(from + 'T00:00:00')) / 86400000) + 1;
+  }
+  /** 작년 같은 날짜. 2월 29일만 28일로 맞춥니다. */
+  function lastYearOf(ds) {
+    var md = ds.slice(5);
+    if (md === '02-29') md = '02-28';
+    return (Number(ds.slice(0, 4)) - 1) + '-' + md;
+  }
+  /**
+   * 기간·조건에 맞는 합계. 일평균은 실적이 있는 날이 아니라 달력일로 나눕니다
+   * (기존 시트 리뷰가 그렇게 계산해 왔습니다).
+   * 수록 기간 밖이면 null 을 돌려 '데이터 없음'으로 표시되게 합니다.
+   * clamp 를 주면 아직 오지 않은 종료일을 마지막 매출일까지로 줄입니다.
+   */
+  function rvSum(from, to, opt) {
+    opt = opt || {};
+    if (!DATA || !from || !to || from > to) return null;
+    var lo = from, hi = to;
+    if (opt.clamp && hi > DATA.maxDate) hi = DATA.maxDate;
+    if (lo < DATA.dates[0] || hi > DATA.maxDate || lo > hi) return null;
+
+    var amt = 0, qty = 0, i, r;
+    for (i = 0; i < DATA.rows.length; i++) {
+      r = DATA.rows[i];
+      if (r.d < lo || r.d > hi) continue;
+      if (opt.ch && r.ch !== opt.ch) continue;
+      if (opt.promo) { if (r.promo !== opt.promo) continue; }
+      else if (opt.line && r.line.toUpperCase().indexOf(opt.line.toUpperCase()) < 0) continue;
+      amt += r.amt; qty += r.qty;
+    }
+    var 일수 = calDays(lo, hi);
+    return { amt: amt, qty: qty, 일수: 일수, 잘림: hi !== to, 시작: lo, 끝: hi,
+             매출일평균: amt / 일수, 수량일평균: qty / 일수 };
+  }
+
+  /* ── 리뷰 표기 ──────────────────────────────────────────── */
+  function rvNA(t) { return '<span class="na">' + (t || '데이터 없음') + '</span>'; }
+  function rvWon(v) {
+    return (v === null || v === undefined || !isFinite(v))
+      ? rvNA('—') : '₩' + nf.format(Math.round(v));
+  }
+  function rvCnt(v, unit) {
+    return (v === null || v === undefined || !isFinite(v))
+      ? rvNA('—') : nf.format(Math.round(v * 10) / 10) + (unit || '');
+  }
+  function rvPct(v, d) {
+    return (v === null || v === undefined || !isFinite(v))
+      ? rvNA('알 수 없음') : (v * 100).toFixed(d === undefined ? 2 : d) + '%';
+  }
+  function rvDiv(a, b) {
+    if (a === null || a === undefined || b === null || b === undefined || !b) return null;
+    return a / b;
+  }
+  /** 증감률. 100%가 넘으면 소수점을 떼어 읽기 편하게 합니다. */
+  function rvSigned(r) {
+    if (r === null || r === undefined || !isFinite(r)) return rvNA();
+    var a = Math.abs(r * 100);
+    var p = nf.format(Number(a >= 100 ? a.toFixed(0) : a.toFixed(1)));
+    if (r > 0.00005)  return '<span style="color:var(--up)">▲ ' + p + '%</span>';
+    if (r < -0.00005) return '<span style="color:var(--down)">▼ ' + p + '%</span>';
+    return '<span style="color:var(--ink-muted)">(동일)</span>';
+  }
+  function rvDelta(cur, base) {
+    if (cur === null || cur === undefined || base === null || base === undefined ||
+        !isFinite(cur) || !isFinite(base) || !base) return rvNA();
+    return rvSigned((cur - base) / base);
+  }
+  /** 태그를 걷어낸 순수 문자열 — CSV 용입니다 */
+  function rvPlain(html) {
+    return String(html).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+  }
+
+  /* ── 불러오기 ───────────────────────────────────────────── */
+  function ensureReview() {
+    if (reviewState === 'ready' || reviewState === 'loading') { renderReview(); return; }
+    reviewState = 'loading';
+    reviewError = null;
+    renderReview();
+    tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_GID).then(function (title) {
+      return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:BZ'));
+    }).then(function (vals) {
+      REVIEW = parseReview(vals);
+      reviewState = 'ready';
+      renderReview();
+    }).catch(function (e) {
+      reviewError = e;
+      reviewState = 'error';
+      renderReview();
+    });
+  }
+
+  /* ── 그리기 ─────────────────────────────────────────────── */
+  function rvCard(title, note, inner, foot) {
+    return '<section class="card"><div class="head"><h2>' + esc(title) + '</h2>' +
+           (note ? '<span class="note">' + note + '</span>' : '') + '</div>' + inner +
+           (foot ? '<div class="rv-note">' + foot + '</div>' : '') + '</section>';
+  }
+  function rvEmptyBox(title, html) {
+    return '<div class="rv-empty"><b>' + esc(title) + '</b>' + html + '</div>';
+  }
+  function rvDay(ds) {
+    if (!ds) return '';
+    return ds.replace(/-/g, '.') + ' (' + WD[new Date(ds + 'T00:00:00').getDay()] + ')';
+  }
+  function promoPickedValue() {
+    var i = state.promo.indexOf(':');
+    return i < 0 ? state.promo : state.promo.slice(i + 1);
+  }
+
+  function renderReview() {
+    var body = document.getElementById('rvBody');
+    var dock = document.getElementById('rvPickDock');
+    var sel = document.getElementById('rvPick');
+    dock.hidden = true;
+
+    if (reviewState === 'loading') {
+      body.innerHTML = '<div class="status"><div class="spinner"></div>' +
+                       '<span>리뷰 시트에서 불러오는 중…</span></div>';
+      return;
+    }
+    if (reviewState === 'error') {
+      body.innerHTML = '<div class="errbox"><b>리뷰 데이터를 불러오지 못했습니다</b>' +
+        esc(hintFor(reviewError)) +
+        '<details><summary>자세한 오류 메시지</summary><code>' +
+        esc(String((reviewError && reviewError.message) || reviewError)) + '</code></details>' +
+        '<button class="ghost" type="button" id="rvRetry">다시 시도</button></div>';
+      var rb = document.getElementById('rvRetry');
+      if (rb) rb.onclick = function () { reviewState = 'idle'; ensureReview(); };
+      return;
+    }
+    if (reviewState !== 'ready') { body.innerHTML = ''; return; }
+
+    var 매칭 = (REVIEW || []).filter(rvMatches);
+    var 매칭없음 = !매칭.length;
+    var 목록 = 매칭없음 ? (REVIEW || []) : 매칭;
+
+    if (!목록.length) {
+      body.innerHTML = rvEmptyBox('리뷰 시트에 등록된 프로모션이 없습니다',
+        '<b>프로모션명</b>과 <b>전략시작일</b>이 모두 채워진 줄만 읽습니다. ' +
+        '두 칸을 채우시면 여기에 바로 나타납니다.');
+      return;
+    }
+
+    sel.innerHTML = (매칭없음 ? '<option value="">— 프로모션을 고르세요 —</option>' : '') +
+      목록.map(function (p) {
+        var 끝 = p.종료 || p.시작;
+        return '<option value="' + esc(p.키) + '">' + esc(p.이름) + ' · ' +
+               esc(p.시작.replace(/-/g, '.')) + '~' + esc(끝.slice(5).replace('-', '.')) +
+               '</option>';
+      }).join('');
+    if (!목록.filter(function (p) { return p.키 === state.rv; }).length) {
+      state.rv = 매칭없음 ? '' : 목록[0].키;
+    }
+    sel.value = state.rv;
+    dock.hidden = false;
+
+    var 안내 = 매칭없음
+      ? rvEmptyBox('이 페이지의 프로모션은 리뷰 시트에 아직 없습니다',
+          '리뷰 시트의 <b>제품라인</b>에 <b>' + esc(promoPickedValue()) + '</b>이(가) 들어 있거나, ' +
+          '<b>프로모션명</b>이 promotion 목록의 이름과 같으면 자동으로 연결됩니다.<br>' +
+          '위에서 다른 프로모션을 골라 보실 수도 있습니다.')
+      : '';
+    var p = 목록.filter(function (x) { return x.키 === state.rv; })[0];
+    if (!p) { csvCache.rv = null; body.innerHTML = 안내; return; }
+    body.innerHTML = 안내 + rvCards(p);
+  }
+
+  function rvCards(p) {
+    var i = p.정보;
+    var from = p.시작, to = p.종료 || p.시작;
+
+    /* 구매채널이 '전체'이거나 원본 판매처 표기에 없으면 판매처를 거르지 않습니다 */
+    var ch = (i.구매채널 && !/^(전체|ALL)$/i.test(i.구매채널)) ? i.구매채널 : '';
+    if (ch && DATA.channels.indexOf(ch) < 0) ch = '';
+    var 라인 = (i.라인 && !/^(ALL|전체)$/i.test(i.라인)) ? i.라인 : '';
+    /* 원본 promo 열에 같은 이름이 적혀 있으면 제품라인보다 그쪽을 먼저 씁니다 */
+    var promoKey = DATA.rows.some(function (r) { return r.promo && r.promo === p.이름; })
+      ? p.이름 : '';
+    var 품목조건 = { ch: ch, line: 라인, promo: promoKey };
+
+    var ctx = {
+      p: p, from: from, to: to, ch: ch, 라인: 라인, promoKey: promoKey,
+      품목필터있음: !!(promoKey || 라인),
+      행사:     rvSum(from, to, { ch: ch, clamp: true }),
+      품목:     rvSum(from, to, { ch: ch, line: 라인, promo: promoKey, clamp: true }),
+      전7:      rvSum(dayShift(from, -7),  dayShift(from, -1), { ch: ch }),
+      전30:     rvSum(dayShift(from, -30), dayShift(from, -1), { ch: ch }),
+      작년:     rvSum(lastYearOf(from), lastYearOf(to), { ch: ch }),
+      품목전7:  rvSum(dayShift(from, -7),  dayShift(from, -1), 품목조건),
+      품목전30: rvSum(dayShift(from, -30), dayShift(from, -1), 품목조건),
+      품목작년: rvSum(lastYearOf(from), lastYearOf(to), 품목조건),
+      유입합: null, 구매고객: i.구매고객
+    };
+    p.발신.forEach(function (r) {
+      if (r.유입 !== null && r.유입 !== undefined) ctx.유입합 = (ctx.유입합 || 0) + r.유입;
+    });
+
+    var csv = [];
+    var html = rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
+               rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv);
+    csvCache.rv = { name: (p.이름 || '프로모션') + '_리뷰', rows: csv };
+    return html;
+  }
+
+  function rvOverviewCard(ctx, csv) {
+    var i = ctx.p.정보;
+    var t = [
+      ['프로모션명', ctx.p.이름], ['대상', i.대상],
+      ['전략시작일', rvDay(ctx.from)], ['전략종료일', rvDay(ctx.to)],
+      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일')],
+      ['제품라인', i.라인], ['제품', i.제품], ['발신타겟', i.발신타겟],
+      ['구매채널', i.구매채널], ['전략', i.전략], ['전략타입', i.타입],
+      ['전략타입(세부)', i.타입세부], ['적립금 중복사용', i.적립금]
+    ];
+    csv.push(['[개요]']);
+    var rows = t.map(function (x) {
+      csv.push([x[0], x[1] || '']);
+      return '<div><span class="k">' + esc(x[0]) + '</span><span class="v' +
+             (x[1] ? '' : ' none') + '">' + esc(x[1] || '미입력') + '</span></div>';
+    }).join('');
+    return rvCard('개요', '리뷰 시트 입력값입니다',
+      '<div class="body"><div class="facts">' + rows + '</div></div>');
+  }
+
+  function rvSendCard(ctx, csv) {
+    /* 한 줄이 한 발신이므로, 발신일 → 채널 순으로 열을 세워 펼칩니다 */
+    var 그룹 = [], idx = {};
+    ctx.p.발신.forEach(function (r) {
+      var key = r.발신일 || r.발신일원문 || '(발신일 미입력)';
+      var g = idx[key];
+      if (!g) { g = idx[key] = { 키: key, 일자: r.발신일, 원문: r.발신일원문, 열: [] }; 그룹.push(g); }
+      g.열.push(r);
+    });
+    그룹.sort(function (a, b) {
+      var x = a.일자 || a.키, y = b.일자 || b.키;
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+    var CH = ['카카오톡', '알림톡', 'SMS문자', '문자'];
+    그룹.forEach(function (g) {
+      g.열.sort(function (a, b) {
+        var x = CH.indexOf(a.발신채널), y = CH.indexOf(b.발신채널);
+        return (x < 0 ? 99 : x) - (y < 0 ? 99 : y);
+      });
+    });
+
+    function 줄(label, fn, cls) {
+      var h = '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="k">' + esc(label) + '</td>';
+      var line = [label];
+      그룹.forEach(function (g) {
+        g.열.forEach(function (r) {
+          var v = fn(r, g);
+          h += '<td class="s num">' + v + '</td>';
+          line.push(rvPlain(v));
+        });
+      });
+      csv.push(line);
+      return h + '</tr>';
+    }
+    function 묶음줄(label, fn, cls) {
+      var h = '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="k">' + esc(label) + '</td>';
+      var line = [label], n;
+      그룹.forEach(function (g) {
+        var v = fn(g);
+        h += '<td class="g num" colspan="' + g.열.length + '">' + v + '</td>';
+        for (n = 0; n < g.열.length; n++) line.push(rvPlain(v));
+      });
+      csv.push(line);
+      return h + '</tr>';
+    }
+
+    csv.push([]); csv.push(['[발신 성과]']);
+    var body =
+      묶음줄('타겟모수', function (g) { return rvCnt(g.열[0].타겟모수); }) +
+      줄('발신채널', function (r) { return esc(r.발신채널 || '—'); }, 'chline') +
+      묶음줄('발신일', function (g) { return esc(g.일자 ? rvDay(g.일자) : (g.원문 || g.키)); }) +
+      줄('발신시각', function (r) { return esc(r.발신시각 || '—'); }) +
+      줄('발신모수', function (r) { return rvCnt(r.발신모수); }) +
+      줄('타겟대비 발신모수 비중', function (r) { return rvPct(rvDiv(r.발신모수, r.타겟모수)); }, 'em') +
+      줄('열람수', function (r) { return rvCnt(r.열람수); }) +
+      줄('열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }, 'em') +
+      줄('클릭수', function (r) { return rvCnt(r.클릭수); }) +
+      줄('클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }, 'em') +
+      줄('유입고객수', function (r) { return rvCnt(r.유입); });
+
+    return rvCard('발신 성과', '모수·열람수·클릭수는 리뷰 시트 입력값 · 비율은 자동계산',
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvSend"><tbody>' +
+      body + '</tbody></table></div></div>',
+      '타겟대비 비중 = 발신모수 ÷ 타겟모수 · 열람률 = 열람수 ÷ 발신모수 · ' +
+      '클릭률 = 클릭수 ÷ <b>열람수</b>. 문자처럼 열람수를 알 수 없는 채널은 비율도 내지 않습니다.');
+  }
+
+  function rvBuyerCard(ctx, csv) {
+    var 구매 = ctx.구매고객, i = ctx.p.정보;
+    var t = [
+      ['구매고객수', rvCnt(구매, '명'), false],
+      ['-유추전환율', rvPct(rvDiv(구매, ctx.유입합)), true],
+      ['-신규고객수', rvCnt(i.신규고객, '명'), true],
+      ['-신규고객비율', rvPct(rvDiv(i.신규고객, 구매)), true],
+      ['-기존고객수', rvCnt(i.기존고객, '명'), true],
+      ['-기존고객비율', rvPct(rvDiv(i.기존고객, 구매)), true]
+    ];
+    csv.push([]); csv.push(['[구매고객정보]']);
+    var body = t.map(function (x) {
+      csv.push([x[0], rvPlain(x[1])]);
+      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) +
+             '</td><td class="v num">' + x[1] + '</td></tr>';
+    }).join('');
+    return rvCard('구매고객정보', '고객수는 리뷰 시트 입력값 · 전환율과 비율은 자동계산',
+      '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
+      body + '</tbody></table></div></div>',
+      '유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + '). ' +
+      '구매고객수의 직전 기간·작년 대비는 원본에 고객수 기록이 없어 내지 않습니다.');
+  }
+
+  function rvSalesCard(ctx, csv) {
+    var 행사 = ctx.행사, 품목 = ctx.품목;
+    /* 주문 단위 정보가 원본에 없어 '행사품목+추가구매품목'만 시트 값을 씁니다 */
+    var 추가 = ctx.p.정보.추가매출;
+    var 일수 = 행사 ? 행사.일수 : calDays(ctx.from, ctx.to);
+    var 추가일평균 = (추가 === null || 추가 === undefined) ? null : 추가 / 일수;
+    var 전략수량 = ctx.p.정보.전략수량;
+
+    var t = [];
+    function 줄(k, v, a, b, c, sub) { t.push({ k: k, v: v, a: a, b: b, c: c, sub: !!sub }); }
+    function 칸(x) { return x === undefined ? rvNA('—') : x; }
+
+    줄('행사기간매출', rvWon(행사 && 행사.amt));
+    줄('행사품목+추가구매품목매출', rvWon(추가));
+    줄('행사품목매출', rvWon(품목 && 품목.amt));
+    줄('행사기간매출(일평균)', rvWon(행사 && 행사.매출일평균),
+       rvDelta(행사 && 행사.매출일평균, ctx.전7 && ctx.전7.매출일평균),
+       rvDelta(행사 && 행사.매출일평균, ctx.전30 && ctx.전30.매출일평균),
+       rvDelta(행사 && 행사.매출일평균, ctx.작년 && ctx.작년.매출일평균));
+    줄('행사품목+추가구매품목매출(일평균)', rvWon(추가일평균));
+    줄('행사품목매출(일평균)', rvWon(품목 && 품목.매출일평균),
+       rvDelta(품목 && 품목.매출일평균, ctx.품목전7 && ctx.품목전7.매출일평균),
+       rvDelta(품목 && 품목.매출일평균, ctx.품목전30 && ctx.품목전30.매출일평균),
+       rvDelta(품목 && 품목.매출일평균, ctx.품목작년 && ctx.품목작년.매출일평균));
+    t.push({ head: '판매수량 (전략상품)' });
+    줄('판매상품수량', rvCnt((전략수량 === null || 전략수량 === undefined)
+                             ? (품목 && 품목.qty) : 전략수량, '개'));
+    줄('-행사기간 판매수량(일평균)', rvCnt(품목 && 품목.수량일평균, '개'),
+       rvDelta(품목 && 품목.수량일평균, ctx.품목전7 && ctx.품목전7.수량일평균),
+       rvDelta(품목 && 품목.수량일평균, ctx.품목전30 && ctx.품목전30.수량일평균),
+       rvDelta(품목 && 품목.수량일평균, ctx.품목작년 && ctx.품목작년.수량일평균), true);
+    줄('-직전 1주일 판매수량(일평균)', rvCnt(ctx.품목전7 && ctx.품목전7.수량일평균, '개'),
+       null, null, null, true);
+
+    var head = '<thead><tr><th class="k"></th><th class="c">값</th>' +
+      '<th class="c">직전 7일 평균대비</th><th class="c">직전 30일 평균대비</th>' +
+      '<th class="c">작년 동기간 대비</th></tr></thead>';
+
+    csv.push([]); csv.push(['[프로모션 전후 증감]']);
+    csv.push(['항목', '값', '직전 7일 평균대비', '직전 30일 평균대비', '작년 동기간 대비']);
+    var body = t.map(function (x) {
+      if (x.head) {
+        csv.push([x.head]);
+        return '<tr class="head"><td class="k">' + esc(x.head) + '</td><td colspan="4"></td></tr>';
+      }
+      csv.push([x.k, rvPlain(x.v), x.a ? rvPlain(x.a) : '',
+                x.b ? rvPlain(x.b) : '', x.c ? rvPlain(x.c) : '']);
+      return '<tr' + (x.sub ? ' class="sub"' : '') + '><td class="k">' + esc(x.k) + '</td>' +
+             '<td class="v num">' + x.v + '</td>' +
+             '<td class="d num">' + 칸(x.a === null ? '' : x.a) + '</td>' +
+             '<td class="d num">' + 칸(x.b === null ? '' : x.b) + '</td>' +
+             '<td class="d num">' + 칸(x.c === null ? '' : x.c) + '</td></tr>';
+    }).join('');
+
+    var n = [];
+    n.push('매출·수량·일평균·증감은 <b>원본(시트1)</b>에서 자동계산합니다.');
+    n.push('행사품목+추가구매품목매출은 주문 단위 정보가 원본에 없어 <b>리뷰 시트 입력값</b>입니다.');
+    n.push('일평균은 달력일 기준(' + 일수 + '일)입니다.');
+    n.push(ctx.ch ? '판매처는 <b>' + esc(ctx.ch) + '</b>만 셉니다.'
+                  : '구매채널이 전체이거나 원본 판매처 표기와 달라 <b>전 판매처</b>를 셉니다.');
+    n.push(ctx.품목필터있음
+      ? ('행사품목은 ' + (ctx.promoKey
+          ? '원본 promo 열이 <b>' + esc(ctx.promoKey) + '</b>인 줄'
+          : '제품라인에 <b>' + esc(ctx.라인) + '</b>이(가) 든 줄') + '로 봅니다.')
+      : '제품라인이 전체(ALL)라 행사품목매출이 행사기간매출과 같습니다.');
+    if (행사 && 행사.잘림) {
+      n.push('종료일이 아직 오지 않아 <b>' + 행사.끝 + '</b>까지의 실적입니다.');
+    }
+    n.push('작년 동기간은 <b>작년 같은 날짜</b>(' + lastYearOf(ctx.from).replace(/-/g, '.') +
+           '~' + lastYearOf(ctx.to).replace(/-/g, '.') + ') 기준입니다' +
+           (ctx.작년 ? '.' : ' — 그 기간의 원본이 아직 없어 <b>데이터 없음</b>으로 둡니다.'));
+
+    return rvCard('프로모션 전후 증감', '원본에서 자동계산',
+      '<div class="body flush"><div class="tablewrap"><table class="rv">' + head +
+      '<tbody>' + body + '</tbody></table></div></div>',
+      n.join('<br>'));
+  }
+
+  function rvAovCard(ctx, csv) {
+    var 구매 = ctx.구매고객, 행사 = ctx.행사, 품목 = ctx.품목, 추가 = ctx.p.정보.추가매출;
+    var t = [
+      ['계산 기준 구매고객수', rvCnt(구매, '명'), false],
+      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 구매)), true],
+      ['객단가(행사품목+추가구매품목)', rvWon(rvDiv(추가, 구매)), true],
+      ['객단가(행사품목만)', rvWon(rvDiv(품목 && 품목.amt, 구매)), true]
+    ];
+    csv.push([]); csv.push(['[객단가]']);
+    var body = t.map(function (x) {
+      csv.push([x[0], rvPlain(x[1])]);
+      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) +
+             '</td><td class="v num">' + x[1] + '</td></tr>';
+    }).join('');
+    return rvCard('객단가', '매출 ÷ 구매고객수로 자동계산',
+      '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
+      body + '</tbody></table></div></div>',
+      '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. ' +
+      '기존 시트 리뷰가 쓰던 \'총매출 계산용 구매고객수\'(비회원 포함)는 리뷰 시트에 열이 없어, ' +
+      '그 값을 쓰던 때보다 객단가가 조금 높게 나옵니다.<br>' +
+      '직전 기간·작년의 구매고객수가 원본에 없어 객단가는 증감을 내지 않습니다.');
   }
 
   function renderKpis(A) {
