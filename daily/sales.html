@@ -133,6 +133,19 @@
   .crumb a:hover { text-decoration: underline; }
   .who { text-align: right; font-size: 11.5px; color: var(--ink-muted); }
   .who strong { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  /* 관리자 화면 ↔ 일반 화면 전환. 관리자에게만 보입니다. */
+  #viewToggle { display: none; font: inherit; font-size: 11px; cursor: pointer;
+                margin-top: 4px; padding: 2px 9px; border-radius: 999px;
+                border: 1px solid var(--hairline); background: var(--surface-2);
+                color: var(--ink-muted); }
+  #viewToggle:hover { border-color: var(--accent); color: var(--accent); }
+  html.can-admin #viewToggle { display: inline-block; }
+  /* 일반 화면을 미리 보는 중 — 지금 내 화면이 아니라는 걸 또렷이 표시합니다 */
+  html.can-admin:not(.is-admin) #viewToggle {
+    color: var(--memo); font-weight: 700;
+    background: color-mix(in srgb, var(--memo) 14%, transparent);
+    border-color: color-mix(in srgb, var(--memo) 40%, transparent); }
+  html.can-admin:not(.is-admin) #viewToggle:hover { color: var(--memo); }
 
   /* ── 컨트롤 : 스크롤해도 상단에 붙어 있습니다 ─────────────── */
   .controls-dock { position: sticky; top: 0; z-index: 60;
@@ -472,9 +485,12 @@
     .controls .field { flex: 1 1 0; min-width: 0; }
     select { text-overflow: ellipsis; }
 
-    /* 범례와 CSV 버튼은 좁은 화면에서 자리만 차지합니다 */
+    /* 범례와 CSV 버튼은 좁은 화면에서 자리만 차지합니다.
+       다만 원본을 다루는 담당자는 휴대폰에서도 받아야 할 때가 있어 관리자에게만 남깁니다.
+       is-admin 으로 걸었으므로 일반 화면 미리보기 중에는 함께 사라집니다. */
     .legend { display: none; }
     [data-csv] { display: none; }
+    html.is-admin [data-csv] { display: inline-block; }
     .noteflo { font-size: 12.5px; padding: 9px 12px; margin-bottom: 10px; }
     .card > .head .headavg { font-size: 11px; }
     /* 좁은 화면에서는 판매처 표도 가로로 스크롤합니다 (행 고정은 이때 동작하지 않습니다) */
@@ -537,6 +553,7 @@
         <strong id="whoEmail">—</strong>
         <span id="whoAsOf">—</span>
         <span id="whoFetched"></span>
+        <button type="button" id="viewToggle"></button>
       </div>
     </header>
 
@@ -784,9 +801,9 @@
       }
       viewerEmail = me.email || '';
       document.getElementById('whoEmail').textContent = viewerEmail;
-      if (CONFIG.관리자.indexOf(viewerEmail.toLowerCase()) >= 0) {
-        document.documentElement.classList.add('is-admin');
-      }
+      viewerIsAdmin = CONFIG.관리자.indexOf(viewerEmail.toLowerCase()) >= 0;
+      if (viewerIsAdmin) document.documentElement.classList.add('can-admin');
+      applyView();
       document.documentElement.classList.add('auth-ok');
       logVisit();
       loadAll();
@@ -798,7 +815,7 @@
    * 페이지 안에서 판매처를 바꿔도 기록되므로, 어느 판매처를 보는지 남습니다.
    * no-cors 라 응답을 읽을 수 없고, 실패해도 화면에는 영향이 없습니다.
    */
-  var viewerEmail = '', loggedUrls = {};
+  var viewerEmail = '', loggedUrls = {}, viewerIsAdmin = false;
   function logVisit() {
     if (!CONFIG.LOG_FORM) return;
     var url = location.href;
@@ -1188,8 +1205,24 @@
     month: qs.get('month') || '',
     promo: qs.get('promo') || '',         // 'promo:이름' 또는 'line:문자열'
     tab: qs.get('tab') === 'review' ? 'review' : 'sales',
-    rv: qs.get('rv') || ''                // 리뷰 탭에서 고른 프로모션 키
+    rv: qs.get('rv') || '',               // 리뷰 탭에서 고른 프로모션 키
+    /* 'guest' 면 관리자도 다른 분들이 보는 화면을 그대로 봅니다 */
+    view: qs.get('view') === 'guest' ? 'guest' : 'admin'
   };
+
+  /**
+   * 지금 어느 화면을 보여줄지 정합니다.
+   * 관리자 기능은 전부 is-admin 에 걸려 있으므로, 이 클래스 하나만 떼면
+   * 앞으로 늘어날 기능까지 함께 감춰집니다.
+   */
+  function applyView() {
+    var 관리자화면 = viewerIsAdmin && state.view !== 'guest';
+    document.documentElement.classList.toggle('is-admin', 관리자화면);
+    var b = document.getElementById('viewToggle');
+    b.textContent = 관리자화면 ? '일반 화면 보기' : '일반 화면 미리보기 · 돌아가기';
+    b.title = 관리자화면 ? '다른 분들이 보는 화면으로 바꿔 봅니다'
+                        : '관리자 화면으로 돌아갑니다';
+  }
 
   function buildControls() {
     var p = document.getElementById('period');
@@ -1249,6 +1282,10 @@
       syncUrl(); render();
     };
     document.getElementById('reload').onclick = loadAll;
+    document.getElementById('viewToggle').onclick = function () {
+      state.view = (state.view === 'guest') ? 'admin' : 'guest';
+      applyView(); syncUrl();
+    };
   }
 
   function syncUrl() {
@@ -1259,6 +1296,9 @@
     if (state.promo) p.set('promo', state.promo);
     if (state.tab === 'review') p.set('tab', 'review');
     if (state.tab === 'review' && state.rv) p.set('rv', state.rv);
+    /* 관리자일 때만 남깁니다 — 미리보기 중에 복사한 링크를 팀원이 열어도
+       첫 조작에서 이 표시가 저절로 떨어져 나갑니다. */
+    if (viewerIsAdmin && state.view === 'guest') p.set('view', 'guest');
     var q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
     document.getElementById('channel').value = state.ch;
