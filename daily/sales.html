@@ -239,6 +239,21 @@
 
   .rv-note { font-size: 11.5px; color: var(--ink-muted); line-height: 1.7;
              padding: 11px 16px 14px; border-top: 1px solid var(--hairline); }
+  /* 어느 시트로 계산했는지 — 리뷰 맨 위에 항상 띄웁니다 */
+  .rv-src { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px;
+            background: var(--surface); border: 1px solid var(--hairline);
+            border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+            font-size: 12px; color: var(--ink-muted); box-shadow: var(--shadow); }
+  .rv-src .pill { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+  .rv-src .pill.final { color: var(--good);
+                        background: color-mix(in srgb, var(--good) 13%, transparent); }
+  .rv-src .pill.prov  { color: var(--memo);
+                        background: color-mix(in srgb, var(--memo) 15%, transparent); }
+  .rv-src .sp { flex: 1 1 auto; }
+  .rv-warn { background: color-mix(in srgb, var(--serious) 8%, transparent);
+             border: 1px solid color-mix(in srgb, var(--serious) 30%, transparent);
+             color: var(--serious); border-radius: 10px; padding: 10px 14px;
+             font-size: 12.5px; line-height: 1.65; margin-bottom: 14px; }
   .rv-empty { background: var(--surface); border: 1px dashed var(--hairline);
               border-radius: 12px; padding: 26px 20px; text-align: center;
               color: var(--ink-muted); font-size: 13px; line-height: 1.7; }
@@ -658,6 +673,19 @@
     REVIEW_GID: 1355839859,
     /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
     비교기준: [7, 30],
+
+    /* 프로모션 리뷰의 매출·고객 데이터 — '자사몰주문RAWDATA'의 요약 탭입니다.
+       월마감 후 붙여넣는 시트라 취소·환불이 반영된 값입니다. 자사몰 전용입니다.
+       원장(약 77,000행)을 그대로 읽지 않고 요약만 읽어, 고객 연락처가 브라우저로
+       내려가지 않게 하고 로딩도 가볍게 유지합니다.
+         · 일자별요약   주문일 · 제품라인 · 매출 · 수량            (전 기간, 가벼움)
+         · 주문라인요약 + 주문번호 · 주문자ID · 첫구매             (2024~, 행사기간 계산용)
+       gid 는 탭을 누르면 주소 끝 #gid=... 에 나옵니다.
+       비워 두면 리뷰는 일일매출RAWDATA(잠정치)로 계산합니다. */
+    ORDER_SHEET_ID:  '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
+    ORDER_DAILY_GID: 1971945306,     // 일자별요약
+    ORDER_LINE_GID:  133654312,      // 주문라인요약
+    ORDER_CHANNEL:   '자사몰',
 
     /* 방문 로그 — monthly/mileage.html과 같은 구글 폼입니다. */
     LOG_FORM:  'https://docs.google.com/forms/d/e/' +
@@ -1633,16 +1661,16 @@
   function rvNorm(v) {
     return String(v === undefined || v === null ? '' : v).replace(/\s+/g, '');
   }
-  function rvMapCols(header) {
-    var pos = {}, c, key, names, j;
+  /** 헤더 줄에서 열 위치를 이름으로 찾습니다. 열 순서가 바뀌어도 안 깨집니다. */
+  function mapBy(header, spec) {
+    var pos = {}, c, key, names, j, C = {};
     for (c = 0; c < header.length; c++) {
       var nm = rvNorm(header[c]);
       if (nm && pos[nm] === undefined) pos[nm] = c;
     }
-    var C = {};
-    for (key in RV_COLS) {
+    for (key in spec) {
       C[key] = -1;
-      names = RV_COLS[key];
+      names = spec[key];
       for (j = 0; j < names.length; j++) {
         var want = rvNorm(names[j]);
         if (pos[want] !== undefined) { C[key] = pos[want]; break; }
@@ -1650,6 +1678,7 @@
     }
     return C;
   }
+  function rvMapCols(header) { return mapBy(header, RV_COLS); }
   function rvText(row, i) {
     if (i < 0) return '';
     var raw = row[i];
@@ -1848,16 +1877,177 @@
                        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
   }
 
+  /* ═══════════════════════════════════════════════════════
+     마감 매출 — '자사몰주문RAWDATA' 요약 탭
+     ── 취소·환불이 반영된 값입니다. 자사몰 전용.
+        리뷰의 매출·고객 숫자는 되도록 여기서 냅니다.
+     ═══════════════════════════════════════════════════════ */
+  var ORD = { daily: null, line: null };
+  var ordState = { daily: 'idle', line: 'idle' };   /* idle · off · loading · ready · error */
+  var ordError = { daily: null, line: null };
+
+  var ORD_DAILY_COLS = {
+    d:    ['주문일', '날짜'],
+    line: ['제품라인'],
+    amt:  ['매출', '매출(SllngPrc)'],
+    qty:  ['수량']
+  };
+  var ORD_LINE_COLS = {
+    d:     ['주문일', '날짜'],
+    ord:   ['주문번호', '자사몰net주문번호'],
+    cust:  ['주문자ID', '주문자아이디'],
+    first: ['첫구매', '첫주문'],
+    line:  ['제품라인'],
+    amt:   ['매출', '매출(SllngPrc)'],
+    qty:   ['수량']
+  };
+
+  function parseOrdDaily(vals) {
+    if (!vals || vals.length < 2) return null;
+    var C = mapBy(vals[0] || [], ORD_DAILY_COLS);
+    if (C.d < 0 || C.amt < 0) return null;
+    var rows = [], min = '', max = '', i, r, d;
+    for (i = 1; i < vals.length; i++) {
+      r = vals[i] || [];
+      d = rvDate(r, C.d); if (!d) continue;
+      rows.push({ d: d, line: rvText(r, C.line),
+                  amt: rvNum(r, C.amt) || 0, qty: rvNum(r, C.qty) || 0 });
+      if (!min || d < min) min = d;
+      if (d > max) max = d;
+    }
+    return rows.length ? { rows: rows, min: min, max: max } : null;
+  }
+
+  function parseOrdLine(vals) {
+    if (!vals || vals.length < 2) return null;
+    var C = mapBy(vals[0] || [], ORD_LINE_COLS);
+    if (C.d < 0 || C.amt < 0 || C.ord < 0) return null;
+    var rows = [], min = '', max = '', i, r, d;
+    for (i = 1; i < vals.length; i++) {
+      r = vals[i] || [];
+      d = rvDate(r, C.d); if (!d) continue;
+      rows.push({
+        d: d,
+        ord: rvText(r, C.ord),
+        cust: rvText(r, C.cust),
+        /* '첫주문' 이 적힌 줄이 그 고객의 생애 첫 주문입니다 */
+        first: !!rvText(r, C.first),
+        line: rvText(r, C.line),
+        amt: rvNum(r, C.amt) || 0,
+        qty: rvNum(r, C.qty) || 0
+      });
+      if (!min || d < min) min = d;
+      if (d > max) max = d;
+    }
+    return rows.length ? { rows: rows, min: min, max: max } : null;
+  }
+
+  function loadOrdTab(which) {
+    var gid = which === 'daily' ? CONFIG.ORDER_DAILY_GID : CONFIG.ORDER_LINE_GID;
+    if (gid === null || gid === undefined) { ordState[which] = 'off'; return Promise.resolve(); }
+    if (ordState[which] === 'loading' || ordState[which] === 'ready') return Promise.resolve();
+    ordState[which] = 'loading';
+    ordError[which] = null;
+    return tabNameByGid(CONFIG.ORDER_SHEET_ID, gid).then(function (title) {
+      return sheetValuesOf(CONFIG.ORDER_SHEET_ID,
+        quoteTab(title, which === 'daily' ? 'A1:D' : 'A1:G'));
+    }).then(function (vals) {
+      ORD[which] = which === 'daily' ? parseOrdDaily(vals) : parseOrdLine(vals);
+      ordState[which] = ORD[which] ? 'ready' : 'error';
+      if (!ORD[which]) ordError[which] = new Error('요약 탭에서 읽을 수 있는 줄이 없습니다');
+    }).catch(function (e) {
+      ordError[which] = e;
+      ordState[which] = 'error';
+    });
+  }
+
+  function lineHit(값, 찾을것) {
+    return !찾을것 || String(값).toUpperCase().indexOf(String(찾을것).toUpperCase()) >= 0;
+  }
+
+  /** rvSum 과 같은 모양을 돌려줍니다 — 부르는 쪽이 소스를 몰라도 되게 합니다 */
+  function ordSum(from, to, opt) {
+    opt = opt || {};
+    var D = ORD.daily;
+    if (!D || !from || !to || from > to) return null;
+    var lo = from, hi = to;
+    if (opt.clamp && hi > D.max) hi = D.max;
+    if (lo < D.min || hi > D.max || lo > hi) return null;
+
+    var amt = 0, qty = 0, i, r;
+    for (i = 0; i < D.rows.length; i++) {
+      r = D.rows[i];
+      if (r.d < lo || r.d > hi) continue;
+      if (opt.line && !lineHit(r.line, opt.line)) continue;
+      amt += r.amt; qty += r.qty;
+    }
+    var 일수 = calDays(lo, hi);
+    return { amt: amt, qty: qty, 일수: 일수, 잘림: hi !== to, 시작: lo, 끝: hi,
+             매출일평균: amt / 일수, 수량일평균: qty / 일수 };
+  }
+
+  /**
+   * 주문 단위 집계 — 행사기간에만 씁니다.
+   * 추가구매매출은 '행사품목이 든 주문'을 먼저 찾고 그 주문의 전체 금액을 더합니다.
+   * 그래서 같은 주문에 딸려 산 다른 상품까지 잡힙니다.
+   */
+  function ordStats(from, to, 라인) {
+    var O = ORD.line;
+    if (!O || !from || !to || from > to) return null;
+    var lo = from, hi = to > O.max ? O.max : to;
+    if (lo < O.min || lo > hi) return null;
+
+    var 대상주문 = {}, i, r;
+    for (i = 0; i < O.rows.length; i++) {
+      r = O.rows[i];
+      if (r.d < lo || r.d > hi) continue;
+      if (lineHit(r.line, 라인)) 대상주문[r.ord] = 1;
+    }
+    var 총 = 0, 품목 = 0, 품목plus = 0, 품목수량 = 0, 총수량 = 0;
+    var 고객 = {}, 신규 = {}, 주문 = {};
+    for (i = 0; i < O.rows.length; i++) {
+      r = O.rows[i];
+      if (r.d < lo || r.d > hi) continue;
+      총 += r.amt; 총수량 += r.qty;
+      if (r.ord) 주문[r.ord] = 1;
+      if (r.cust) { 고객[r.cust] = 1; if (r.first) 신규[r.cust] = 1; }
+      if (lineHit(r.line, 라인)) { 품목 += r.amt; 품목수량 += r.qty; }
+      if (대상주문[r.ord]) 품목plus += r.amt;
+    }
+    var 고객수 = 0, 신규수 = 0, k;
+    for (k in 고객) 고객수++;
+    for (k in 신규) 신규수++;
+    var 주문수 = 0;
+    for (k in 주문) 주문수++;
+
+    return { 시작: lo, 끝: hi, 잘림: hi !== to,
+             총매출: 총, 총수량: 총수량, 품목매출: 품목, 품목수량: 품목수량,
+             품목plus매출: 품목plus,
+             구매고객수: 고객수, 신규고객수: 신규수, 기존고객수: 고객수 - 신규수,
+             주문수: 주문수 };
+  }
+
+  /** 이 구간을 마감 요약이 온전히 덮고 있는지 */
+  function ordCovers(from, to) {
+    var D = ORD.daily;
+    return !!(D && from && to && from >= D.min && to <= D.max);
+  }
+
   /* ── 불러오기 ───────────────────────────────────────────── */
   function ensureReview() {
     if (reviewState === 'ready' || reviewState === 'loading') { renderReview(); return; }
     reviewState = 'loading';
     reviewError = null;
     renderReview();
-    tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_GID).then(function (title) {
-      return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:BZ'));
-    }).then(function (vals) {
-      REVIEW = parseReview(vals);
+    /* 리뷰 시트와 마감 매출 요약을 함께 부릅니다. 마감 요약이 없거나 실패해도
+       리뷰는 잠정치로 그려지므로, 실패를 리뷰 전체의 실패로 만들지 않습니다. */
+    Promise.all([
+      tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_GID).then(function (title) {
+        return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:BZ'));
+      }),
+      loadOrdTab('daily')
+    ]).then(function (res) {
+      REVIEW = parseReview(res[0]);
       reviewState = 'ready';
       renderReview();
     }).catch(function (e) {
@@ -1940,7 +2130,66 @@
       : '';
     var p = 목록.filter(function (x) { return x.키 === state.rv; })[0];
     if (!p) { csvCache.rv = null; body.innerHTML = 안내; return; }
+
+    /* 주문 단위 요약은 무거우므로, 자사몰 프로모션을 실제로 열었을 때만 부릅니다.
+       loadOrdTab 이 상태를 곧바로 'loading' 으로 바꾸므로 다시 부르지 않습니다. */
+    if (ordState.line === 'idle' && ORD.daily &&
+        p.정보.구매채널 && p.정보.구매채널.indexOf(CONFIG.ORDER_CHANNEL) >= 0) {
+      loadOrdTab('line').then(renderReview);
+    }
     body.innerHTML = 안내 + rvCards(p);
+  }
+
+  /** 이 리뷰를 어느 시트로 냈는지, 그리고 걸리는 게 있으면 무엇인지 */
+  function rvSourceStrip(ctx) {
+    var D = ORD.daily;
+    var out = '<div class="rv-src">';
+    out += ctx.마감
+      ? '<span class="pill final">마감 기준</span>' +
+        '<span>취소·환불이 반영된 자사몰주문RAWDATA로 계산했습니다</span>'
+      : '<span class="pill prov">잠정 기준</span>' +
+        '<span>일일매출RAWDATA로 계산했습니다 — 취소·환불이 아직 빠져 있습니다</span>';
+    out += '<span class="sp"></span>';
+    if (D) out += '<span>주문 원장 ' + D.min.replace(/-/g, '.') + ' ~ <b>' +
+                  D.max.replace(/-/g, '.') + '</b></span>';
+    else if (ordState.daily === 'off') out += '<span>주문 원장 미연결</span>';
+    else if (ordState.daily === 'error') out += '<span>주문 원장을 읽지 못했습니다</span>';
+    out += '</div>';
+
+    var w = [];
+    if (!ctx.마감) {
+      if (ordState.daily === 'off') {
+        w.push('자사몰주문RAWDATA 요약 탭이 아직 연결되지 않았습니다 — 연결하면 취소·환불이 반영된 값으로 바뀝니다.');
+      } else if (ordState.daily === 'error') {
+        w.push('자사몰주문RAWDATA 요약 탭을 읽지 못했습니다 — ' + esc(hintFor(ordError.daily)));
+      } else if (!ctx.자사몰) {
+        w.push('구매채널이 <b>' + esc(ctx.p.정보.구매채널 || '미입력') +
+               '</b> 이라 자사몰 주문 원장으로는 낼 수 없습니다.');
+      } else if (D) {
+        w.push('비교 기준 구간(직전 30일 ' + dayShift(ctx.from, -30).replace(/-/g, '.') +
+               ' · 작년 ' + lastYearOf(ctx.from).replace(/-/g, '.') + ')이 주문 원장 범위 밖이라 ' +
+               '잠정치로 냈습니다 — 네 구간을 같은 시트에서 내야 증감률이 기울지 않습니다.');
+      }
+    }
+    if (ctx.행사 && ctx.행사.잘림) {
+      w.push('행사기간 중 <b>' + ctx.행사.끝.replace(/-/g, '.') + '</b> 까지만 들어 있습니다' +
+             (ctx.마감 && D && D.max < DATA.maxDate
+               ? ' — 자사몰주문RAWDATA에 최신분을 붙여넣으시면 나머지가 채워집니다.'
+               : ' — 아직 지나지 않은 기간입니다.'));
+    }
+    if (ctx.마감 && !ctx.주문) {
+      if (ordState.line === 'loading') {
+        w.push('구매고객수·추가구매매출을 불러오는 중입니다…');
+      } else if (ordState.line === 'off') {
+        w.push('주문라인요약 탭을 연결하면 구매고객수·신규/기존·추가구매매출이 자동으로 계산됩니다.');
+      } else if (ordState.line === 'error') {
+        w.push('주문라인요약 탭을 읽지 못해 고객수는 리뷰 시트 입력값을 씁니다 — ' +
+               esc(hintFor(ordError.line)));
+      } else {
+        w.push('행사기간이 주문라인요약 범위 밖이라 고객수는 리뷰 시트 입력값을 씁니다.');
+      }
+    }
+    return out + (w.length ? '<div class="rv-warn">' + w.join('<br>') + '</div>' : '');
   }
 
   function rvCards(p) {
@@ -1954,27 +2203,57 @@
     /* 원본 promo 열에 같은 이름이 적혀 있으면 제품라인보다 그쪽을 먼저 씁니다 */
     var promoKey = DATA.rows.some(function (r) { return r.promo && r.promo === p.이름; })
       ? p.이름 : '';
-    var 품목조건 = { ch: ch, line: 라인, promo: promoKey };
+
+    /* 어느 시트로 계산할지 정합니다.
+       마감(자사몰주문RAWDATA)을 쓰려면 구매채널이 자사몰이어야 하고, 비교 기준이 되는
+       세 구간(직전 7일·30일·작년)이 모두 요약에 들어 있어야 합니다.
+       한 리뷰 안에서 소스를 섞으면 증감률이 한쪽으로 기울기 때문에, 조건이 하나라도
+       어긋나면 네 구간 모두 잠정치(일일매출RAWDATA)로 냅니다. */
+    var 전7시작 = dayShift(from, -7),  전7끝 = dayShift(from, -1);
+    var 전30시작 = dayShift(from, -30), 전30끝 = 전7끝;
+    var 작년시작 = lastYearOf(from), 작년끝 = lastYearOf(to);
+    var 자사몰 = !!(i.구매채널 && i.구매채널.indexOf(CONFIG.ORDER_CHANNEL) >= 0);
+    var 마감 = !!(ORD.daily && 자사몰 &&
+                  ordCovers(전7시작, 전7끝) && ordCovers(전30시작, 전30끝) &&
+                  ordCovers(작년시작, 작년끝) && ordCovers(from, from));
+
+    var S = 마감 ? ordSum : rvSum;
+    /* 마감 요약에는 promo 열이 없으므로 행사품목은 제품라인으로만 봅니다 */
+    var 품목조건 = 마감 ? { line: 라인 } : { ch: ch, line: 라인, promo: promoKey };
+    var 전체조건 = 마감 ? {} : { ch: ch };
 
     var ctx = {
-      p: p, from: from, to: to, ch: ch, 라인: 라인, promoKey: promoKey,
-      품목필터있음: !!(promoKey || 라인),
-      행사:     rvSum(from, to, { ch: ch, clamp: true }),
-      품목:     rvSum(from, to, { ch: ch, line: 라인, promo: promoKey, clamp: true }),
-      전7:      rvSum(dayShift(from, -7),  dayShift(from, -1), { ch: ch }),
-      전30:     rvSum(dayShift(from, -30), dayShift(from, -1), { ch: ch }),
-      작년:     rvSum(lastYearOf(from), lastYearOf(to), { ch: ch }),
-      품목전7:  rvSum(dayShift(from, -7),  dayShift(from, -1), 품목조건),
-      품목전30: rvSum(dayShift(from, -30), dayShift(from, -1), 품목조건),
-      품목작년: rvSum(lastYearOf(from), lastYearOf(to), 품목조건),
-      유입합: null, 구매고객: i.구매고객
+      p: p, from: from, to: to, ch: ch, 라인: 라인, promoKey: 마감 ? '' : promoKey,
+      마감: 마감, 자사몰: 자사몰,
+      품목필터있음: !!(마감 ? 라인 : (promoKey || 라인)),
+      행사:     S(from, to, { ch: ch, clamp: true }),
+      품목:     S(from, to, { ch: ch, line: 라인, promo: 품목조건.promo, clamp: true }),
+      전7:      S(전7시작, 전7끝, 전체조건),
+      전30:     S(전30시작, 전30끝, 전체조건),
+      작년:     S(작년시작, 작년끝, 전체조건),
+      품목전7:  S(전7시작, 전7끝, 품목조건),
+      품목전30: S(전30시작, 전30끝, 품목조건),
+      품목작년: S(작년시작, 작년끝, 품목조건),
+      주문: null, 유입합: null, 구매고객: i.구매고객, 시트구매고객: i.구매고객
     };
     p.발신.forEach(function (r) {
       if (r.유입 !== null && r.유입 !== undefined) ctx.유입합 = (ctx.유입합 || 0) + r.유입;
     });
 
-    var csv = [];
-    var html = rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
+    /* 주문 단위 숫자(구매고객수·신규/기존·추가구매매출)는 행사기간에만 필요합니다 */
+    if (마감 && ordState.line === 'ready') {
+      ctx.주문 = ordStats(from, to, 라인);
+      if (ctx.주문) {
+        ctx.구매고객 = ctx.주문.구매고객수;
+        ctx.신규고객 = ctx.주문.신규고객수;
+        ctx.기존고객 = ctx.주문.기존고객수;
+      }
+    }
+
+    var csv = [['기준', 마감 ? '마감 (자사몰주문RAWDATA · 취소·환불 반영)'
+                              : '잠정 (일일매출RAWDATA · 취소·환불 미반영)']];
+    var html = rvSourceStrip(ctx) +
+               rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
                rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv);
     csvCache.rv = { name: (p.이름 || '프로모션') + '_리뷰', rows: csv };
     return html;
@@ -2068,32 +2347,55 @@
   }
 
   function rvBuyerCard(ctx, csv) {
-    var 구매 = ctx.구매고객, i = ctx.p.정보;
+    var i = ctx.p.정보, 주문계산 = !!ctx.주문;
+    var 구매 = ctx.구매고객;
+    var 신규 = 주문계산 ? ctx.신규고객 : i.신규고객;
+    var 기존 = 주문계산 ? ctx.기존고객 : i.기존고객;
+
     var t = [
       ['구매고객수', rvCnt(구매, '명'), false],
       ['-유추전환율', rvPct(rvDiv(구매, ctx.유입합)), true],
-      ['-신규고객수', rvCnt(i.신규고객, '명'), true],
-      ['-신규고객비율', rvPct(rvDiv(i.신규고객, 구매)), true],
-      ['-기존고객수', rvCnt(i.기존고객, '명'), true],
-      ['-기존고객비율', rvPct(rvDiv(i.기존고객, 구매)), true]
+      ['-신규고객수', rvCnt(신규, '명'), true],
+      ['-신규고객비율', rvPct(rvDiv(신규, 구매)), true],
+      ['-기존고객수', rvCnt(기존, '명'), true],
+      ['-기존고객비율', rvPct(rvDiv(기존, 구매)), true]
     ];
+    if (주문계산) t.push(['-주문건수', rvCnt(ctx.주문.주문수, '건'), true]);
+
     csv.push([]); csv.push(['[구매고객정보]']);
     var body = t.map(function (x) {
       csv.push([x[0], rvPlain(x[1])]);
       return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) +
              '</td><td class="v num">' + x[1] + '</td></tr>';
     }).join('');
-    return rvCard('구매고객정보', '고객수는 리뷰 시트 입력값 · 전환율과 비율은 자동계산',
+
+    var n = ['유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + ').'];
+    if (주문계산) {
+      n.push('고객수는 <b>자사몰주문RAWDATA</b>에서 주문자ID를 세어 낸 값입니다 — ' +
+             '기간 안에 두 번 산 고객도 한 명으로 셉니다. ' +
+             '신규는 <b>첫구매</b> 열이 찍힌 고객입니다.');
+      if (ctx.시트구매고객 !== null && ctx.시트구매고객 !== undefined &&
+          Math.round(ctx.시트구매고객) !== Math.round(ctx.구매고객)) {
+        n.push('리뷰 시트에 적힌 구매고객수는 ' + rvCnt(ctx.시트구매고객, '명') + ' 입니다 — 화면 값과 다릅니다.');
+      }
+    } else {
+      n.push('고객수는 <b>리뷰 시트 입력값</b>입니다. ' +
+             '자사몰주문RAWDATA 요약이 이 기간을 덮으면 자동으로 계산값으로 바뀝니다.');
+    }
+    n.push('구매고객수의 직전 기간·작년 대비는 화면에 내지 않습니다.');
+
+    return rvCard('구매고객정보',
+      주문계산 ? '주문 원장에서 자동계산' : '고객수는 리뷰 시트 입력값 · 비율은 자동계산',
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
-      body + '</tbody></table></div></div>',
-      '유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + '). ' +
-      '구매고객수의 직전 기간·작년 대비는 원본에 고객수 기록이 없어 내지 않습니다.');
+      body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   function rvSalesCard(ctx, csv) {
     var 행사 = ctx.행사, 품목 = ctx.품목;
-    /* 주문 단위 정보가 원본에 없어 '행사품목+추가구매품목'만 시트 값을 씁니다 */
-    var 추가 = ctx.p.정보.추가매출;
+    /* 추가구매는 주문번호로 묶어야 나옵니다. 주문 원장이 있으면 계산하고,
+       없으면 리뷰 시트에 적힌 값을 씁니다. */
+    var 추가 = ctx.주문 ? ctx.주문.품목plus매출 : ctx.p.정보.추가매출;
+    var 추가계산 = !!ctx.주문;
     var 일수 = 행사 ? 행사.일수 : calDays(ctx.from, ctx.to);
     var 추가일평균 = (추가 === null || 추가 === undefined) ? null : 추가 / 일수;
     var 전략수량 = ctx.p.정보.전략수량;
@@ -2145,11 +2447,16 @@
     }).join('');
 
     var n = [];
-    n.push('매출·수량·일평균·증감은 <b>원본(시트1)</b>에서 자동계산합니다.');
-    n.push('행사품목+추가구매품목매출은 주문 단위 정보가 원본에 없어 <b>리뷰 시트 입력값</b>입니다.');
+    n.push(ctx.마감
+      ? '매출·수량은 <b>자사몰주문RAWDATA</b>에서 냅니다 — 월마감 후 시트라 취소·환불이 반영된 값입니다.'
+      : '매출·수량은 <b>일일매출RAWDATA</b>에서 냅니다 — 매일 모으는 시트라 취소·환불은 아직 빠져 있습니다.');
+    n.push(추가계산
+      ? '행사품목+추가구매품목매출은 <b>행사품목이 든 주문의 전체 금액</b>을 더한 값입니다 — 같은 주문에 딸려 산 상품까지 들어갑니다.'
+      : '행사품목+추가구매품목매출은 주문번호가 있어야 낼 수 있어 <b>리뷰 시트 입력값</b>을 씁니다.');
     n.push('일평균은 달력일 기준(' + 일수 + '일)입니다.');
-    n.push(ctx.ch ? '판매처는 <b>' + esc(ctx.ch) + '</b>만 셉니다.'
-                  : '구매채널이 전체이거나 원본 판매처 표기와 달라 <b>전 판매처</b>를 셉니다.');
+    n.push(ctx.마감 ? '자사몰 주문만 셉니다.'
+      : (ctx.ch ? '판매처는 <b>' + esc(ctx.ch) + '</b>만 셉니다.'
+                : '구매채널이 전체이거나 원본 판매처 표기와 달라 <b>전 판매처</b>를 셉니다.'));
     n.push(ctx.품목필터있음
       ? ('행사품목은 ' + (ctx.promoKey
           ? '원본 promo 열이 <b>' + esc(ctx.promoKey) + '</b>인 줄'
@@ -2161,6 +2468,10 @@
     n.push('작년 동기간은 <b>작년 같은 날짜</b>(' + lastYearOf(ctx.from).replace(/-/g, '.') +
            '~' + lastYearOf(ctx.to).replace(/-/g, '.') + ') 기준입니다' +
            (ctx.작년 ? '.' : ' — 그 기간의 원본이 아직 없어 <b>데이터 없음</b>으로 둡니다.'));
+    if (ctx.마감) {
+      n.push('네 구간 모두 같은 시트에서 냅니다 — 소스가 섞이지 않아 증감률이 한쪽으로 기울지 않습니다. ' +
+             '다만 이번 달처럼 아직 마감 전인 구간은 취소·환불이 덜 반영돼 있을 수 있습니다.');
+    }
 
     return rvCard('프로모션 전후 증감', '원본에서 자동계산',
       '<div class="body flush"><div class="tablewrap"><table class="rv">' + head +
@@ -2169,7 +2480,8 @@
   }
 
   function rvAovCard(ctx, csv) {
-    var 구매 = ctx.구매고객, 행사 = ctx.행사, 품목 = ctx.품목, 추가 = ctx.p.정보.추가매출;
+    var 구매 = ctx.구매고객, 행사 = ctx.행사, 품목 = ctx.품목;
+    var 추가 = ctx.주문 ? ctx.주문.품목plus매출 : ctx.p.정보.추가매출;
     var t = [
       ['계산 기준 구매고객수', rvCnt(구매, '명'), false],
       ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 구매)), true],
@@ -2185,10 +2497,11 @@
     return rvCard('객단가', '매출 ÷ 구매고객수로 자동계산',
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
       body + '</tbody></table></div></div>',
-      '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. ' +
-      '기존 시트 리뷰가 쓰던 \'총매출 계산용 구매고객수\'(비회원 포함)는 리뷰 시트에 열이 없어, ' +
-      '그 값을 쓰던 때보다 객단가가 조금 높게 나옵니다.<br>' +
-      '직전 기간·작년의 구매고객수가 원본에 없어 객단가는 증감을 내지 않습니다.');
+      (ctx.주문
+        ? '나누는 값은 행사기간에 <b>실제로 주문한 고객 수</b>입니다 — 주문 원장의 주문자ID를 세어 냈습니다.'
+        : '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. 주문 원장이 이 기간을 덮으면 ' +
+          '실제 주문 고객 수로 바뀝니다.') +
+      '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
   }
 
   function renderKpis(A) {
