@@ -670,11 +670,12 @@
     ],
     RECENT_DAYS: 30,
 
-    /* 프로모션 리뷰 — 발신·고객 데이터를 적어 두는 시트입니다.
-       "리뷰 - 카카오톡 발신 데이터 및 프로모션 성과 (PROMO)"
-       탭은 이름 대신 gid 로 찾습니다. 탭 이름을 바꾸셔도 그대로 동작합니다. */
-    REVIEW_SHEET_ID: '1VFbnF-K5FoUFtmqZVSQ-4QF3e5nsq9Fo_kq5oyEWppk',
-    REVIEW_GID: 1355839859,
+    /* 프로모션 리뷰 — 프로모션 정보와 발신 데이터를 적어 두는 탭입니다.
+       아래 주문 원장과 같은 파일('자사몰주문RAWDATA') 안에 있어, 이 파일 하나만
+       열람 권한이 있으면 리뷰가 다 보입니다.
+       탭은 이름 대신 gid 로 찾으므로 탭 이름을 바꾸셔도 그대로 동작합니다. */
+    REVIEW_SHEET_ID: '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
+    REVIEW_GID: 1003712761,
     /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
     비교기준: [7, 30],
 
@@ -862,16 +863,30 @@
   }
   function sheetValues(range) { return sheetValuesOf(CONFIG.SHEET_ID, range); }
 
-  /** gid 로 탭 이름을 찾습니다 — 탭 이름이 바뀌어도 gid 는 그대로라서요 */
+  /**
+   * gid 로 탭 이름을 찾습니다 — 탭 이름이 바뀌어도 gid 는 그대로라서요.
+   * 한 파일에서 탭을 여럿 읽으므로 탭 목록은 파일당 한 번만 받아 둡니다.
+   */
+  var tabNames = {};
   function tabNameByGid(sheetId, gid) {
-    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId +
-              '?fields=' + encodeURIComponent('sheets.properties(sheetId,title)');
-    return api(url).then(function (j) {
-      var found = (j.sheets || []).filter(function (s) {
-        return s.properties && s.properties.sheetId === gid;
-      })[0];
-      if (!found) throw new Error('gid ' + gid + ' 에 해당하는 탭이 없습니다');
-      return found.properties.title;
+    var 목록 = tabNames[sheetId];
+    if (!목록) {
+      var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId +
+                '?fields=' + encodeURIComponent('sheets.properties(sheetId,title)');
+      목록 = tabNames[sheetId] = api(url).then(function (j) {
+        var map = {};
+        (j.sheets || []).forEach(function (s) {
+          if (s.properties) map[s.properties.sheetId] = s.properties.title;
+        });
+        return map;
+      });
+      /* 실패한 약속을 캐시에 남겨 두면 '다시 시도'가 영영 안 됩니다 */
+      목록['catch'](function () { delete tabNames[sheetId]; });
+    }
+    return 목록.then(function (map) {
+      var name = map[gid];
+      if (!name) throw new Error('gid ' + gid + ' 에 해당하는 탭이 없습니다');
+      return name;
     });
   }
   /** 탭 이름을 A1 표기의 범위로 감쌉니다 (이름 안의 작은따옴표는 두 번 적습니다) */
