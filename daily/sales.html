@@ -209,14 +209,12 @@
   .tabs[hidden] { display: none; }
 
   /* ── 프로모션 리뷰 ──────────────────────────────────────── */
-  /* 개요 : 6칸짜리 격자에 얹어 줄마다 1·2·3단을 섞습니다.
-     좁은 화면에서는 아래 미디어 쿼리에서 전부 한 줄씩 내려갑니다. */
-  .facts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .facts > div { grid-column: span 6; display: flex; flex-direction: column; gap: 3px;
-                 padding: 9px 16px 9px 0; border-bottom: 1px solid var(--hairline); }
-  .facts > div.half  { grid-column: span 3; }
-  .facts > div.third { grid-column: span 2; }
-  .facts .k { font-size: 10.5px; letter-spacing: .06em; color: var(--ink-muted); }
+  /* 개요 : 한 줄에 한 항목. 이름은 오른쪽에 붙이고 값이 그 옆에 섭니다. */
+  .facts > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px;
+                 align-items: baseline; padding: 8px 0;
+                 border-bottom: 1px solid var(--hairline); }
+  .facts > div:last-child { border-bottom: 0; }
+  .facts .k { font-size: 11.5px; color: var(--ink-muted); text-align: right; }
   .facts .v { font-size: 13px; font-weight: 550; color: var(--ink); overflow-wrap: anywhere; }
   .facts .v.none { color: var(--ink-muted); font-weight: 400; }
   .facts > div.title .v { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
@@ -232,12 +230,10 @@
   table.rv td.d { text-align: center; width: 132px; font-size: 12px; }
   .na { color: var(--ink-muted); font-weight: 400; }
 
-  /* 발신 성과 : 발신일 묶음마다 채널 열이 붙습니다 */
-  #rvSend td.k { width: 168px; }
-  #rvSend td.g { text-align: center; background: var(--surface-2); font-weight: 620; }
+  /* 발신 성과 : 지표가 행, 발신이 열 */
+  #rvSend td.k { width: 150px; }
   #rvSend td.s { text-align: center; }
-  #rvSend tr.em td.s { font-weight: 700; }
-  #rvSend tr.chline td.s { background: var(--surface-2); font-weight: 620; }
+  #rvSend tr.chline td { background: var(--surface-2); font-weight: 620; }
 
   .rv-note { font-size: 11.5px; color: var(--ink-muted); line-height: 1.7;
              padding: 11px 16px 14px; border-top: 1px solid var(--hairline); }
@@ -246,12 +242,25 @@
             background: var(--surface); border: 1px solid var(--hairline);
             border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
             font-size: 12px; color: var(--ink-muted); box-shadow: var(--shadow); }
-  .rv-src .pill { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
-  .rv-src .pill.final { color: var(--good);
-                        background: color-mix(in srgb, var(--good) 13%, transparent); }
-  .rv-src .pill.prov  { color: var(--memo);
-                        background: color-mix(in srgb, var(--memo) 15%, transparent); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700;
+          padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.final { color: var(--good); background: color-mix(in srgb, var(--good) 13%, transparent); }
+  .pill.prov  { color: var(--memo); background: color-mix(in srgb, var(--memo) 15%, transparent); }
   .rv-src .sp { flex: 1 1 auto; }
+
+  /* 리뷰 맨 위 줄 — 건수와 CSV 버튼 */
+  .rv-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+            font-size: 12.5px; color: var(--ink-muted); }
+  .rv-top .sp { flex: 1 1 auto; }
+
+  /* 프로모션마다 상세가 이어집니다 */
+  .rv-sec { margin-top: 30px; scroll-margin-top: 96px; }
+  .rv-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px;
+          margin: 0 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+          font-size: 15px; font-weight: 660; letter-spacing: -.01em; }
+  .rv-h .when { font-size: 12px; font-weight: 500; color: var(--ink-muted); }
+  .rv-h .sp { flex: 1 1 auto; }
+  .rv-more { margin-top: 26px; text-align: center; font-size: 12.5px; color: var(--ink-muted); }
   .rv-warn { background: color-mix(in srgb, var(--serious) 8%, transparent);
              border: 1px solid color-mix(in srgb, var(--serious) 30%, transparent);
              color: var(--serious); border-radius: 10px; padding: 10px 14px;
@@ -487,10 +496,8 @@
 
     /* 탭과 리뷰 : 좁은 화면에서는 항목 이름 칸을 줄이고 표는 가로로 흘립니다 */
     .tabs button { font-size: 12.5px; padding: 8px 10px; }
-    /* 개요는 항목 하나에 한 줄씩 */
-    .facts > div,
-    .facts > div.half,
-    .facts > div.third { grid-column: span 6; padding: 8px 0; }
+    .facts > div { grid-template-columns: 104px minmax(0, 1fr); gap: 10px; }
+    .facts .k { font-size: 11px; }
     .facts > div.title .v { font-size: 15px; }
     table.rv { width: max-content; }
     table.rv td.k, table.rv th.k { width: auto; }
@@ -627,17 +634,8 @@
       </footer>
     </div>
 
-    <!-- 프로모션 리뷰 : 발신·고객 데이터는 리뷰 시트, 매출은 원본에서 계산합니다 -->
+    <!-- 프로모션 리뷰 : 발신·고객 데이터는 리뷰 시트, 매출은 주문 원장에서 계산합니다 -->
     <div id="reviewPane" hidden>
-      <div class="controls-dock" id="rvPickDock" hidden>
-        <div class="controls">
-          <label class="field"><span>리뷰 대상</span>
-            <select id="rvPick"></select>
-          </label>
-          <div class="spacer"></div>
-          <button class="ghost" type="button" data-csv="rv">CSV 다운로드</button>
-        </div>
-      </div>
       <div id="rvBody"></div>
     </div>
   </div>
@@ -678,6 +676,9 @@
     REVIEW_GID: 1003712761,
     /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
     비교기준: [7, 30],
+    /* 이 페이지에 걸리는 프로모션은 전부 펼칩니다. 걸리는 게 없어 전체 목록을
+       보여줄 때만, 상세를 이 건수까지로 끊습니다. */
+    리뷰_상세_최대: 5,
 
     /* 프로모션 리뷰의 매출·고객 데이터 — '자사몰주문RAWDATA'의 요약 탭입니다.
        월마감 후 붙여넣는 시트라 취소·환불이 반영된 값입니다. 자사몰 전용입니다.
@@ -1238,9 +1239,6 @@
       state.tab = b.dataset.tab;
       syncUrl(); render();
     };
-    document.getElementById('rvPick').onchange = function () {
-      state.rv = this.value; syncUrl(); renderReview();
-    };
 
     document.getElementById('metric').onclick = function (e) {
       var b = e.target.closest('button[data-v]'); if (!b) return;
@@ -1733,6 +1731,18 @@
     ['오일', 'OIL'], ['에디션', 'LTD'],
     ['더스프레이', 'TSP'], ['스프레이', 'TSP']
   ];
+  /**
+   * 이름 끝에 붙은 괄호는 발신 대상을 적어 둔 것으로 봅니다.
+   *   '캄 앤 밸런스 오일 런칭 (구매고객)'  →  이름 '캄 앤 밸런스 오일 런칭' · 타겟 '구매고객'
+   * 같은 프로모션을 대상만 갈라 보낸 줄들이 한 프로모션으로 묶이고,
+   * 발신 표에는 대상이 줄마다 남습니다.
+   */
+  function splitName(s) {
+    var m = String(s || '').match(/^(.*?)\s*[(（]\s*([^()（）]*?)\s*[)）]\s*$/);
+    if (m && m[1].trim() && m[2]) return { 이름: m[1].trim(), 타겟: m[2] };
+    return { 이름: String(s || '').trim(), 타겟: '' };
+  }
+
   function guessLine(name) {
     var s = rvNorm(name);
     if (!s) return '';
@@ -1778,8 +1788,9 @@
   }
 
   function rvReadRow(row, C) {
+    var 갈린이름 = splitName(rvText(row, C.이름));
     var rec = {
-      이름: rvText(row, C.이름),
+      이름: 갈린이름.이름,
       시작: rvDate(row, C.시작), 종료: rvDate(row, C.종료), 기간: rvText(row, C.기간),
       라인: rvText(row, C.라인), 제품: rvText(row, C.제품),
       발신타겟: rvText(row, C.발신타겟), 구매채널: rvText(row, C.구매채널),
@@ -1794,6 +1805,8 @@
       신규고객: rvNum(row, C.신규고객), 기존고객: rvNum(row, C.기존고객),
       전략수량: rvNum(row, C.전략수량), 추가매출: rvNum(row, C.추가매출)
     };
+    /* 발신타겟 열이 비면 이름 끝 괄호를 씁니다 */
+    if (!rec.발신타겟 && 갈린이름.타겟) rec.발신타겟 = 갈린이름.타겟;
     /* 제품라인이 비면 이름에서 추정하고, 추정했다는 사실을 남깁니다 */
     rec.라인추정 = false;
     if (!rec.라인) {
@@ -1835,7 +1848,8 @@
       for (var r = h + 1; r < end; r++) {
         var rec = rvReadRow(vals[r] || [], C);
         if (!rec.이름 || !rec.시작) continue;
-        var k = [rec.이름, rec.시작, rec.발신채널, rec.발신일, rec.발신시각].join('|');
+        var k = [rec.이름, rec.시작, rec.발신타겟,
+                 rec.발신채널, rec.발신일, rec.발신시각].join('|');
         if (byKey[k]) rvFill(byKey[k], rec);
         else { byKey[k] = rec; order.push(k); }
       }
@@ -2144,9 +2158,10 @@
   }
 
   /* ── 그리기 ─────────────────────────────────────────────── */
-  function rvCard(title, note, inner, foot) {
+  function rvCard(title, note, inner, foot, 머리끝) {
     return '<section class="card"><div class="head"><h2>' + esc(title) + '</h2>' +
-           (note ? '<span class="note">' + note + '</span>' : '') + '</div>' + inner +
+           (note ? '<span class="note">' + note + '</span>' : '') +
+           (머리끝 ? '<span class="spacer"></span>' + 머리끝 : '') + '</div>' + inner +
            (foot ? '<div class="rv-note">' + foot + '</div>' : '') + '</section>';
   }
   function rvEmptyBox(title, html) {
@@ -2163,9 +2178,6 @@
 
   function renderReview() {
     var body = document.getElementById('rvBody');
-    var dock = document.getElementById('rvPickDock');
-    var sel = document.getElementById('rvPick');
-    dock.hidden = true;
 
     if (reviewState === 'loading') {
       body.innerHTML = '<div class="status"><div class="spinner"></div>' +
@@ -2195,36 +2207,64 @@
       return;
     }
 
-    sel.innerHTML = (매칭없음 ? '<option value="">— 프로모션을 고르세요 —</option>' : '') +
-      목록.map(function (p) {
-        var 끝 = p.종료 || p.시작;
-        return '<option value="' + esc(p.키) + '">' + esc(p.이름) + ' · ' +
-               esc(p.시작.replace(/-/g, '.')) + '~' + esc(끝.slice(5).replace('-', '.')) +
-               '</option>';
-      }).join('');
-    if (!목록.filter(function (p) { return p.키 === state.rv; }).length) {
-      state.rv = 매칭없음 ? '' : 목록[0].키;
+    /* 매칭이 없어 전체 목록을 보여줄 때는 상세를 몇 건만 그립니다 —
+       프로모션이 수십 건이면 한 페이지에 다 펼쳐 봐야 읽히지 않아서요. */
+    var 상세목록 = 매칭없음 ? 목록.slice(0, CONFIG.리뷰_상세_최대) : 목록;
+
+    /* 주문 단위 요약은 무거우므로, 자사몰 프로모션을 실제로 열었을 때만 부릅니다.
+       loadOrdTab 이 상태를 곧바로 'loading' 으로 바꾸므로 다시 부르지 않습니다. */
+    if (ordState.line === 'idle' && ORD.daily && 상세목록.some(function (p) {
+      var c = p.정보.구매채널 || CONFIG.ORDER_CHANNEL;
+      return c.indexOf(CONFIG.ORDER_CHANNEL) >= 0;
+    })) {
+      loadOrdTab('line').then(renderReview);
     }
-    sel.value = state.rv;
-    dock.hidden = false;
 
     var 안내 = 매칭없음
       ? rvEmptyBox('이 페이지의 프로모션은 리뷰 시트에 아직 없습니다',
           '리뷰 시트의 <b>제품라인</b>에 <b>' + esc(promoPickedValue()) + '</b>이(가) 들어 있거나, ' +
           '<b>프로모션명</b>이 promotion 목록의 이름과 같으면 자동으로 연결됩니다.<br>' +
-          '위에서 다른 프로모션을 골라 보실 수도 있습니다.')
+          '아래는 리뷰 시트에 있는 전체 프로모션입니다.')
       : '';
-    var p = 목록.filter(function (x) { return x.키 === state.rv; })[0];
-    if (!p) { csvCache.rv = null; body.innerHTML = 안내; return; }
 
-    /* 주문 단위 요약은 무거우므로, 자사몰 프로모션을 실제로 열었을 때만 부릅니다.
-       loadOrdTab 이 상태를 곧바로 'loading' 으로 바꾸므로 다시 부르지 않습니다. */
-    if (ordState.line === 'idle' && ORD.daily &&
-        p.정보.구매채널 && p.정보.구매채널.indexOf(CONFIG.ORDER_CHANNEL) >= 0) {
-      loadOrdTab('line').then(renderReview);
+    var csv = [];
+    var 상세 = 상세목록.map(rvContext);
+
+    var html = 안내 +
+      '<div class="rv-top"><span>프로모션 ' + 목록.length + '건</span>' +
+      '<span class="sp"></span>' +
+      '<button class="ghost" type="button" data-csv="rv">CSV 다운로드</button></div>';
+    상세.forEach(function (ctx, i) {
+      html += '<section class="rv-sec" id="rv' + i + '" data-key="' + esc(ctx.p.키) + '">' +
+              '<h3 class="rv-h">' + esc(ctx.p.이름) +
+              '<span class="when">' + esc(rvSpan(ctx)) + '</span></h3>' +
+              rvDetail(ctx, csv) + '</section>';
+    });
+    if (목록.length > 상세.length) {
+      html += '<div class="rv-more">' + (목록.length - 상세.length) +
+              '건은 생략했습니다 (' +
+              esc(목록.slice(상세.length).map(function (p) { return p.이름; }).join(' · ')) +
+              ') — promotion 을 고르시면 그 프로모션이 펼쳐집니다.</div>';
     }
-    body.innerHTML = 안내 + rvCards(p);
+    csvCache.rv = { name: (promoName() || '프로모션') + '_리뷰', rows: csv };
+    body.innerHTML = html;
+
+    /* 공유받은 ?rv=… 링크로 들어오면 그 프로모션 위치로 내려갑니다 */
+    if (state.rv) {
+      var secs = body.querySelectorAll('.rv-sec');
+      for (var s = 0; s < secs.length; s++) {
+        if (secs[s].getAttribute('data-key') === state.rv) { secs[s].scrollIntoView(); break; }
+      }
+    }
   }
+
+  /** '2026.02.02 ~ 02.08 · 7일' */
+  function rvSpan(ctx) {
+    var 끝 = ctx.to;
+    return ctx.from.replace(/-/g, '.') + ' ~ ' + 끝.slice(5).replace('-', '.') +
+           ' · ' + calDays(ctx.from, 끝) + '일';
+  }
+
 
   /** 이 리뷰를 어느 시트로 냈는지, 그리고 걸리는 게 있으면 무엇인지 */
   function rvSourceStrip(ctx) {
@@ -2286,7 +2326,8 @@
     return out + (w.length ? '<div class="rv-warn">' + w.join('<br>') + '</div>' : '');
   }
 
-  function rvCards(p) {
+  /** 프로모션 하나의 계산 결과를 모읍니다 — 그리는 쪽은 이 값만 봅니다 */
+  function rvContext(p) {
     var i = p.정보;
     var from = p.시작, to = p.종료 || p.시작;
 
@@ -2346,41 +2387,57 @@
       }
     }
 
-    var csv = [['기준', 마감 ? '마감 (자사몰주문RAWDATA · 취소·환불 반영)'
-                              : '잠정 (일일매출RAWDATA · 취소·환불 미반영)']];
-    var html = rvSourceStrip(ctx) +
-               rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
-               rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv);
+    return ctx;
+  }
+
+  /** 프로모션 하나의 상세 — 기준 띠 + 카드 다섯 장 */
+  function rvDetail(ctx, csv) {
+    csv.push([]);
+    csv.push(['[' + ctx.p.이름 + ']',
+              ctx.마감 ? '마감 (자사몰주문RAWDATA · 취소·환불 반영)'
+                       : '잠정 (일일매출RAWDATA · 취소·환불 미반영)']);
+    return rvSourceStrip(ctx) +
+           rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
+           rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv);
+  }
+
+  /** 프로모션 하나만 그립니다 — 테스트에서 씁니다 */
+  function rvCards(p) {
+    var csv = [];
+    var html = rvDetail(rvContext(p), csv);
     csvCache.rv = { name: (p.이름 || '프로모션') + '_리뷰', rows: csv };
     return html;
   }
 
-  /**
-   * 개요. 세 번째 값이 한 줄에 몇 칸으로 들어갈지입니다 —
-   * title 은 한 줄 전체, half 는 2단, third 는 3단.
-   * 좁은 화면에서는 CSS 가 전부 한 줄씩 내립니다.
-   */
+  /** 개요 — 한 줄에 한 항목씩 세로로 나열합니다 */
   function rvOverviewCard(ctx, csv) {
     var i = ctx.p.정보;
+    /* 발신타겟은 발신마다 다를 수 있으므로(구매고객·비구매고객) 모아서 보여줍니다 */
+    var 타겟 = [], 본것 = {};
+    ctx.p.발신.forEach(function (r) {
+      if (r.발신타겟 && !본것[r.발신타겟]) { 본것[r.발신타겟] = 1; 타겟.push(r.발신타겟); }
+    });
+
     var t = [
       ['프로모션명', ctx.p.이름, 'title'],
-      ['전략시작일', rvDay(ctx.from), 'third'],
-      ['전략종료일', rvDay(ctx.to), 'third'],
-      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일'), 'third'],
-      ['제품라인', i.라인 + (i.라인추정 ? ' (이름에서 추정)' : ''), 'half'],
-      ['제품', i.제품, 'half'],
-      ['발신타겟', i.발신타겟, 'half'],
-      ['구매채널', i.구매채널, 'half'],
-      ['전략타입', i.타입, 'third'],
-      ['전략타입(세부)', i.타입세부, 'third'],
-      ['전략', i.전략, 'third'],
-      ['비회원구매가능여부', i.비회원, 'half'],
-      ['적립금 중복사용', i.적립금, 'half']
+      ['전략시작일', rvDay(ctx.from), ''],
+      ['전략종료일', rvDay(ctx.to), ''],
+      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일'), ''],
+      ['제품라인', i.라인 + (i.라인추정 ? ' (이름에서 추정)' : ''), ''],
+      ['제품', i.제품, ''],
+      ['발신타겟', 타겟.join(' · '), ''],
+      ['구매채널', i.구매채널, ''],
+      ['전략타입', i.타입, ''],
+      ['전략타입(세부)', i.타입세부, ''],
+      ['전략', i.전략, ''],
+      ['비회원구매가능여부', i.비회원, ''],
+      ['적립금 중복사용', i.적립금, '']
     ];
     csv.push(['[개요]']);
     var rows = t.map(function (x) {
       csv.push([x[0], x[1] || '']);
-      return '<div class="' + x[2] + '"><span class="k">' + esc(x[0]) + '</span>' +
+      return '<div' + (x[2] ? ' class="' + x[2] + '"' : '') +
+             '><span class="k">' + esc(x[0]) + '</span>' +
              '<span class="v' + (x[1] ? '' : ' none') + '">' +
              esc(x[1] || '미입력') + '</span></div>';
     }).join('');
@@ -2388,65 +2445,49 @@
       '<div class="body"><div class="facts">' + rows + '</div></div>');
   }
 
+  /**
+   * 발신 성과 — 지표가 행, 발신이 열입니다.
+   * 같은 프로모션을 대상·채널을 갈라 여러 번 보내므로 발신마다 열이 하나씩 섭니다.
+   * 발신일 → 대상 → 채널 순으로 세웁니다.
+   */
   function rvSendCard(ctx, csv) {
-    /* 한 줄이 한 발신이므로, 발신일 → 채널 순으로 열을 세워 펼칩니다 */
-    var 그룹 = [], idx = {};
-    ctx.p.발신.forEach(function (r) {
-      var key = r.발신일 || r.발신일원문 || '(발신일 미입력)';
-      var g = idx[key];
-      if (!g) { g = idx[key] = { 키: key, 일자: r.발신일, 원문: r.발신일원문, 열: [] }; 그룹.push(g); }
-      g.열.push(r);
-    });
-    그룹.sort(function (a, b) {
-      var x = a.일자 || a.키, y = b.일자 || b.키;
-      return x < y ? -1 : x > y ? 1 : 0;
-    });
     var CH = ['카카오톡', '알림톡', 'SMS문자', '문자'];
-    그룹.forEach(function (g) {
-      g.열.sort(function (a, b) {
-        var x = CH.indexOf(a.발신채널), y = CH.indexOf(b.발신채널);
-        return (x < 0 ? 99 : x) - (y < 0 ? 99 : y);
-      });
+    var 발신 = ctx.p.발신.slice().sort(function (a, b) {
+      var x = (a.발신일 || a.발신일원문 || ''), y = (b.발신일 || b.발신일원문 || '');
+      if (x !== y) return x < y ? -1 : 1;
+      if (a.발신타겟 !== b.발신타겟) return a.발신타겟 < b.발신타겟 ? -1 : 1;
+      var i = CH.indexOf(a.발신채널), j = CH.indexOf(b.발신채널);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
     });
 
-    function 줄(label, fn, cls) {
-      var h = '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="k">' + esc(label) + '</td>';
-      var line = [label];
-      그룹.forEach(function (g) {
-        g.열.forEach(function (r) {
-          var v = fn(r, g);
-          h += '<td class="s num">' + v + '</td>';
-          line.push(rvPlain(v));
-        });
-      });
-      csv.push(line);
-      return h + '</tr>';
-    }
-    function 묶음줄(label, fn, cls) {
-      var h = '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="k">' + esc(label) + '</td>';
-      var line = [label], n;
-      그룹.forEach(function (g) {
-        var v = fn(g);
-        h += '<td class="g num" colspan="' + g.열.length + '">' + v + '</td>';
-        for (n = 0; n < g.열.length; n++) line.push(rvPlain(v));
-      });
-      csv.push(line);
-      return h + '</tr>';
-    }
+    /* [이름, 발신 하나에서 값을 내는 함수, 글자줄인지] */
+    var 지표 = [
+      ['발신타겟', function (r) { return esc(r.발신타겟 || '—'); }, 'chline'],
+      ['발신채널', function (r) { return esc(r.발신채널 || '—'); }, 'chline'],
+      ['발신일', function (r) {
+        return esc(r.발신일 ? rvDay(r.발신일) : (r.발신일원문 || '—')); }, 'txt'],
+      ['발신시각', function (r) { return esc(r.발신시각 || '—'); }, 'txt'],
+      ['타겟모수', function (r) { return rvCnt(r.타겟모수); }],
+      ['발신모수', function (r) { return rvCnt(r.발신모수); }],
+      ['타겟대비 비중', function (r) { return rvPct(rvDiv(r.발신모수, r.타겟모수)); }],
+      ['열람수', function (r) { return rvCnt(r.열람수); }],
+      ['열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }],
+      ['클릭수', function (r) { return rvCnt(r.클릭수); }],
+      ['클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }],
+      ['유입고객수', function (r) { return rvCnt(r.유입); }]
+    ];
 
     csv.push([]); csv.push(['[발신 성과]']);
-    var body =
-      묶음줄('타겟모수', function (g) { return rvCnt(g.열[0].타겟모수); }) +
-      줄('발신채널', function (r) { return esc(r.발신채널 || '—'); }, 'chline') +
-      묶음줄('발신일', function (g) { return esc(g.일자 ? rvDay(g.일자) : (g.원문 || g.키)); }) +
-      줄('발신시각', function (r) { return esc(r.발신시각 || '—'); }) +
-      줄('발신모수', function (r) { return rvCnt(r.발신모수); }) +
-      줄('타겟대비 발신모수 비중', function (r) { return rvPct(rvDiv(r.발신모수, r.타겟모수)); }, 'em') +
-      줄('열람수', function (r) { return rvCnt(r.열람수); }) +
-      줄('열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }, 'em') +
-      줄('클릭수', function (r) { return rvCnt(r.클릭수); }) +
-      줄('클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }, 'em') +
-      줄('유입고객수', function (r) { return rvCnt(r.유입); });
+    var body = 지표.map(function (x) {
+      var 글자 = x[2] === 'chline' || x[2] === 'txt';
+      var 값 = 발신.map(x[1]);
+      csv.push([x[0]].concat(값.map(rvPlain)));
+      return '<tr' + (x[2] === 'chline' ? ' class="chline"' : '') + '>' +
+        '<td class="k">' + esc(x[0]) + '</td>' +
+        값.map(function (v) {
+          return '<td class="' + (글자 ? 's' : 's num') + '">' + v + '</td>';
+        }).join('') + '</tr>';
+    }).join('');
 
     var n = ['타겟대비 비중 = 발신모수 ÷ 타겟모수 · 열람률 = 열람수 ÷ 발신모수 · ' +
              '클릭률 = 클릭수 ÷ <b>열람수</b>. 문자처럼 열람수를 알 수 없는 채널은 비율도 내지 않습니다.'];
@@ -2454,7 +2495,8 @@
       n.push('유입고객수 열이 없어 <b>클릭수</b>를 유입고객수로 봤습니다 — ' +
              '지금까지 리뷰에서 두 값이 늘 같았습니다.');
     }
-    return rvCard('발신 성과', '모수·열람수·클릭수는 리뷰 시트 입력값 · 비율은 자동계산',
+    return rvCard('발신 성과',
+      '한 열이 한 발신입니다 · 모수·열람수·클릭수는 리뷰 시트 입력값 · 비율은 자동계산',
       '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvSend"><tbody>' +
       body + '</tbody></table></div></div>', n.join('<br>'));
   }
