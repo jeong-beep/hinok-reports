@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<!-- 권한을 확인하기 전에는 대시보드 이름조차 내보내지 않습니다.
+     진짜 제목은 시트 열람 권한을 통과한 뒤에 붙습니다. -->
+<title>리포트</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  /* ── 토큰 : daily/sales.html과 동일 체계 ─────────────────── */
+  :root {
+    color-scheme: light;
+    --plane:        #ffffff;
+    --surface:      #ffffff;
+    --surface-2:    #f2f5f7;
+    --ink:          #15191d;
+    --ink-2:        #4c545c;
+    --ink-muted:    #8b939c;
+    --hairline:     #e6e9eb;
+    --border:       rgba(15,23,32,0.10);
+    --accent:       #1d6fa5;
+    --accent-soft:  #e8f1fa;
+    --good:         #0ca30c;
+    --serious:      #c1543a;
+    --up:           #c1543a;   /* 국내 관행 : 상승 적색 */
+    --down:         #1d6fa5;   /*            하락 청색 */
+    --neg:          #c1543a;   /* 마이너스 금액 */
+    /* 열별 색 스케일의 가장 진한 단계. 농도는 알파로만 조절해
+       글자가 흰색으로 바뀔 만큼 어두워지지 않습니다. */
+    --scale-rgb:    122, 179, 230;
+    /* 누적 비교선 3개 — 당월 / 전월 / 전년 동월 순입니다 */
+    --series-1: #1d6fa5;
+    --series-2: #8b939c;
+    --series-3: #c99a2a;
+    /* 판매처 색 — CH_ORDER 위치와 1:1 고정. daily/sales.html과 같은 배열이라
+       같은 판매처가 두 대시보드에서 같은 색으로 보입니다. */
+    --c1:#1B6B3A;   /* 자사몰       진한 초록 */
+    --c2:#4E9A1F;   /* 네이버       연두 */
+    --c3:#F7C500;   /* 카카오       노랑 */
+    --c4:#B5457B;   /* 캐리마켓(온) */
+    --c5:#1A1A1A;   /* 29cm        검정 */
+    --c6:#9A5F2B;   /* 제네시스 */
+    --c7:#2A78D6;   /* 현대M몰 */
+    --c8:#C0392B;   /* 롯데백화점(온) */
+    --c9:#5C5FBF;   /* 신세계면세점 */
+    --c10:#DE5F2A;  /* 롯데면세점 */
+    --c11:#008B7A;  /* 신라면세점 */
+    --c12:#7B3FA0;  /* 플래그쉽 */
+    --c13:#0288A7;  /* HOS청담 */
+    --c14:#6D7C1F;  /* 어메니티 */
+    --c15:#D14A8F;  /* 페이히어 */
+    --c-other:#8b939c;
+    --shadow: 0 1px 2px rgba(15,23,32,.05), 0 8px 24px -12px rgba(15,23,32,.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane:#14171a; --surface:#1c2024; --surface-2:#23282d;
+      --ink:#f2f4f6; --ink-2:#c1c8ce; --ink-muted:#8b939c;
+      --hairline:#2c3237; --border:rgba(255,255,255,0.10);
+      --accent:#3e8cc4; --accent-soft:#1c2a3d;
+      --good:#0ca30c; --serious:#c96a50;
+      --up:#c96a50; --down:#3e8cc4; --neg:#e8877a;
+      --scale-rgb:122, 179, 230;
+      --series-1:#3e8cc4; --series-2:#8b939c; --series-3:#c9a44a;
+      /* 29cm 검정은 어두운 배경에서 묻히므로 흰색으로 반전됩니다 */
+      --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
+      --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
+      --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
+      --c-other:#8b939c;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:#14171a; --surface:#1c2024; --surface-2:#23282d;
+    --ink:#f2f4f6; --ink-2:#c1c8ce; --ink-muted:#8b939c;
+    --hairline:#2c3237; --border:rgba(255,255,255,0.10);
+    --accent:#3e8cc4; --accent-soft:#1c2a3d;
+    --good:#0ca30c; --serious:#c96a50;
+    --up:#c96a50; --down:#3e8cc4; --neg:#e8877a;
+    --scale-rgb:122, 179, 230;
+    --series-1:#3e8cc4; --series-2:#8b939c; --series-3:#c9a44a;
+    --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
+    --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
+    --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
+    --c-other:#8b939c;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  /* hidden 은 display 를 지정한 규칙에 밀립니다. 게이트 조각들을 flex 로 두고
+     hidden 으로 여닫기 때문에, 여기서 한 번 못 박아 둡니다. */
+  [hidden] { display: none !important; }
+  body {
+    background: var(--plane); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic",
+                 "맑은 고딕", "Apple SD Gothic Neo", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .num { font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+         font-variant-numeric: tabular-nums; }
+  .neg { color: var(--neg); }
+
+  /* ── 로그인 게이트 ──────────────────────────────────────── */
+  /* 게이트 하나가 부팅·로그인·권한없음을 모두 맡습니다.
+     어느 단계든 화면에 매출값이 한 줄도 없다는 점은 같습니다. */
+  .gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .gate-card { width: min(420px, 100%); background: var(--surface);
+               border: 1px solid var(--hairline); border-radius: 14px;
+               padding: 32px 28px; box-shadow: var(--shadow); text-align: center; }
+  /* 권한이 없을 때의 기본값 — 카드까지 지워 완전한 빈 화면으로 둡니다 */
+  .gate-card.bare { background: none; border: 0; box-shadow: none; padding: 0; }
+  .gate-card .mark { width: 3px; height: 34px; background: var(--accent);
+                     border-radius: 2px; margin: 0 auto 16px; }
+  .gate-card.bare .mark { display: none; }
+  .gate-card h1 { margin: 0 0 6px; font-size: 18px; font-weight: 650; }
+  .gate-card p { margin: 0 0 22px; color: var(--ink-muted); font-size: 13px; }
+  .gate-boot { display: flex; align-items: center; justify-content: center; gap: 10px;
+               color: var(--ink-muted); font-size: 13px; min-height: 44px; }
+  #gsiButton { display: flex; justify-content: center; min-height: 44px; }
+  .gate-msg { margin-top: 16px; font-size: 12.5px; color: var(--serious); min-height: 18px; }
+  .gate-card.bare .gate-msg { min-height: 0; }
+  .denied-title { margin: 0 0 4px !important; color: var(--ink) !important;
+                  font-size: 15px; font-weight: 640; }
+  .link-muted { display: inline-block; margin-top: 14px; font: inherit; font-size: 12.5px;
+                background: none; border: 0; color: var(--ink-muted);
+                text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .link-muted:hover { color: var(--accent); }
+  .gate-foot { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--hairline);
+               font-size: 11.5px; color: var(--ink-muted); line-height: 1.6; }
+
+  .app { display: none; }
+  html.auth-ok .gate { display: none; }
+  html.auth-ok .app  { display: block; }
+
+  .wrap { max-width: 1560px; margin: 0 auto; padding: 24px 20px 72px; }
+
+  /* ── 헤더 ───────────────────────────────────────────────── */
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end;
+               justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark { width: 3px; height: 40px; background: var(--accent); border-radius: 2px; }
+  h1.title { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.01em; }
+  .crumb { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-muted); }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+  .who { text-align: right; font-size: 11.5px; color: var(--ink-muted); }
+  .who strong { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+
+  /* ── 컨트롤 : 스크롤해도 상단에 붙어 있습니다 ─────────────── */
+  .controls-dock { position: sticky; top: 0; z-index: 60;
+                   background: var(--plane); padding: 10px 0 6px; margin-bottom: 10px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end;
+              background: var(--surface); border: 1px solid var(--hairline);
+              border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field > span { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
+  select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2);
+           border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 9px; min-height: 32px; }
+  select:focus-visible, button:focus-visible, a:focus-visible, td:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; }
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--hairline);
+         border-radius: 8px; padding: 2px; gap: 2px; }
+  .seg button { font: inherit; font-size: 12.5px; border: 0; background: transparent;
+                color: var(--ink-2); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+  .seg .short { display: none; }
+  .ghost { font: inherit; font-size: 12.5px; background: var(--surface-2); color: var(--ink-2);
+           border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .spacer { flex: 1 1 auto; }
+  /* 다시 불러오기는 원본을 올리는 담당자에게만 보이면 됩니다.
+     다른 분들은 새로고침(F5)으로 같은 결과를 얻습니다. */
+  #reload { display: none; }
+  html.is-admin #reload { display: inline-flex; align-items: center; }
+  #reload .icon { display: none; }
+  .who #whoFetched { display: block; }
+
+  /* ── KPI ────────────────────────────────────────────────── */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
+          gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+         padding: 14px 16px; box-shadow: var(--shadow); text-align: center; }
+  .kpi .k { font-size: 10.5px; letter-spacing: .09em; color: var(--ink-muted); }
+  .kpi .v { font-size: 24px; font-weight: 620; margin-top: 4px; letter-spacing: -.02em; }
+  .kpi .v.long { font-size: 20px; }
+  .kpi .v small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
+  .kpi .d { font-size: 12px; margin-top: 5px; color: var(--ink-muted); }
+  .chip { display: inline-flex; align-items: center; gap: 3px; font-weight: 620;
+          font-size: 12px; padding: 1px 6px; border-radius: 6px; }
+  .chip.up   { color: var(--up);   background: color-mix(in srgb, var(--up) 12%, transparent); }
+  .chip.down { color: var(--down); background: color-mix(in srgb, var(--down) 12%, transparent); }
+  .chip.flat { color: var(--ink-muted); background: var(--surface-2); }
+
+  /* ── 카드 ───────────────────────────────────────────────── */
+  .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+          box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+  .card > .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px;
+                  padding: 13px 16px; border-bottom: 1px solid var(--hairline); }
+  .card > .head h2 { margin: 0; font-size: 14px; font-weight: 640; }
+  .card > .head .note { font-size: 11.5px; color: var(--ink-muted); }
+  .card > .head .headavg { font-size: 12px; font-weight: 620; color: var(--ink-2);
+                           text-align: right; margin-left: auto; }
+  .card > .body { padding: 14px 16px; }
+  .card > .body.flush { padding: 0; }
+  /* 구성 두 장은 나란히 놓습니다 — 판매처와 상품은 같은 질문의 두 축이라서요 */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .pair > .card { margin-bottom: 0; }
+
+  /* ── 차트 ───────────────────────────────────────────────── */
+  .chartbox { position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; }
+  svg.chart .gridline { stroke: var(--hairline); stroke-width: 1; }
+  svg.chart .axis { stroke: var(--border); stroke-width: 1; }
+  svg.chart text { fill: var(--ink-muted); font-size: 10.5px;
+                   font-family: ui-monospace, Consolas, monospace; }
+  svg.chart text.lbl { font-family: inherit; }
+  svg.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.chart .line.s1 { stroke: var(--series-1); }
+  svg.chart .line.s2 { stroke: var(--series-2); stroke-dasharray: 5 4; }
+  svg.chart .line.s3 { stroke: var(--series-3); stroke-dasharray: 2 3; }
+  svg.chart .dot.s1 { fill: var(--series-1); }
+  svg.chart .dot.s2 { fill: var(--series-2); }
+  svg.chart .dot.s3 { fill: var(--series-3); }
+  svg.chart .crosshair { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tip { position: absolute; pointer-events: none; z-index: 5; opacity: 0;
+         transform: translate(-50%, -100%); transition: opacity .1s;
+         background: var(--ink); color: var(--plane); padding: 7px 10px;
+         border-radius: 8px; font-size: 12px; white-space: nowrap; box-shadow: var(--shadow); }
+  .tip .t-d { font-size: 10.5px; opacity: .72; }
+  .tip .t-m { font-size: 11px; margin-top: 3px; max-width: 300px; white-space: normal;
+              border-top: 1px solid rgba(255,255,255,.2); padding-top: 3px; }
+  .tip .t-rows { margin-top: 5px; padding-top: 4px; font-size: 11px;
+                 border-top: 1px solid rgba(255,255,255,.2); }
+  .tip .t-rows div { display: grid; grid-template-columns: 9px 1fr auto 44px;
+                     align-items: center; gap: 6px; line-height: 1.65; }
+  .tip .t-rows i { width: 7px; height: 7px; border-radius: 2px; }
+  .tip .t-rows b { font-weight: 600; }
+  .tip .t-rows em { font-style: normal; opacity: .66; text-align: right; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 16px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .legend i.dash { height: 0; width: 14px; border-radius: 0;
+                   border-top: 2px dashed var(--ink); opacity: .5; }
+
+  /* ── 가로 막대 : 구성 ───────────────────────────────────── */
+  .hbars { list-style: none; margin: 0; padding: 0; display: flex;
+           flex-direction: column; gap: 9px; }
+  .hbar { display: grid; grid-template-columns: 116px 1fr 108px; align-items: center; gap: 10px; }
+  .hbar-name { font-size: 12.5px; color: var(--ink-2); overflow: hidden;
+               text-overflow: ellipsis; white-space: nowrap; }
+  .hbar-track { position: relative; height: 18px; background: var(--surface-2);
+                border-radius: 4px; overflow: hidden; }
+  .hbar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px;
+               background: var(--accent); }
+  .hbar-other .hbar-fill { background: var(--c-other); }
+  .hbar-value { font-size: 12px; text-align: right; font-weight: 600; }
+  .hbar-share { font-size: 11px; color: var(--ink-muted); margin-left: 4px; font-weight: 500; }
+
+  /* ── 표 ─────────────────────────────────────────────────── */
+  /* 세로는 내용만큼 늘어납니다. 가로만 필요할 때 스크롤됩니다. */
+  .tablewrap { overflow-x: auto; overflow-y: visible; max-width: 100%;
+               -webkit-overflow-scrolling: touch; }
+  table { border-collapse: separate; border-spacing: 0; font-size: 12.5px;
+          width: max-content; min-width: 100%; }
+  th, td { padding: 6px 10px; white-space: nowrap; border-bottom: 1px solid var(--hairline); }
+  /* 층 순서 : 제목행(6·7) > 통계행(4·5) > 본문 고정열(2) */
+  thead th { position: sticky; top: 0; z-index: 6; background: var(--surface-2);
+             font-weight: 600; font-size: 11px; color: var(--ink-2); text-align: center;
+             border-bottom: 1px solid var(--border); }
+  tbody td { text-align: right; }
+  td.l, th.l { text-align: left; }
+  td.c, th.c { text-align: center; }
+  th.chlink { cursor: pointer; }
+  th.chlink span { color: var(--accent); text-decoration: underline;
+                   text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  th.chlink:hover span { text-decoration-thickness: 2px; }
+  td.mlink { cursor: pointer; }
+  td.mlink span.pick { color: var(--accent); text-decoration: underline;
+                       text-underline-offset: 2px; text-decoration-thickness: 1px; }
+
+  /* 월 × 판매처 표는 PC에서 가로 스크롤 없이 화면 폭에 들어가야 합니다.
+     열이 17개까지 늘어나므로 글자와 여백을 조여 폭을 맞춥니다.
+     카드의 overflow:hidden 까지 풀어야 제목행·통계행이 화면 기준으로 고정됩니다.
+     대신 맨 아랫줄 모서리를 직접 둥글게 해 카드 모양을 지킵니다. */
+  #m1Card, #m1Card .tablewrap { overflow: visible; }
+  #m1 tbody tr:last-child td { border-bottom: 0; }
+  #m1 tbody tr:last-child td:first-child { border-bottom-left-radius: 11px; }
+  #m1 tbody tr:last-child td:last-child { border-bottom-right-radius: 11px; }
+  #m1 { width: 100%; min-width: 0; font-size: 11px; }
+  #m1 th, #m1 td { padding: 4px 3px; }
+  #m1 thead th { font-size: 10px; padding: 4px 2px; letter-spacing: -.01em; }
+  #m1 .chip { font-size: 10.5px; padding: 0 4px; }
+  #m1 .stick { position: sticky; left: 0; z-index: 2; background: var(--surface);
+               border-right: 1px solid var(--hairline); min-width: 74px; }
+  #m1 thead .stick { z-index: 7; background: var(--surface-2); }
+  #m1 .totcol { font-weight: 620; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+  #m1 thead .totcol { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+  /* 기준 월은 배경을 덮지 않고 행 전체를 감싸는 테두리로 표시합니다 */
+  #m1 tbody tr.pick td { border-top: 2px solid var(--accent); border-bottom: 2px solid var(--accent); }
+  #m1 tbody tr.pick td:first-child { border-left: 2px solid var(--accent); }
+  #m1 tbody tr.pick td:last-child  { border-right: 2px solid var(--accent); }
+
+  /* 상품 매트릭스 : 좌측 6열 고정 (제품라인·상품코드·상품명·정상가·월평균·합계) */
+  #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5, #m2 .p6 {
+    position: sticky; z-index: 2; background: var(--surface); }
+  #m2 thead .p1, #m2 thead .p2, #m2 thead .p3,
+  #m2 thead .p4, #m2 thead .p5, #m2 thead .p6 {
+    z-index: 7; background: var(--surface-2); }
+  #m2 .p1 { left: 0;     min-width:  78px; max-width:  78px; }
+  #m2 .p2 { left: 78px;  min-width: 116px; max-width: 116px; }
+  #m2 .p3 { left: 194px; min-width: 240px; max-width: 240px;
+            overflow: hidden; text-overflow: ellipsis; }
+  #m2 .p4 { left: 434px; min-width:  92px; max-width:  92px; }
+  #m2 .p5 { left: 526px; min-width: 104px; max-width: 104px; }
+  #m2 .p6 { left: 630px; min-width: 110px; max-width: 110px;
+            border-right: 1px solid var(--hairline); }
+
+  /* 호버 : 반투명 덮개. 인라인 배경(색 스케일) 위에 얹혀 색이 비쳐 보입니다. */
+  tbody tr:hover td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--accent) 10%, transparent); }
+  td.zero { color: var(--ink-muted); opacity: .35; }
+  tr.stat td { background: var(--surface-2); font-weight: 620; }
+  tr.stat.top td { border-bottom: 1px solid var(--border); }
+  tr.stat.bottom td { border-top: 1px solid var(--border); }
+  .code { font-size: 11px; color: var(--ink-muted); }
+  .line-tag { display: inline-block; font-size: 10px; letter-spacing: .04em; color: var(--ink-2);
+              background: var(--surface-2); border: 1px solid var(--hairline);
+              border-radius: 5px; padding: 0 5px; }
+
+  .status { display: flex; align-items: center; gap: 10px; padding: 40px 16px;
+            justify-content: center; color: var(--ink-muted); font-size: 13px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--hairline);
+             border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .errbox { background: color-mix(in srgb, var(--serious) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--serious) 32%, transparent);
+            color: var(--serious); border-radius: 10px; padding: 14px 16px;
+            font-size: 13px; margin-bottom: 16px; }
+  .errbox b { display: block; margin-bottom: 4px; }
+  .errbox details { margin-top: 8px; }
+  .errbox summary { cursor: pointer; font-size: 12px; opacity: .8; }
+  .errbox code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 6px;
+                 background: var(--surface-2); color: var(--ink-2); font-size: 11.5px;
+                 line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+                 font-family: ui-monospace, Consolas, monospace; }
+  .errbox #retry { margin-top: 10px; }
+  .empty { padding: 28px 16px; text-align: center; color: var(--ink-muted); font-size: 12.5px; }
+
+  footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--hairline);
+           color: var(--ink-muted); font-size: 11.5px; display: grid; gap: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media print { .controls-dock, .ghost, .who { display: none; }
+                 .tablewrap { max-height: none; overflow: visible; }
+                 .card { break-inside: avoid; box-shadow: none; } }
+
+  @media (max-width: 860px) {
+    .pair { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 16px 12px 56px; }
+    /* KPI는 두 개씩 */
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .kpi { padding: 12px 13px; }
+    .kpi .v { font-size: 18px; }
+    .kpi .v.long { font-size: 15px; }
+    .kpi .v small { font-size: 12px; }
+    .kpi .k { font-size: 10px; letter-spacing: .04em; }
+    .kpi .d, .chip { font-size: 11px; }
+
+    /* 고정바를 한 줄에 담습니다 : 라벨 숨김, 지표는 짧은 문구, 새로고침은 감춤 */
+    .controls-dock { padding: 6px 0 4px; margin-bottom: 8px; }
+    .controls { flex-wrap: nowrap; gap: 6px; padding: 7px 8px; align-items: center; }
+    .field { flex: 1 1 0; min-width: 0; }
+    .field > span { display: none; }
+    select { font-size: 12px; padding: 3px 4px; min-height: 30px; width: 100%;
+             text-overflow: ellipsis; }
+    .seg { flex: 0 0 auto; padding: 2px; }
+    .seg button { font-size: 11.5px; padding: 4px 7px; }
+    .seg .long { display: none; }
+    .seg .short { display: inline; }
+    .spacer { display: none; }
+    /* 좁은 화면에서는 담당자에게도 숨깁니다 — 새로고침(F5)으로 대체됩니다 */
+    html.is-admin #reload { display: none; }
+
+    /* 범례와 CSV 버튼은 좁은 화면에서 자리만 차지합니다 */
+    .legend { display: none; }
+    [data-csv] { display: none; }
+    .card > .head .headavg { font-size: 11px; }
+    /* 좁은 화면에서는 월 × 판매처 표도 가로로 스크롤합니다 (행 고정은 이때 동작하지 않습니다) */
+    #m1Card .tablewrap { overflow-x: auto; }
+    #m1 { width: max-content; font-size: 11px; }
+    #m1 th, #m1 td { padding: 5px 6px; }
+
+    /* 상품 매트릭스는 고정열을 풀어야 좌우로 스크롤됩니다 */
+    #m2 .p1, #m2 .p2, #m2 .p3, #m2 .p4, #m2 .p5, #m2 .p6 { position: static; }
+    #m2 .p3 { min-width: 180px; max-width: 180px; }
+    #m2 .p6 { border-right: 0; }
+    .hbar { grid-template-columns: 88px 1fr 92px; gap: 8px; }
+    .tablewrap { overscroll-behavior-x: contain; }
+    th, td { padding: 5px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── 로그인 ─────────────────────────────────────────────── -->
+<!-- 여기에는 매출값이 한 줄도 들어있지 않습니다. 링크만 받은 사람이
+     보는 것은 이 화면이 전부입니다. -->
+<div class="gate">
+  <div class="gate-card" id="gateCard">
+    <div class="mark"></div>
+
+    <div class="gate-boot" id="gateBoot">
+      <div class="spinner"></div><span>확인 중…</span>
+    </div>
+
+    <div id="gateSignin" hidden>
+      <h1>리포트</h1>
+      <p>구글 계정으로 로그인해 주세요.</p>
+      <div id="gsiButton"></div>
+    </div>
+
+    <div id="gateDenied" hidden>
+      <p class="denied-title">열람 권한이 없습니다.</p>
+      <p>이 스프레드시트를 공유받은 계정으로 로그인해 주세요.</p>
+    </div>
+
+    <div class="gate-msg" id="gateMsg"></div>
+    <button class="link-muted" type="button" id="switchAcct" hidden>다른 계정으로 로그인</button>
+
+    <div class="gate-foot" id="gateFoot">
+      이 페이지에는 매출 데이터가 담겨 있지 않습니다.<br>
+      로그인 후 구글이 시트 열람 권한을 확인한 뒤에만 불러옵니다.
+    </div>
+  </div>
+</div>
+
+<!-- ── 대시보드 ───────────────────────────────────────────── -->
+<div class="app">
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="mark"></div>
+        <div>
+          <h1 class="title" id="pageTitle">월별매출현황</h1>
+          <p class="crumb" id="crumb">주문일 기준 · 배송비 미포함 · 취소/교환/반품/환불 미반영</p>
+        </div>
+      </div>
+      <div class="who">
+        <strong id="whoEmail">—</strong>
+        <span id="whoAsOf">—</span>
+        <span id="whoFetched"></span>
+      </div>
+    </header>
+
+    <div id="errSlot"></div>
+
+    <div class="controls-dock">
+      <div class="controls">
+        <label class="field"><span>기준 월</span>
+          <select id="month"></select>
+        </label>
+        <div class="seg" id="metric" role="group" aria-label="지표 선택">
+          <button type="button" data-v="amt" aria-pressed="true">
+            <span class="long">주문금액</span><span class="short">금액</span></button>
+          <button type="button" data-v="qty" aria-pressed="false">
+            <span class="long">주문수량</span><span class="short">수량</span></button>
+        </div>
+        <label class="field"><span>판매처</span>
+          <select id="channel"><option value="">전체 판매처</option></select>
+        </label>
+        <div class="spacer"></div>
+        <button class="ghost" type="button" id="reload"
+                title="시트에서 다시 불러옵니다" aria-label="다시 불러오기">
+          <span class="icon">🔄</span><span class="text">다시 불러오기</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
+
+    <div id="dash" hidden>
+      <div class="kpis" id="kpis"></div>
+
+      <section class="card">
+        <div class="head">
+          <h2 id="trendTitle">월별 총 주문금액 추이</h2>
+          <span class="note">막대 한 칸이 판매처 하나입니다 — 누르면 그 달로 이동합니다.</span>
+          <span class="spacer"></span>
+          <span class="headavg num" id="trendAvg"></span>
+        </div>
+        <div class="legend" id="trendLegend"></div>
+        <div class="body">
+          <div class="chartbox" id="trendBox">
+            <svg class="chart" id="trend" viewBox="0 0 1000 330"
+                 role="img" aria-label="판매처별 월별 주문금액 누적막대와 총액 추이선"></svg>
+            <div class="tip" id="trendTip"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2 id="cumTitle">일자별 누적</h2>
+          <span class="note">같은 날짜까지 얼마나 쌓였는지 — 당월 · 전월 · 전년 동월</span>
+          <span class="spacer"></span>
+          <span class="headavg num" id="cumPace"></span>
+        </div>
+        <div class="legend" id="cumLegend"></div>
+        <div class="body">
+          <div class="chartbox" id="cumBox">
+            <svg class="chart" id="cum" viewBox="0 0 1000 300"
+                 role="img" aria-label="당월·전월·전년 동월 일자별 누적 매출"></svg>
+            <div class="tip" id="cumTip"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="pair">
+        <section class="card">
+          <div class="head">
+            <h2>판매처 구성</h2>
+            <span class="note" id="chNote"></span>
+          </div>
+          <div class="body"><div id="chBars"></div></div>
+        </section>
+
+        <section class="card">
+          <div class="head">
+            <h2>상품 구성</h2>
+            <span class="note" id="prNote"></span>
+          </div>
+          <div class="body"><div id="prBars"></div></div>
+        </section>
+      </div>
+
+      <section class="card" id="m1Card">
+        <div class="head">
+          <h2>판매처별 월 총 주문금액 현황</h2>
+          <span class="note" id="m1Note"></span>
+          <span class="spacer"></span>
+          <button class="ghost" type="button" data-csv="m1">CSV 다운로드</button>
+        </div>
+        <div class="body flush"><div class="tablewrap"><table id="m1"></table></div></div>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2 id="m2Title">상품별 현황</h2>
+          <span class="note">합계 순 정렬 · 세트/단품 관계없이 카운팅</span>
+          <span class="spacer"></span>
+          <button class="ghost" type="button" data-csv="m2">CSV 다운로드</button>
+        </div>
+        <div class="body flush"><div class="tablewrap"><table id="m2"></table></div></div>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2>월별 집계</h2>
+          <span class="note" id="m3Note"></span>
+          <span class="spacer"></span>
+          <button class="ghost" type="button" data-csv="m3">CSV 다운로드</button>
+        </div>
+        <div class="body flush"><div class="tablewrap"><table id="m3"></table></div></div>
+      </section>
+
+      <footer>
+        <div id="colmap"></div>
+        <div id="coverage"></div>
+        <div id="caveat"></div>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ═══════════════════════════════════════════════════════
+     막는 방식 — 읽고 넘어가 주세요
+
+     · 이 페이지에는 매출 데이터가 없습니다. HTML 어디에도 값이 없고,
+       링크만 받은 사람이 보는 것은 로그인 화면이 전부입니다.
+     · 로그인한 사람의 토큰으로 먼저 spreadsheets.get 을 불러 "제목만"
+       물어봅니다. 여기서 통과해야 값을 요청합니다.
+     · 공유받지 못한 계정은 구글이 403(또는 404)을 돌려주고, 화면은
+       빈 상태로 둡니다. 대시보드 이름도 그때는 감춥니다.
+     · 토큰은 메모리에만 둡니다. localStorage 나 쿠키에 쓰지 않습니다.
+
+     그래서 이 대시보드에는 별도의 권한 체계가 없습니다. 판정은 전부
+     스프레드시트 공유 설정이 합니다 — 사람을 빼면 그 순간부터 안 보입니다.
+     CONFIG.CLIENT_ID 와 SHEET_ID 는 비밀이 아닙니다. OAuth 클라이언트 ID 는
+     "승인된 자바스크립트 원본" 에 등록된 도메인에서만 동작하고, 시트 ID 를
+     알아도 공유받지 못하면 아무것도 읽지 못합니다.
+     ═══════════════════════════════════════════════════════ */
+
+  /* ═══════════════════════════════════════════════════════
+     설정 — 바꿀 일이 생기면 여기만 보시면 됩니다
+     ═══════════════════════════════════════════════════════ */
+  var CONFIG = {
+    CLIENT_ID:  '490629671344-150ivr5s67rv02odtt5fo285us2ef6tp.apps.googleusercontent.com',
+    /* 로그인 창에서 계정을 골라주는 힌트입니다. 차단은 시트 공유 설정이 합니다.
+       (일일매출현황은 이 값으로 아예 막지만, 여기서는 시트 밖의 계정에게도
+        공유만 하면 열리도록 두었습니다 — 필요하면 아래 주석을 참고하세요.) */
+    DOMAIN:     'hinok.life',
+    /* 일일매출현황과 같은 raw data 를 봅니다. 다른 시트를 보려면 여기만 바꾸면 됩니다. */
+    SHEET_ID:   '1TaUTDagfp3bl0e6vHDUNWkerPHIh1FBuH9ctiO6WEq4',
+    /* 첫 행(헤더)까지 함께 읽어 열을 "이름"으로 찾습니다.
+       열 순서가 바뀌거나 중간에 열이 추가돼도 화면이 깨지지 않습니다. */
+    DATA_RANGE: '시트1!A1:Z',
+
+    TREND_MONTHS: 24,      /* 추이 차트에 올릴 최근 개월 수 */
+    TOP_N:        8,       /* 구성 막대에 세울 줄 수. 나머지는 '기타'로 접습니다 */
+
+    /* 방문 로그 — daily/sales.html, monthly/mileage.html과 같은 구글 폼입니다. */
+    LOG_FORM:  'https://docs.google.com/forms/d/e/' +
+               '1FAIpQLSdxFBLKsClbQcpYbjJzi4iGFIErQC1tty7mz2wiIIzH-SQnvQ/formResponse',
+    LOG_EMAIL: 'entry.1550214245',
+    LOG_URL:   'entry.1208487914',
+
+    /* '다시 불러오기' 버튼을 보는 사람. 원본을 올리는 담당자만 있으면 됩니다. */
+    관리자: ['jeong@hinok.life'],
+
+    /* 권한이 없을 때 화면 처리
+         true  — 아무것도 그리지 않습니다 (제목도 감춥니다). 링크 유출 대비 기본값.
+         false — "열람 권한이 없습니다" 안내를 보여줍니다. */
+    권한없음_빈화면: true,
+
+    /* 인증을 통과한 뒤에만 화면과 탭에 나타나는 이름입니다. */
+    제목: '월별매출현황'
+  };
+
+  /* 판매처 표시 순서. 시트에 새 채널이 생기면 목록 끝에 자동으로 붙습니다.
+     daily/sales.html과 같은 배열이라 같은 판매처가 같은 색으로 보입니다. */
+  var CH_ORDER = ['자사몰', '네이버', '카카오', '캐리마켓(온)', '29cm', '제네시스', '현대M몰',
+                  '롯데백화점(온)', '신세계면세점', '롯데면세점', '신라면세점',
+                  '플래그쉽', 'HOS청담', '어메니티', '페이히어'];
+
+  function chColor(name) {
+    var i = CH_ORDER.indexOf(name);
+    return i >= 0 && i < 15 ? 'var(--c' + (i + 1) + ')' : 'var(--c-other)';
+  }
+
+  var SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets/';
+  var SCOPES = 'openid email https://www.googleapis.com/auth/spreadsheets.readonly';
+  var SHEET_EPOCH = Date.UTC(1899, 11, 30);
+
+  /* ═══════════════════════════════════════════════════════
+     인증
+     ═══════════════════════════════════════════════════════ */
+  var token = null, tokenExp = 0, tokenClient = null, pendingResolve = null;
+  var viewerEmail = '', sheetTitle = '';
+
+  function $(id) { return document.getElementById(id); }
+  function gateMsg(t) { $('gateMsg').textContent = t || ''; }
+
+  /** 게이트 안에서 지금 보여줄 조각을 고릅니다 : boot | signin | denied */
+  function gateStep(name) {
+    $('gateBoot').hidden   = name !== 'boot';
+    $('gateSignin').hidden = name !== 'signin';
+    /* 권한이 없을 때는 안내조차 감추는 것이 기본값입니다 */
+    $('gateDenied').hidden = !(name === 'denied' && CONFIG.권한없음_빈화면 === false);
+    $('gateFoot').hidden   = name === 'denied';
+    $('switchAcct').hidden = name === 'boot';
+    $('gateCard').className = 'gate-card' +
+      (name === 'denied' && CONFIG.권한없음_빈화면 !== false ? ' bare' : '');
+    gateMsg('');
+  }
+
+  window.onGsiLoaded = function () {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.CLIENT_ID,
+      scope: SCOPES,
+      hd: CONFIG.DOMAIN,
+      callback: function (res) {
+        if (res.error) {
+          gateStep('signin');
+          gateMsg('로그인이 취소되었거나 권한이 거부되었습니다.');
+          if (pendingResolve) { pendingResolve.reject(new Error(res.error)); pendingResolve = null; }
+          return;
+        }
+        token = res.access_token;
+        tokenExp = Date.now() + (Number(res.expires_in) || 3600) * 1000 - 60000;
+        if (pendingResolve) { pendingResolve.resolve(token); pendingResolve = null; }
+        else afterSignIn();
+      },
+      /* 창을 닫거나 팝업이 막히면 callback 이 오지 않습니다. 그때도 로그인
+         버튼으로 돌려놔야 "확인 중…" 에서 멈추지 않습니다. */
+      error_callback: function (err) {
+        gateStep('signin');
+        if (err && err.type && err.type !== 'popup_closed') {
+          gateMsg('로그인 창을 열지 못했습니다. 팝업 차단을 해제해 주세요.');
+        }
+        if (pendingResolve) {
+          pendingResolve.reject(new Error((err && err.type) || 'popup_failed'));
+          pendingResolve = null;
+        }
+      }
+    });
+
+    var btn = document.createElement('button');
+    btn.className = 'ghost';
+    btn.type = 'button';
+    btn.style.cssText = 'font-size:14px;padding:10px 20px;border-radius:10px';
+    btn.textContent = 'Google 계정으로 로그인';
+    btn.onclick = function () { gateMsg(''); tokenClient.requestAccessToken({ prompt: '' }); };
+    $('gsiButton').appendChild(btn);
+
+    $('switchAcct').onclick = function () {
+      token = null; tokenExp = 0;
+      gateStep('boot');
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
+    };
+
+    /* 이전에 승인한 적이 있으면 조용히 통과시킵니다 */
+    try { tokenClient.requestAccessToken({ prompt: '' }); } catch (e) { gateStep('signin'); }
+    /* 조용한 시도가 끝나지 않는 경우(팝업을 방치 등)를 대비해 버튼을 내어둡니다.
+       늦게 성공하면 afterSignIn 이 화면을 대시보드로 바꿉니다. */
+    setTimeout(function () {
+      if (!token && !$('gateBoot').hidden) gateStep('signin');
+    }, 2500);
+  };
+
+  (function waitGsi(n) {
+    if (window.google && google.accounts && google.accounts.oauth2) return window.onGsiLoaded();
+    if (n > 100) {
+      gateStep('signin');
+      return gateMsg('구글 로그인 스크립트를 불러오지 못했습니다. 새로고침해 주세요.');
+    }
+    setTimeout(function () { waitGsi(n + 1); }, 100);
+  })(0);
+
+  function freshToken() {
+    if (token && Date.now() < tokenExp) return Promise.resolve(token);
+    return new Promise(function (resolve, reject) {
+      pendingResolve = { resolve: resolve, reject: reject };
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
+  }
+
+  /**
+   * 로그인 직후 흐름.
+   * 계정 확인 → 열람 권한 확인(제목만) → 통과한 뒤에야 값을 요청합니다.
+   */
+  function afterSignIn() {
+    gateStep('boot');
+    api('https://www.googleapis.com/oauth2/v3/userinfo').then(function (me) {
+      viewerEmail = me.email || '';
+      /* 열람 권한 확인. 값은 한 칸도 가져오지 않고 제목만 물어봅니다. */
+      return checkAccess();
+    }).then(function (meta) {
+      sheetTitle = meta.title || '';
+      $('whoEmail').textContent = viewerEmail;
+      if (CONFIG.관리자.indexOf(viewerEmail.toLowerCase()) >= 0) {
+        document.documentElement.classList.add('is-admin');
+      }
+      /* 여기까지 온 사람에게만 이름을 보여줍니다 */
+      document.title = CONFIG.제목 + ' · 희녹';
+      $('pageTitle').textContent = CONFIG.제목;
+      document.documentElement.classList.add('auth-ok');
+      logVisit();
+      loadAll();
+    }).catch(function (e) {
+      /* 구글은 권한 없는 문서를 404 로 답하기도 합니다. 둘 다 "권한 없음"으로 봅니다. */
+      if (e.status === 403 || e.status === 404) return gateStep('denied');
+      if (e.status === 401) {
+        gateStep('signin');
+        return gateMsg('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+      }
+      gateStep('signin');
+      gateMsg('확인에 실패했습니다: ' + e.message);
+    });
+  }
+
+  /** 열람 권한 확인 지점. 이 대시보드의 권한 판정은 전부 여기서 끝납니다. */
+  function checkAccess() {
+    return api(SHEETS_API + encodeURIComponent(CONFIG.SHEET_ID) + '?fields=properties.title');
+  }
+
+  /**
+   * 방문 기록을 구글 폼에 남깁니다. 같은 화면은 한 번만 보냅니다.
+   * 페이지 안에서 월이나 판매처를 바꿔도 기록되므로, 무엇을 보는지 남습니다.
+   * no-cors 라 응답을 읽을 수 없고, 실패해도 화면에는 영향이 없습니다.
+   */
+  var loggedUrls = {};
+  function logVisit() {
+    if (!CONFIG.LOG_FORM) return;
+    var url = location.href;
+    if (loggedUrls[url]) return;
+    loggedUrls[url] = 1;
+    try {
+      var p = new URLSearchParams();
+      p.append(CONFIG.LOG_EMAIL, viewerEmail || '(알 수 없음)');
+      p.append(CONFIG.LOG_URL, url);
+      fetch(CONFIG.LOG_FORM, { method: 'POST', mode: 'no-cors', body: p });
+    } catch (e) { /* 기록 실패는 무시합니다 */ }
+  }
+
+  function api(url) {
+    return freshToken().then(function (t) {
+      return fetch(url, { headers: { Authorization: 'Bearer ' + t } });
+    }).then(function (r) {
+      if (!r.ok) {
+        return r.text().then(function (body) {
+          var msg = r.status + ' ' + r.statusText, reason = '';
+          try {
+            var j = JSON.parse(body);
+            if (j.error) {
+              msg = j.error.message || msg;
+              reason = j.error.status || '';
+              (j.error.details || []).forEach(function (d) { if (d.reason) reason = d.reason; });
+            }
+          } catch (e) {}
+          var err = new Error(msg);
+          err.status = r.status;
+          err.reason = reason;
+          throw err;
+        });
+      }
+      return r.json();
+    });
+  }
+
+  /** 오류 원인별로 실제로 할 일을 알려줍니다 */
+  function hintFor(e) {
+    var m = String(e && e.message || ''), s = (e && e.status) || 0, reason = (e && e.reason) || '';
+    if (e && e.kind === 'columns') return m + ' 열 이름을 원래대로 두거나, 옮기더라도 이름은 유지해 주세요.';
+    if (reason === 'SERVICE_DISABLED' || /has not been used in project|API .*disabled/i.test(m)) {
+      return 'Google Cloud 프로젝트에서 Sheets API가 꺼져 있습니다. ' +
+             'console.cloud.google.com → API 및 서비스 → "Google Sheets API" 사용 설정 후 1~2분 뒤 새로고침하세요.';
+    }
+    if (s === 401) return '로그인 세션이 만료되었습니다. 페이지를 새로고침해 다시 로그인해 주세요.';
+    if (s === 403) return '이 계정에는 시트 열람 권한이 없습니다. 시트 소유자에게 뷰어 권한을 요청하세요.';
+    if (s === 404) return '시트를 찾을 수 없습니다. 파일 상단 CONFIG.SHEET_ID가 맞는지 확인해 주세요.';
+    if (s === 400 && /range|parse/i.test(m)) {
+      return '탭 이름이나 범위가 맞지 않습니다. CONFIG.DATA_RANGE의 탭 이름이 시트와 같은지 확인해 주세요.';
+    }
+    if (s === 429) return '잠시 요청이 몰렸습니다. 1분 뒤 "다시 불러오기"를 눌러 주세요.';
+    return '잠시 후 다시 시도해 주세요. 계속되면 위 메시지를 그대로 공유해 주세요.';
+  }
+
+  function sheetValues(range) {
+    var url = SHEETS_API + encodeURIComponent(CONFIG.SHEET_ID) +
+              '/values/' + encodeURIComponent(range) +
+              '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE' +
+              '&dateTimeRenderOption=SERIAL_NUMBER';
+    return api(url).then(function (j) { return j.values || []; });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     데이터
+     ═══════════════════════════════════════════════════════ */
+  var DATA = null;
+
+  function serialToISO(n) {
+    return new Date(SHEET_EPOCH + Math.round(n) * 86400000).toISOString().slice(0, 10);
+  }
+  function codeStr(v) {
+    if (v === null || v === undefined || v === '') return '';
+    return (typeof v === 'number') ? String(Math.round(v)) : String(v).trim();
+  }
+
+  /**
+   * 날짜 칸을 'YYYY-MM-DD' 로. 못 읽으면 null.
+   * 숫자면 시트 일련번호, 글자면 흔한 표기를 넓게 받습니다
+   * (2026-07-01, 2026/7/1, 2026. 7. 1, 20260701).
+   */
+  function toDateKey(v) {
+    if (typeof v === 'number') return isFinite(v) ? serialToISO(v) : null;
+    var s = String(v === undefined || v === null ? '' : v).trim();
+    if (!s) return null;
+    var m = s.match(/^(\d{4})\D{0,2}(\d{1,2})\D{0,2}(\d{1,2})/);
+    if (!m) m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (!m) return null;
+    var mo = Number(m[2]), da = Number(m[3]);
+    if (mo < 1 || mo > 12 || da < 1 || da > 31) return null;
+    return m[1] + '-' + (mo < 10 ? '0' : '') + mo + '-' + (da < 10 ? '0' : '') + da;
+  }
+
+  /* 흔한 표기를 넓게 받습니다. 시트 열 이름이 다르면 여기에 한 줄 더하면 됩니다. */
+  var COL_ALIASES = {
+    date:   ['날짜', '주문일', '주문일자', '일자', '결제일', '결제일자', '판매일'],
+    line:   ['제품라인', '라인', '제품군'],
+    code:   ['상품코드', '코드', '품목코드'],
+    name:   ['상품명', '제품명', '품목명', '상품', '품목', '제품'],
+    price:  ['정상가', '판매가', '단가'],
+    ch:     ['채널명', '판매처', '채널', '판매채널', '매장', '스토어'],
+    qty:    ['수량', '주문수량', '판매수량'],
+    amt:    ['매출', '주문금액', '금액', '매출액', '판매금액', '결제금액'],
+    orders: ['주문건수', '건수', '주문수']
+  };
+
+  function mapColumns(header, required) {
+    var pos = {}, c;
+    for (c = 0; c < header.length; c++) {
+      var nm = String(header[c] === undefined || header[c] === null ? '' : header[c]).replace(/\s+/g, '');
+      if (nm && pos[nm] === undefined) pos[nm] = c;
+    }
+    var C = {}, key, names, j;
+    for (key in COL_ALIASES) {
+      C[key] = -1;
+      names = COL_ALIASES[key];
+      for (j = 0; j < names.length; j++) {
+        if (pos[names[j]] !== undefined) { C[key] = pos[names[j]]; break; }
+      }
+    }
+    var missing = [];
+    (required || ['date', 'amt']).forEach(function (k) {
+      if (C[k] < 0) missing.push(COL_ALIASES[k][0]);
+    });
+    if (missing.length) {
+      var err = new Error('시트 첫 행에 "' + missing.join('", "') +
+                          '" 열이 없습니다. 첫 행에서 찾은 열: ' + Object.keys(pos).join(', '));
+      err.kind = 'columns';
+      throw err;
+    }
+    return C;
+  }
+
+  var COLMAP = null;
+
+  function colLetter(i) {
+    var s = '';
+    while (i >= 0) { s = String.fromCharCode(65 + (i % 26)) + s; i = Math.floor(i / 26) - 1; }
+    return s;
+  }
+  function colmapText() {
+    if (!COLMAP) return '';
+    var labels = { date: '날짜', ch: '채널명', qty: '수량', amt: '매출', orders: '주문건수',
+                   line: '제품라인', code: '상품코드', name: '상품명', price: '정상가' };
+    var parts = [];
+    ['date', 'ch', 'qty', 'amt', 'orders', 'line', 'code', 'name', 'price'].forEach(function (k) {
+      parts.push(labels[k] + '=' + (COLMAP[k] < 0 ? '없음' : colLetter(COLMAP[k]) + '열'));
+    });
+    return '열 인식: ' + parts.join(' · ') + ' — 시트 첫 행의 이름으로 찾습니다.';
+  }
+
+  function loadAll() {
+    showLoading(true);
+    clearErr();
+    sheetValues(CONFIG.DATA_RANGE).then(function (values) {
+      DATA = parseRows(values);
+      var now = new Date();
+      $('whoFetched').textContent =
+        ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ' 조회';
+      buildControls();
+      showLoading(false);
+      render();
+    }).catch(function (e) {
+      showLoading(false);
+      showErr('데이터를 불러오지 못했습니다', hintFor(e), e.message);
+    });
+  }
+
+  function parseRows(values) {
+    if (!values.length) throw new Error('시트가 비어 있습니다');
+    var C = mapColumns(values[0]);
+    COLMAP = C;
+
+    var rows = [], dateSet = {}, chSet = {}, skipped = 0;
+    var pick = function (r, i) { return i < 0 ? '' : r[i]; };
+
+    for (var i = 1; i < values.length; i++) {
+      var r = values[i];
+      if (!r || !r.length) continue;
+      var ds = toDateKey(r[C.date]);
+      if (!ds) { skipped++; continue; }
+      var rec = {
+        d: ds,
+        m: ds.slice(0, 7),
+        line: String(pick(r, C.line) || '').trim(),
+        code: codeStr(pick(r, C.code)),
+        name: String(pick(r, C.name) || '').trim(),
+        price: Number(pick(r, C.price)) || 0,
+        ch: String(pick(r, C.ch) || '').trim() || '채널미입력',
+        qty: Number(pick(r, C.qty)) || 0,
+        amt: Number(r[C.amt]) || 0,
+        /* 주문건수 열이 따로 있으면 그 값을, 없으면 한 행을 한 건으로 셉니다 */
+        orders: C.orders >= 0 ? (Number(r[C.orders]) || 0) : 1
+      };
+      rows.push(rec);
+      dateSet[ds] = 1; chSet[rec.ch] = 1;
+    }
+    if (!rows.length) throw new Error('읽을 수 있는 행이 없습니다 (날짜 열의 서식을 확인해 주세요)');
+
+    var dates = Object.keys(dateSet).sort();
+    var found = Object.keys(chSet);
+    var channels = CH_ORDER.filter(function (c) { return chSet[c]; })
+      .concat(found.filter(function (c) { return CH_ORDER.indexOf(c) < 0; }).sort());
+
+    return {
+      rows: rows, dates: dates, channels: channels,
+      /* 비어 있는 달도 0 으로 채워 연속되게 만듭니다 — 추이가 끊기지 않도록요 */
+      months: fillMonths(dates[0].slice(0, 7), dates[dates.length - 1].slice(0, 7)),
+      maxDate: dates[dates.length - 1],
+      hasOrders: C.orders >= 0,
+      skipped: skipped
+    };
+  }
+
+  function shiftMonth(month, delta) {
+    var y = Number(month.slice(0, 4)), m = Number(month.slice(5, 7));
+    var d = new Date(y, m - 1 + delta, 1);
+    var mm = d.getMonth() + 1;
+    return d.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm;
+  }
+  function fillMonths(from, to) {
+    var out = [], cur = from;
+    /* 무한 루프 방지용 상한 (50년) */
+    for (var guard = 0; guard < 600; guard++) {
+      out.push(cur);
+      if (cur === to) break;
+      cur = shiftMonth(cur, 1);
+    }
+    return out;
+  }
+  function monthLabel(m) { return m.slice(0, 4) + '년 ' + Number(m.slice(5, 7)) + '월'; }
+  /** 연도가 바뀌는 지점에서만 연도를 적습니다 */
+  function shortMonth(m, prev) {
+    var y = m.slice(0, 4);
+    if (!prev || prev.slice(0, 4) !== y) return y.slice(2) + '.' + Number(m.slice(5, 7)) + '월';
+    return Number(m.slice(5, 7)) + '월';
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     상태 & 컨트롤
+     ═══════════════════════════════════════════════════════ */
+  var qs = new URLSearchParams(location.search);
+  var state = {
+    ch: qs.get('ch') || '',
+    metric: qs.get('metric') === 'qty' ? 'qty' : 'amt',
+    month: qs.get('month') || ''
+  };
+
+  function buildControls() {
+    var p = $('month');
+    var withData = {};
+    DATA.rows.forEach(function (r) { withData[r.m] = 1; });
+    var opts = DATA.months.filter(function (m) { return withData[m]; }).reverse();
+    p.innerHTML = opts.map(function (m) {
+      return '<option value="' + m + '">' + monthLabel(m) + '</option>';
+    }).join('');
+    if (!state.month || opts.indexOf(state.month) < 0) state.month = opts[0];
+    p.value = state.month;
+    p.onchange = function () { state.month = p.value; syncUrl(); render(); };
+
+    var c = $('channel');
+    c.innerHTML = '<option value="">전체 판매처</option>' +
+      DATA.channels.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('');
+    if (state.ch && DATA.channels.indexOf(state.ch) < 0) state.ch = '';
+    c.value = state.ch;
+    c.onchange = function () { state.ch = c.value; syncUrl(); render(); };
+
+    $('metric').onclick = function (e) {
+      var b = e.target.closest('button[data-v]'); if (!b) return;
+      state.metric = b.dataset.v;
+      Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      syncUrl(); render();
+    };
+    $('reload').onclick = loadAll;
+  }
+
+  function syncUrl() {
+    var p = new URLSearchParams();
+    if (state.ch) p.set('ch', state.ch);
+    if (state.month) p.set('month', state.month);
+    if (state.metric !== 'amt') p.set('metric', state.metric);
+    var q = p.toString();
+    history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
+    $('channel').value = state.ch;
+    $('month').value = state.month;
+    logVisit();                      /* 월·판매처를 바꾼 것도 방문 기록에 남습니다 */
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     집계
+     ═══════════════════════════════════════════════════════ */
+  function zeros(n) { var a = new Array(n); for (var i = 0; i < n; i++) a[i] = 0; return a; }
+  function sumOf(vals, n) { var s = 0; for (var j = 0; j < n; j++) s += vals[j]; return s; }
+  /** 실적이 있는 달만 평균 — 엑셀 피벗의 AVERAGE와 동일 */
+  function avgOf(vals, has, n) {
+    var s = 0, c = 0;
+    for (var j = 0; j < n; j++) if (has[j]) { s += vals[j]; c++; }
+    return c ? s / c : 0;
+  }
+
+  /**
+   * 월 × 판매처, 월 × 상품, 월별 합계를 한 번에 만듭니다.
+   * 판매처를 하나 고르면 그 판매처의 행만 셉니다 (daily/sales.html과 같은 규칙).
+   */
+  function aggregate() {
+    var ms = DATA.months, n = ms.length;
+    var mi = {}; ms.forEach(function (m, i) { mi[m] = i; });
+    var chs = DATA.channels, ci = {}; chs.forEach(function (c, i) { ci[c] = i; });
+
+    var chV = chs.map(function () { return zeros(n); });
+    var chHas = chs.map(function () { return zeros(n); });
+    var chTot = zeros(chs.length);
+    var monTot = zeros(n), monQty = zeros(n), monOrd = zeros(n);
+    var monDays = [], k;
+    for (k = 0; k < n; k++) monDays.push({});
+    var pIdx = {}, prods = [], pV = [], pHas = [], pTot = [];
+
+    for (k = 0; k < DATA.rows.length; k++) {
+      var r = DATA.rows[k];
+      var j = mi[r.m]; if (j === undefined) continue;
+      if (state.ch && r.ch !== state.ch) continue;
+      var v = state.metric === 'amt' ? r.amt : r.qty;
+
+      var c = ci[r.ch];
+      if (c !== undefined) { chV[c][j] += v; chHas[c][j] = 1; chTot[c] += v; }
+      monTot[j] += v;
+      monQty[j] += r.qty;
+      monOrd[j] += r.orders;
+      monDays[j][r.d] = 1;
+
+      var key = r.code + '|@|' + r.name;
+      var p = pIdx[key];
+      if (p === undefined) {
+        p = prods.length; pIdx[key] = p;
+        prods.push([r.line, r.code, r.name, r.price]);
+        pV.push(zeros(n)); pHas.push(zeros(n)); pTot.push(0);
+      }
+      pV[p][j] += v; pHas[p][j] = 1; pTot[p] += v;
+      if (!prods[p][3] && r.price) prods[p][3] = r.price;
+    }
+
+    var days = monDays.map(function (o) { return Object.keys(o).length; });
+    return { ms: ms, n: n, mi: mi, chs: chs, chV: chV, chHas: chHas, chTot: chTot,
+             monTot: monTot, monQty: monQty, monOrd: monOrd, days: days,
+             prods: prods, pV: pV, pHas: pHas, pTot: pTot };
+  }
+
+  /** 증감률. 기준이 0 이면 비교 불가로 null. */
+  function rate(now, base) { return base ? (now - base) / base : null; }
+
+  /**
+   * 구성 비중. 슬롯이 넘치면 나머지는 "기타" 한 줄로 접습니다
+   * (색을 늘려 쓰지 않기 위해서요).
+   */
+  function breakdown(month, field) {
+    var acc = {}, order = [];
+    DATA.rows.forEach(function (r) {
+      if (r.m !== month) return;
+      if (state.ch && field !== 'ch' && r.ch !== state.ch) return;
+      var key = field === 'ch' ? r.ch : (r.name || '상품미입력');
+      if (acc[key] === undefined) { acc[key] = 0; order.push(key); }
+      acc[key] += state.metric === 'amt' ? r.amt : r.qty;
+    });
+    var list = order.map(function (k) { return { name: k, v: acc[k] }; })
+      .filter(function (x) { return x.v !== 0; })
+      .sort(function (a, b) { return b.v - a.v; });
+    if (list.length <= CONFIG.TOP_N) return list;
+    var head = list.slice(0, CONFIG.TOP_N - 1);
+    var rest = list.slice(CONFIG.TOP_N - 1);
+    head.push({
+      name: '기타 ' + rest.length + '개',
+      v: rest.reduce(function (a, x) { return a + x.v; }, 0),
+      other: true
+    });
+    return head;
+  }
+
+  /** 일자별 누적. 당월 · 전월 · 전년 동월을 같은 x축(일)에 올립니다. */
+  function cumulativeByDay(month) {
+    function build(m) {
+      var daily = {}, maxDay = 0;
+      DATA.rows.forEach(function (r) {
+        if (r.m !== m) return;
+        if (state.ch && r.ch !== state.ch) return;
+        var day = Number(r.d.slice(8, 10));
+        daily[day] = (daily[day] || 0) + (state.metric === 'amt' ? r.amt : r.qty);
+        if (day > maxDay) maxDay = day;
+      });
+      if (!maxDay) return [];
+      var out = [], run = 0;
+      for (var d = 1; d <= maxDay; d++) { run += daily[d] || 0; out.push({ day: d, v: run }); }
+      return out;
+    }
+    return [
+      { key: 'cur',  label: monthLabel(month),                  short: '당월', pts: build(month) },
+      { key: 'prev', label: monthLabel(shiftMonth(month, -1)),  short: '전월', pts: build(shiftMonth(month, -1)) },
+      { key: 'yoy',  label: monthLabel(shiftMonth(month, -12)), short: '전년', pts: build(shiftMonth(month, -12)) }
+    ].filter(function (s) { return s.pts.length; });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     포맷
+     ═══════════════════════════════════════════════════════ */
+  var nf = new Intl.NumberFormat('ko-KR');
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /** 금액 : ₩ 접두, 마이너스는 빨간색 */
+  function money(v) {
+    if (!v) return '';
+    var s = '₩' + nf.format(Math.abs(Math.round(v)));
+    return v < 0 ? '<span class="neg">-' + s + '</span>' : s;
+  }
+  function qtyFmt(v) {
+    if (!v) return '';
+    var s = nf.format(Math.abs(Math.round(v)));
+    return v < 0 ? '<span class="neg">-' + s + '</span>' : s;
+  }
+  function val(v) { return state.metric === 'amt' ? money(v) : qtyFmt(v); }
+  /** 수량은 가운데, 금액은 우측 정렬 */
+  function alignCls() { return state.metric === 'amt' ? '' : ' c'; }
+  function unitTxt() { return state.metric === 'amt' ? '주문금액' : '주문수량'; }
+  function unitSuffix() { return state.metric === 'amt' ? '원' : '개'; }
+  function fig(v) { return (state.metric === 'amt' ? '₩' : '') + nf.format(Math.round(v || 0)); }
+
+  function compact(v) {
+    var a = Math.abs(v);
+    if (state.metric === 'qty') return nf.format(Math.round(v));
+    if (a >= 1e8) return (v / 1e8).toFixed(2) + '억';
+    if (a >= 1e4) return nf.format(Math.round(v / 1e4)) + '만';
+    return nf.format(Math.round(v));
+  }
+  /**
+   * [빨강]▲ +#,##0.0% ; [파랑]▼ -#,##0.0% ; (동일)
+   * 엑셀 서식과 같은 규칙으로, 오를 때 빨강·내릴 때 파랑입니다.
+   */
+  function pctSigned(r) {
+    if (r === null || !isFinite(r)) return '—';
+    var p = Math.abs(r * 100).toFixed(1);
+    if (r > 0.00005)  return '<span style="color:var(--up)">▲ +' + p + '%</span>';
+    if (r < -0.00005) return '<span style="color:var(--down)">▼ -' + p + '%</span>';
+    return '<span style="color:var(--ink-muted)">(동일)</span>';
+  }
+  function chip(r) {
+    if (r === null || !isFinite(r)) return '<span class="chip flat">기준 없음</span>';
+    var c = r > 0.0005 ? 'up' : r < -0.0005 ? 'down' : 'flat';
+    var m = r > 0.0005 ? '▲' : r < -0.0005 ? '▼' : '−';
+    return '<span class="chip ' + c + '">' + m + ' ' + (r > 0 ? '+' : '') + (r * 100).toFixed(1) + '%</span>';
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     렌더
+     ═══════════════════════════════════════════════════════ */
+  var csvCache = {};
+
+  function render() {
+    var A = aggregate();
+
+    $('crumb').innerHTML =
+      (state.ch ? '<a href="#" id="backAll">← 전체 판매처</a> · ' + esc(state.ch)
+                : '주문일 기준 · 배송비 미포함 · 취소/교환/반품/환불 미반영');
+    var back = $('backAll');
+    if (back) back.onclick = function (e) { e.preventDefault(); state.ch = ''; syncUrl(); render(); };
+
+    $('pageTitle').textContent = (state.ch || '전체 판매처') + ' 월별' + unitTxt() + '현황';
+    $('whoAsOf').textContent = '기준 ' + monthLabel(state.month) + ' · 수록 ' + DATA.maxDate + '까지';
+    $('trendTitle').textContent = (state.ch || '월별 총') + ' ' + unitTxt() + ' 추이';
+    $('cumTitle').textContent = monthLabel(state.month) + ' 일자별 누적';
+    $('m2Title').textContent = (state.ch || '전체 판매처') + ' 월 ' + unitTxt() + ' 현황 (상품별)';
+    $('m1Card').hidden = !!state.ch;
+
+    renderKpis(A);
+    renderTrend(A);
+    renderCum();
+    renderBreakdowns();
+    if (!state.ch) renderM1(A);
+    renderM2(A);
+    renderM3(A);
+
+    $('colmap').textContent = colmapText();
+    $('coverage').textContent =
+      '원본 ' + nf.format(DATA.rows.length) + '행 · 수록 기간 ' + DATA.dates[0] + ' ~ ' + DATA.maxDate +
+      ' · ' + DATA.months.length + '개월 · 판매처 ' + DATA.channels.length + '곳' +
+      (DATA.skipped ? ' · 날짜를 읽지 못한 ' + nf.format(DATA.skipped) + '행 제외' : '');
+    $('caveat').textContent =
+      '월평균은 실적이 있는 달만 평균합니다 (엑셀 피벗의 AVERAGE와 동일 — 빈칸 제외, 0은 포함). ' +
+      '전월비·전년동월비는 기준이 0인 달에는 "기준 없음"으로 둡니다.';
+    $('dash').hidden = false;
+    /* 숨겨진 동안에는 크기를 잴 수 없으므로 화면에 올린 뒤에 고정합니다 */
+    stickStatRows();
+  }
+
+  function renderKpis(A) {
+    var j = A.mi[state.month];
+    var cur = A.monTot[j];
+    var prevM = shiftMonth(state.month, -1), yoyM = shiftMonth(state.month, -12);
+    var prev = A.mi[prevM] === undefined ? null : A.monTot[A.mi[prevM]];
+    var yoy  = A.mi[yoyM]  === undefined ? null : A.monTot[A.mi[yoyM]];
+    var days = A.days[j];
+
+    var bi = -1, bv = -Infinity;
+    for (var i = 0; i < A.chs.length; i++) {
+      if (A.chV[i][j] > bv) { bv = A.chV[i][j]; bi = i; }
+    }
+
+    var unit = state.metric === 'amt' ? '' : '개';
+    var t = [
+      [monthLabel(state.month) + ' 총 ' + unitTxt(), fig(cur), unit,
+       '전월 대비 ' + chip(rate(cur, prev))],
+      ['전년 동월 대비', pctSigned(rate(cur, yoy)), '',
+       yoy === null ? '<span class="chip flat">전년 데이터 없음</span>'
+                    : '<span class="chip flat">' + yoyM.slice(2).replace('-', '/') + ' ' + fig(yoy) + unit + '</span>'],
+      ['일평균', days ? fig(cur / days) : '—', unit,
+       '<span class="chip flat">판매 ' + days + '일</span>'],
+      ['1위 판매처', bi >= 0 && bv > 0 ? A.chs[bi] : '—', '',
+       bi >= 0 && bv > 0
+         ? '<span class="chip flat">' + fig(bv) + unit + ' · 비중 ' +
+           (cur ? (bv / cur * 100).toFixed(0) : 0) + '%</span>'
+         : '<span class="chip flat">주문 없음</span>']
+    ];
+    /* 주문건수 열이 시트에 있을 때만 객단가를 셉니다.
+       한 행을 한 건으로 센 값으로 객단가를 내면 원본 집계 단위에 휘둘립니다. */
+    if (DATA.hasOrders) {
+      var ord = A.monOrd[j];
+      t.push(['주문 건수', nf.format(Math.round(ord)), '건',
+              A.monQty[j] ? '<span class="chip flat">수량 ' + nf.format(Math.round(A.monQty[j])) + '개</span>' : '']);
+      t.push(['객단가', ord ? '₩' + nf.format(Math.round(A.monTot[j] / ord)) : '—', '',
+              '<span class="chip flat">매출 ÷ 주문 건수</span>']);
+    }
+
+    $('kpis').innerHTML = t.map(function (x) {
+      var big = String(x[1]);
+      var isHtml = big.charAt(0) === '<';           /* pctSigned 는 색과 기호를 담은 조각입니다 */
+      var plainLen = isHtml ? big.replace(/<[^>]*>/g, '').length : big.length;
+      return '<div class="kpi"><div class="k">' + esc(x[0]) + '</div><div class="v num' +
+             (plainLen > 10 ? ' long' : '') + '">' + (isHtml ? big : esc(big)) +
+             (x[2] ? '<small>' + x[2] + '</small>' : '') +
+             '</div><div class="d">' + x[3] + '</div></div>';
+    }).join('');
+  }
+
+  /* ── 추이 : 판매처 누적막대 + 총액 선 + 월평균 점선 ─────── */
+  function renderTrend(A) {
+    var svg = $('trend');
+    /* mb 는 45도로 기울인 월 이름 자리입니다 */
+    var W = 1000, H = 330, ml = 74, mr = 16, mt = 22, mb = 58;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+    /* 최근 N개월만 봅니다. 그 앞은 표(월별 집계)에 남아 있습니다. */
+    var from = Math.max(0, A.n - CONFIG.TREND_MONTHS);
+    var idx = [];
+    for (var q = from; q < A.n; q++) idx.push(q);
+    var n = idx.length;
+    if (!n) { svg.innerHTML = ''; $('trendAvg').textContent = ''; return; }
+
+    var posMax = 1, negMin = 0, k2, i2, v2, ps, ns;
+    for (k2 = 0; k2 < n; k2++) {
+      ps = 0; ns = 0;
+      for (i2 = 0; i2 < A.chs.length; i2++) {
+        v2 = A.chV[i2][idx[k2]];
+        if (v2 > 0) ps += v2; else ns += v2;
+      }
+      if (ps > posMax) posMax = ps;
+      if (ns < negMin) negMin = ns;
+    }
+    var top = posMax * 1.08, bottom = negMin * 1.15;
+    var band = (W - ml - mr) / n;
+    var bw = Math.max(3, Math.min(34, band * 0.68));
+    var cx = function (k) { return ml + band * (k + 0.5); };
+    var y = function (v) { return H - mb - ((v - bottom) / (top - bottom)) * (H - mt - mb); };
+
+    var o = '', t, yy;
+
+    /* 기준 월 하이라이트 — 가장 먼저 그려서 막대와 선 뒤에 놓습니다 */
+    var pk = idx.indexOf(A.mi[state.month]);
+    if (pk >= 0) {
+      var hlW = bw * 1.6, hlTop = y(top);
+      o += '<rect x="' + (cx(pk) - hlW / 2).toFixed(1) + '" y="' + hlTop.toFixed(1) +
+           '" width="' + hlW.toFixed(1) + '" height="' + ((H - mb) - hlTop).toFixed(1) +
+           '" fill="var(--accent)" opacity=".12" stroke="none" pointer-events="none"/>';
+    }
+
+    for (t = 0; t <= 4; t++) {
+      yy = y(top * t / 4);
+      o += '<line class="gridline" x1="' + ml + '" y1="' + yy.toFixed(1) + '" x2="' + (W - mr) +
+           '" y2="' + yy.toFixed(1) + '"/>' +
+           '<text x="' + (ml - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end">' +
+           compact(top * t / 4) + '</text>';
+    }
+
+    var segs = [];
+    for (var k = 0; k < n; k++) {
+      var j = idx[k], accP = 0, accN = 0, total = A.monTot[j];
+      for (var i = 0; i < A.chs.length; i++) {
+        var v = A.chV[i][j];
+        if (!v) continue;
+        var y0, y1;
+        if (v > 0) { y0 = y(accP); y1 = y(accP + v); accP += v; }
+        else       { y1 = y(accN); y0 = y(accN + v); accN += v; }
+        var h = Math.max(1.5, Math.abs(y0 - y1) - 2);
+        segs.push({ k: k, j: j, i: i, v: v, total: total });
+        o += '<rect x="' + (cx(k) - bw / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) +
+             '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) +
+             '" fill="' + chColor(A.chs[i]) + '"' +
+             (v < 0 ? ' opacity=".55"' : '') +
+             ' data-s="' + (segs.length - 1) + '" style="cursor:pointer"></rect>';
+      }
+    }
+    if (negMin < 0) {
+      o += '<line x1="' + ml + '" y1="' + y(0).toFixed(1) + '" x2="' + (W - mr) +
+           '" y2="' + y(0).toFixed(1) + '" stroke="var(--border)" stroke-width="1"/>';
+    }
+
+    /* 월 총액 선 */
+    var pts = idx.map(function (j, k) { return cx(k).toFixed(1) + ',' + y(A.monTot[j]).toFixed(1); });
+    o += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ink)" stroke-width="2" ' +
+         'stroke-linejoin="round" stroke-linecap="round" opacity=".82" pointer-events="none"/>';
+    o += '<circle cx="' + cx(n - 1).toFixed(1) + '" cy="' + y(A.monTot[idx[n - 1]]).toFixed(1) +
+         '" r="4.5" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" pointer-events="none"/>';
+
+    /* 월평균 점선 — 값 라벨은 그래프에 가려지므로 카드 제목 우측에 둡니다 */
+    var live = idx.filter(function (j) { return A.monTot[j] !== 0; });
+    var avg = live.length ? live.reduce(function (s, j) { return s + A.monTot[j]; }, 0) / live.length : 0;
+    var ay = y(avg);
+    o += '<line x1="' + ml + '" y1="' + ay.toFixed(1) + '" x2="' + (W - mr) + '" y2="' + ay.toFixed(1) +
+         '" stroke="var(--ink)" stroke-width="2" stroke-dasharray="6 4" opacity=".5" pointer-events="none"/>';
+    $('trendAvg').innerHTML = '월평균 ' + (state.metric === 'amt' ? money(avg) : qtyFmt(avg) + '개');
+
+    o += '<line class="axis" x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '"/>';
+
+    /* 월 이름은 하나도 빠짐없이, 45도로 기울여 표시합니다 */
+    idx.forEach(function (j, k) {
+      var lx = cx(k).toFixed(1), ly = (H - mb + 12).toFixed(1);
+      o += '<text x="' + lx + '" y="' + ly + '" text-anchor="end" ' +
+           'transform="rotate(-45 ' + lx + ' ' + ly + ')" style="font-size:9.5px">' +
+           shortMonth(A.ms[j], k > 0 ? A.ms[idx[k - 1]] : null) + '</text>';
+    });
+    svg.innerHTML = o;
+
+    var tip = $('trendTip');
+    var uu = unitSuffix();
+    var plain = function (v) { return nf.format(Math.round(v)) + uu; };
+
+    svg.onpointermove = function (e) {
+      var box = svg.getBoundingClientRect();
+      var rect = e.target.closest('rect[data-s]');
+      var html, px, py;
+
+      if (rect) {
+        var s = segs[+rect.dataset.s];
+        html = '<div class="t-d">' + monthLabel(A.ms[s.j]) + '</div><strong>' + esc(A.chs[s.i]) +
+               '</strong> · <span class="num">' + plain(s.v) +
+               '</span> · 비중 ' + (s.total ? (s.v / s.total * 100).toFixed(1) : '0.0') + '%' +
+               '<div class="t-m">월 총 ' + plain(s.total) + '</div>';
+        var rb = rect.getBoundingClientRect();
+        px = rb.left - box.left + rb.width / 2;
+        py = rb.top - box.top;
+      } else {
+        var kk = Math.floor(((e.clientX - box.left) / box.width * W - ml) / band);
+        kk = Math.max(0, Math.min(n - 1, kk));
+        var jj = idx[kk], mt2 = A.monTot[jj];
+        var list = [];
+        for (var z = 0; z < A.chs.length; z++) {
+          if (A.chV[z][jj]) list.push({ c: A.chs[z], v: A.chV[z][jj] });
+        }
+        list.sort(function (a, b) { return b.v - a.v; });
+        html = '<div class="t-d">' + monthLabel(A.ms[jj]) + '</div><strong class="num">' + plain(mt2) + '</strong>' +
+               '<div class="t-rows">' + list.map(function (r) {
+                 return '<div><i style="background:' + chColor(r.c) + '"></i><span>' + esc(r.c) +
+                        '</span><b class="num">' + nf.format(Math.round(r.v)) + '</b><em>' +
+                        (mt2 ? (r.v / mt2 * 100).toFixed(1) : '0.0') + '%</em></div>';
+               }).join('') + '</div>';
+        px = cx(kk) / W * box.width;
+        py = y(Math.max(0, mt2)) / H * box.height - 10;
+      }
+      tip.innerHTML = html;
+      tip.style.left = px + 'px';
+      tip.style.top = py + 'px';
+      tip.style.opacity = '1';
+    };
+    svg.onpointerleave = function () { tip.style.opacity = '0'; };
+    /* 막대를 누르면 그 달로 이동합니다 */
+    svg.onclick = function (e) {
+      var rect = e.target.closest('rect[data-s]'); if (!rect) return;
+      state.month = A.ms[segs[+rect.dataset.s].j];
+      syncUrl(); render(); window.scrollTo(0, 0);
+    };
+
+    var items = [];
+    for (var g = 0; g < A.chs.length; g++) {
+      if (!A.chTot[g]) continue;
+      items.push('<span><i style="background:' + chColor(A.chs[g]) + '"></i>' + esc(A.chs[g]) + '</span>');
+    }
+    items.push('<span><i style="background:var(--ink);opacity:.82;height:3px;border-radius:2px"></i>' +
+               '월 총' + unitTxt() + '</span>');
+    items.push('<span><i class="dash"></i>월평균</span>');
+    $('trendLegend').innerHTML = items.join('');
+  }
+
+  /* ── 누적 : 당월 · 전월 · 전년 동월 ─────────────────────── */
+  function renderCum() {
+    var svg = $('cum'), tip = $('cumTip');
+    var series = cumulativeByDay(state.month);
+    if (!series.length) {
+      svg.innerHTML = '';
+      $('cumLegend').innerHTML = '';
+      $('cumPace').textContent = '';
+      return;
+    }
+
+    var W = 1000, H = 300, ml = 74, mr = 58, mt = 18, mb = 34;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+    var maxX = 1, maxY = 0;
+    series.forEach(function (s) {
+      s.pts.forEach(function (p) {
+        if (p.day > maxX) maxX = p.day;
+        if (p.v > maxY) maxY = p.v;
+      });
+    });
+    var top = (maxY || 1) * 1.08;
+    var x = function (d) { return ml + (maxX === 1 ? (W - ml - mr) / 2 : ((d - 1) / (maxX - 1)) * (W - ml - mr)); };
+    var y = function (v) { return H - mb - (v / top) * (H - mt - mb); };
+
+    var o = '', t, yy;
+    for (t = 0; t <= 4; t++) {
+      yy = y(top * t / 4);
+      o += '<line class="gridline" x1="' + ml + '" y1="' + yy.toFixed(1) + '" x2="' + (W - mr) +
+           '" y2="' + yy.toFixed(1) + '"/>' +
+           '<text x="' + (ml - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end">' +
+           compact(top * t / 4) + '</text>';
+    }
+    var step = Math.max(1, Math.ceil(maxX / 10));
+    for (var d = 1; d <= maxX; d += step) {
+      o += '<text x="' + x(d).toFixed(1) + '" y="' + (H - mb + 14) + '" text-anchor="middle">' + d + '</text>';
+    }
+
+    series.forEach(function (s, i) {
+      var slot = i + 1;
+      var path = s.pts.map(function (p, k) {
+        return (k ? 'L' : 'M') + x(p.day).toFixed(1) + ' ' + y(p.v).toFixed(1);
+      }).join(' ');
+      o += '<path class="line s' + slot + '" d="' + path + '"/>';
+      /* 끝점에 이름을 직접 붙입니다. 색만으로 구분되는 계열이 없어야 합니다. */
+      var last = s.pts[s.pts.length - 1];
+      var lx = x(last.day), ly = y(last.v);
+      o += '<circle class="dot s' + slot + '" cx="' + lx.toFixed(1) + '" cy="' + ly.toFixed(1) + '" r="4"/>';
+      o += '<text class="lbl" x="' + (lx + 7).toFixed(1) + '" y="' + (ly + 4).toFixed(1) +
+           '" text-anchor="start" style="fill:var(--series-' + slot + ')">' + s.short + '</text>';
+    });
+
+    o += '<line class="crosshair" id="cumCross" x1="0" y1="' + mt + '" x2="0" y2="' + (H - mb) +
+         '" opacity="0"/>';
+    o += '<line class="axis" x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '"/>';
+    o += '<rect x="' + ml + '" y="' + mt + '" width="' + (W - ml - mr) + '" height="' + (H - mt - mb) +
+         '" fill="transparent" id="cumHit"/>';
+    svg.innerHTML = o;
+
+    /* 같은 날짜까지의 진도 — 전월·전년 대비 얼마나 앞서 있는지 */
+    var cur = series[0];
+    var atDay = cur.pts[cur.pts.length - 1];
+    var pace = series.slice(1).map(function (s) {
+      var p = s.pts.filter(function (q) { return q.day <= atDay.day; }).pop();
+      return s.short + ' 대비 ' + (p ? pctSigned(rate(atDay.v, p.v)) : '—');
+    }).join(' · ');
+    $('cumPace').innerHTML = atDay.day + '일까지 · ' + pace;
+
+    var cross = $('cumCross'), hit = $('cumHit');
+    var uu = unitSuffix();
+    hit.onpointermove = function (e) {
+      var box = svg.getBoundingClientRect();
+      var px = ((e.clientX - box.left) / box.width) * W;
+      var day = Math.round(1 + ((px - ml) / (W - ml - mr)) * (maxX - 1));
+      day = Math.max(1, Math.min(maxX, day));
+      cross.setAttribute('x1', x(day)); cross.setAttribute('x2', x(day));
+      cross.setAttribute('opacity', '1');
+
+      var rows = series.map(function (s, i) {
+        var p = null;
+        for (var k = 0; k < s.pts.length; k++) if (s.pts[k].day === day) { p = s.pts[k]; break; }
+        return '<div><i style="background:var(--series-' + (i + 1) + ')"></i><span>' + esc(s.label) +
+               '</span><b class="num">' + (p ? nf.format(Math.round(p.v)) + uu : '—') + '</b><em></em></div>';
+      }).join('');
+      tip.innerHTML = '<div class="t-d">' + day + '일 누적</div><div class="t-rows">' + rows + '</div>';
+      tip.style.left = (x(day) / W * box.width) + 'px';
+      tip.style.top = (mt / H * box.height) + 'px';
+      tip.style.opacity = '1';
+    };
+    hit.onpointerleave = function () {
+      cross.setAttribute('opacity', '0');
+      tip.style.opacity = '0';
+    };
+
+    $('cumLegend').innerHTML = series.map(function (s, i) {
+      return '<span><i style="background:var(--series-' + (i + 1) + ')"></i>' + esc(s.label) + '</span>';
+    }).join('');
+  }
+
+  /* ── 구성 : 판매처 / 상품 가로막대 ──────────────────────── */
+  function renderBreakdowns() {
+    var chs = breakdown(state.month, 'ch');
+    var prs = breakdown(state.month, 'name');
+
+    hbars($('chBars'), chs, true);
+    hbars($('prBars'), prs, false);
+
+    $('chNote').textContent = monthLabel(state.month) + ' · 전체 판매처 기준 · 단위 ' + unitSuffix();
+    $('prNote').textContent = monthLabel(state.month) + ' · 상위 ' + prs.length + '줄 · 단위 ' + unitSuffix();
+  }
+
+  function hbars(host, list, colorByChannel) {
+    if (!list.length) { host.innerHTML = '<div class="empty">해당 달에 실적이 없습니다.</div>'; return; }
+    var max = Math.max.apply(null, list.map(function (d) { return Math.abs(d.v); }).concat([1]));
+    var total = list.reduce(function (a, d) { return a + d.v; }, 0);
+    host.innerHTML = '<ul class="hbars">' + list.map(function (d) {
+      /* 판매처는 추이 차트와 같은 색을 씁니다. 상품은 색으로 구분할 대상이
+         아니라서 강조색 하나로 두고, 길이와 숫자로만 읽게 합니다. */
+      var style = 'width:' + Math.max(1, Math.abs(d.v) / max * 100).toFixed(1) + '%';
+      if (colorByChannel && !d.other) style += ';background:' + chColor(d.name);
+      var share = total ? (d.v / total * 100).toFixed(1) : '0.0';
+      return '<li class="hbar' + (d.other ? ' hbar-other' : '') + '" title="' + esc(d.name) + '">' +
+             '<span class="hbar-name">' + esc(d.name) + '</span>' +
+             '<span class="hbar-track"><span class="hbar-fill" style="' + style + '"></span></span>' +
+             '<span class="hbar-value num">' + (val(d.v) || '0') +
+             '<span class="hbar-share">' + share + '%</span></span></li>';
+    }).join('') + '</ul>';
+  }
+
+  /* ── 표1 : 월 × 판매처 (합계 열이 맨 앞) ─────────────────── */
+  function renderM1(A) {
+    var cols = [];
+    for (var i = 0; i < A.chs.length; i++) if (A.chTot[i] !== 0) cols.push(i);
+
+    var al = alignCls();
+
+    /* 열별 색 스케일 — 각 판매처 열의 최대값이 가장 진한 단계입니다.
+       농도는 알파(최대 0.5)로만 올리므로 글자가 흰색으로 바뀔 일이 없습니다.
+       합계 열과 통계 행은 비교 대상이 아니라 기준선이라 칠하지 않습니다. */
+    var colMax = cols.map(function (i) {
+      var m = 0, j;
+      for (j = 0; j < A.n; j++) if (A.chV[i][j] > m) m = A.chV[i][j];
+      return m;
+    });
+    function scaleStyle(v, ci) {
+      if (!(v > 0) || !colMax[ci]) return '';
+      return ' style="background-color:rgba(var(--scale-rgb),' +
+             ((v / colMax[ci]) * 0.5).toFixed(3) + ')"';
+    }
+
+    var avg = cols.map(function (i) { return avgOf(A.chV[i], A.chHas[i], A.n); });
+    var monHas = A.monTot.map(function (v, j) { return A.days[j] ? 1 : 0; });
+    var totAvg = avgOf(A.monTot, monHas, A.n);
+    var sums = cols.map(function (i) { return sumOf(A.chV[i], A.n); });
+    var grand = sumOf(A.monTot, A.n);
+    var pickIdx = A.mi[state.month];
+
+    var head = '<thead><tr><th class="stick">월</th>' +
+      '<th class="totcol">합계</th>' +
+      cols.map(function (i) {
+        return '<th class="chlink" data-ch="' + esc(A.chs[i]) + '" title="클릭하면 상세로 이동합니다">' +
+               '<span>' + esc(A.chs[i]) + '</span></th>';
+      }).join('') + '</tr></thead>';
+
+    /* 통계 행 — 제목행 바로 아래에 붙여둡니다 */
+    var body =
+      '<tr class="stat top"><td class="c stick">월평균</td>' +
+      '<td class="num totcol' + al + '">' + val(totAvg) + '</td>' +
+      avg.map(function (v) { return '<td class="num' + al + '">' + val(v) + '</td>'; }).join('') + '</tr>' +
+      '<tr class="stat top"><td class="c stick">합계</td>' +
+      '<td class="num totcol' + al + '">' + val(grand) + '</td>' +
+      sums.map(function (v) { return '<td class="num' + al + '">' + val(v) + '</td>'; }).join('') + '</tr>';
+
+    /* 월 행 — 최신이 위입니다 */
+    var csv = [['월', '합계'].concat(cols.map(function (i) { return A.chs[i]; }))];
+    for (var s = A.n - 1; s >= 0; s--) {
+      var m = A.ms[s];
+      body += '<tr class="' + (s === pickIdx ? 'pick' : '') + '">' +
+              '<td class="c stick num mlink" data-m="' + m + '" tabindex="0">' +
+              '<span class="pick">' + m.slice(2) + '</span></td>' +
+              '<td class="num totcol' + al + '"><strong>' + val(A.monTot[s]) + '</strong></td>';
+      var line = [m, A.monTot[s]];
+      for (var q = 0; q < cols.length; q++) {
+        var ci = cols[q], v = A.chV[ci][s], has = A.chHas[ci][s];
+        body += '<td class="num' + al + (has ? '' : ' zero') + '"' + scaleStyle(v, q) + '>' +
+                (has ? (v ? val(v) : '0') : '·') + '</td>';
+        line.push(has ? v : '');
+      }
+      body += '</tr>';
+      csv.push(line);
+    }
+
+    var m1 = $('m1');
+    m1.innerHTML = head + '<tbody>' + body + '</tbody>';
+    Array.prototype.forEach.call(m1.querySelectorAll('th.chlink'), function (th) {
+      th.onclick = function () { state.ch = th.dataset.ch; syncUrl(); render(); window.scrollTo(0, 0); };
+    });
+    Array.prototype.forEach.call(m1.querySelectorAll('td.mlink'), function (td) {
+      td.onclick = function () { state.month = td.dataset.m; syncUrl(); render(); window.scrollTo(0, 0); };
+    });
+    $('m1Note').textContent =
+      '단위: ' + unitSuffix() + ' · 최신 월이 위 · 월을 누르면 기준 월이 바뀝니다 · ' +
+      '판매처 이름을 클릭하면 상세로 이동합니다';
+
+    csv.unshift(['합계', grand].concat(sums));
+    csv.unshift(['월평균', totAvg].concat(avg));
+    csvCache.m1 = { name: '판매처별_월_' + (state.metric === 'amt' ? '금액' : '수량'), rows: csv };
+  }
+
+  /**
+   * 월평균·합계 행을 제목행 바로 아래에 붙여둡니다.
+   * 행 높이는 글꼴과 화면 폭에 따라 달라지므로 그릴 때마다 실측해서 오프셋을 잡습니다.
+   */
+  /** 가로 스크롤이 걸린 상자인지 — 이 안에서는 top 오프셋의 기준이 화면이 아니라 상자입니다 */
+  function isScrollBox(el) {
+    if (!el) return false;
+    var o = getComputedStyle(el).overflowX;
+    return o === 'auto' || o === 'scroll';
+  }
+
+  function stickStatRows() {
+    var tbl = $('m1');
+    var headRow = tbl.querySelector('thead tr');
+    var box = document.querySelector('#m1Card .tablewrap');
+
+    /* 상단에 이미 떠 있는 것 아래로 붙여야 겹치지 않습니다 */
+    var dock = document.querySelector('.controls-dock');
+    var base = dock ? dock.getBoundingClientRect().height : 0;
+
+    /* 표가 가로 스크롤 상자 안에 있으면(좁은 화면) 오프셋 기준이 상자로 바뀝니다.
+       그대로 두면 제목행과 통계행이 상자 안에서 그만큼 아래로 밀려
+       맨 위 월들을 덮어버립니다. 그때는 고정을 걸지 않습니다. */
+    var docked = !isScrollBox(box);
+
+    if (headRow) {
+      Array.prototype.forEach.call(headRow.children, function (th) {
+        th.style.top = docked ? base + 'px' : '0px';
+      });
+    }
+
+    var off = base + (headRow ? headRow.getBoundingClientRect().height : 0);
+    Array.prototype.forEach.call(tbl.querySelectorAll('tbody tr.stat.top'), function (tr) {
+      Array.prototype.forEach.call(tr.children, function (td) {
+        if (docked) {
+          td.style.position = 'sticky';
+          td.style.top = off + 'px';
+          td.style.zIndex = td.classList.contains('stick') ? '5' : '4';
+        } else {
+          td.style.position = '';
+          td.style.top = '';
+          td.style.zIndex = '';
+        }
+      });
+      off += tr.getBoundingClientRect().height;
+    });
+
+    /* 상품표와 집계표는 늘 가로 스크롤 상자 안이라 제목행이 상자 맨 위에 붙어야 합니다 */
+    ['#m2 thead tr', '#m3 thead tr'].forEach(function (sel) {
+      var h = document.querySelector(sel);
+      if (h) Array.prototype.forEach.call(h.children, function (th) { th.style.top = '0px'; });
+    });
+  }
+
+  /* ── 표2 : 상품 × 월 ────────────────────────────────────── */
+  function renderM2(A) {
+    var order = [];
+    for (var i = 0; i < A.prods.length; i++) if (A.pTot[i] !== 0) order.push(i);
+    order.sort(function (a, b) { return A.pTot[b] - A.pTot[a]; });
+    var al = alignCls();
+
+    /* 최근 N개월만 열로 둡니다 — 그 앞은 합계 열에 들어 있습니다 */
+    var from = Math.max(0, A.n - CONFIG.TREND_MONTHS);
+    var seq = [];
+    for (var q = A.n - 1; q >= from; q--) seq.push(q);
+
+    var head = '<thead><tr>' +
+      '<th class="p1">제품라인</th><th class="p2">상품코드</th>' +
+      '<th class="p3">상품명</th><th class="p4">정상가</th>' +
+      '<th class="p5">월평균</th><th class="p6">합계</th>';
+    var csvHead = ['제품라인', '상품코드', '상품명', '정상가', '월평균', '합계'];
+    seq.forEach(function (j) {
+      head += '<th>' + shortMonth(A.ms[j], null) + '</th>';
+      csvHead.push(A.ms[j]);
+    });
+    head += '</tr></thead>';
+
+    var body = '', csv = [csvHead];
+    order.forEach(function (pi) {
+      var p = A.prods[pi];
+      var pavg = avgOf(A.pV[pi], A.pHas[pi], A.n);
+      var psum = A.pTot[pi];
+      body += '<tr><td class="l p1"><span class="line-tag">' + esc(p[0] || '—') + '</span></td>' +
+              '<td class="l p2 code num">' + esc(p[1]) + '</td>' +
+              '<td class="l p3" title="' + esc(p[2]) + '">' + esc(p[2]) + '</td>' +
+              '<td class="num p4">' + (p[3] ? '₩' + nf.format(p[3]) : '') + '</td>' +
+              '<td class="num p5' + al + '">' + val(pavg) + '</td>' +
+              '<td class="num p6' + al + '"><strong>' + val(psum) + '</strong></td>';
+      var row = [p[0], p[1], p[2], p[3] || '', pavg, psum];
+      seq.forEach(function (j) {
+        var v = A.pV[pi][j];
+        body += '<td class="num' + al + (v ? '' : ' zero') + '">' + (v ? val(v) : '·') + '</td>';
+        row.push(v || '');
+      });
+      body += '</tr>';
+      csv.push(row);
+    });
+
+    $('m2').innerHTML = head + '<tbody>' + body + '</tbody>';
+    csvCache.m2 = { name: (state.ch || '전체') + '_상품별_월_' + (state.metric === 'amt' ? '금액' : '수량'),
+                    rows: csv };
+  }
+
+  /* ── 표3 : 월별 집계 (전월비 · 전년동월비) ──────────────── */
+  function renderM3(A) {
+    var al = alignCls();
+    var head = '<thead><tr><th class="l">월</th>' +
+      '<th>' + unitTxt() + '</th><th>전월비</th><th>전년동월비</th>' +
+      '<th>판매일수</th><th>일평균</th><th>판매처</th><th>상품</th>' +
+      (DATA.hasOrders ? '<th>주문건수</th><th>객단가</th>' : '') + '</tr></thead>';
+
+    var body = '', csv = [['월', unitTxt(), '전월비', '전년동월비', '판매일수', '일평균', '판매처', '상품']
+      .concat(DATA.hasOrders ? ['주문건수', '객단가'] : [])];
+
+    for (var j = A.n - 1; j >= 0; j--) {
+      var m = A.ms[j];
+      if (!A.days[j]) continue;                     /* 실적이 없는 달은 줄로 세우지 않습니다 */
+      var cur = A.monTot[j];
+      var pj = A.mi[shiftMonth(m, -1)], yj = A.mi[shiftMonth(m, -12)];
+      var mom = pj === undefined ? null : rate(cur, A.monTot[pj]);
+      var yoy = yj === undefined ? null : rate(cur, A.monTot[yj]);
+
+      var chN = 0, prN = 0, i;
+      for (i = 0; i < A.chs.length; i++) if (A.chHas[i][j]) chN++;
+      for (i = 0; i < A.prods.length; i++) if (A.pHas[i][j]) prN++;
+
+      body += '<tr' + (m === state.month ? ' style="font-weight:640"' : '') + '>' +
+              '<td class="l mlink" data-m="' + m + '" tabindex="0"><span class="pick">' +
+              monthLabel(m) + '</span></td>' +
+              '<td class="num' + al + '">' + val(cur) + '</td>' +
+              '<td class="c">' + pctSigned(mom) + '</td>' +
+              '<td class="c">' + pctSigned(yoy) + '</td>' +
+              '<td class="c num">' + A.days[j] + '</td>' +
+              '<td class="num' + al + '">' + val(cur / A.days[j]) + '</td>' +
+              '<td class="c num">' + chN + '</td>' +
+              '<td class="c num">' + prN + '</td>';
+      var row = [m, cur, mom === null ? '' : mom, yoy === null ? '' : yoy,
+                 A.days[j], cur / A.days[j], chN, prN];
+      if (DATA.hasOrders) {
+        var ord = A.monOrd[j];
+        body += '<td class="c num">' + nf.format(Math.round(ord)) + '</td>' +
+                '<td class="num">' + (ord ? '₩' + nf.format(Math.round(A.monTot[j] / ord)) : '') + '</td>';
+        row.push(ord, ord ? A.monTot[j] / ord : '');
+      }
+      body += '</tr>';
+      csv.push(row);
+    }
+
+    $('m3').innerHTML = head + '<tbody>' + body + '</tbody>';
+    Array.prototype.forEach.call($('m3').querySelectorAll('td.mlink'), function (td) {
+      td.onclick = function () { state.month = td.dataset.m; syncUrl(); render(); window.scrollTo(0, 0); };
+    });
+    $('m3Note').textContent = '단위: ' + unitSuffix() + ' · 최신 월이 위 · 실적이 있는 달만';
+    csvCache.m3 = { name: (state.ch || '전체') + '_월별집계_' + (state.metric === 'amt' ? '금액' : '수량'),
+                    rows: csv };
+  }
+
+  window.addEventListener('resize', function () {
+    if (DATA) stickStatRows();          /* 폭이 바뀌면 행 높이도 바뀝니다 */
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     CSV
+     ═══════════════════════════════════════════════════════ */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-csv]'); if (!b) return;
+    var c = csvCache[b.dataset.csv]; if (!c) return;
+    var csv = c.rows.map(function (r) {
+      return r.map(function (v) {
+        if (v === null || v === undefined || v === '') return '';
+        var s = String(v);
+        return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\r\n');
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '희녹_' + c.name + '_' + DATA.months[0] + '_' + state.month + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    var t = b.textContent; b.textContent = '내려받는 중…';
+    setTimeout(function () { b.textContent = t; }, 1200);
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     상태 표시
+     ═══════════════════════════════════════════════════════ */
+  function showLoading(on) {
+    $('loading').style.display = on ? 'flex' : 'none';
+    if (on) $('dash').hidden = true;
+  }
+  function showErr(title, hint, raw) {
+    $('errSlot').innerHTML =
+      '<div class="errbox"><b>' + esc(title) + '</b>' + esc(hint) +
+      (raw ? '<details><summary>자세한 오류 메시지</summary><code>' + esc(raw) + '</code></details>' : '') +
+      '<button class="ghost" type="button" id="retry">다시 시도</button></div>';
+    var btn = $('retry');
+    if (btn) btn.onclick = loadAll;
+  }
+  function clearErr() { $('errSlot').innerHTML = ''; }
+})();
+</script>
+</body>
+</html>
