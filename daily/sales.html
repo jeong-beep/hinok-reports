@@ -210,14 +210,17 @@
   .tabs .hint { margin-left: auto; font-size: 11.5px; color: var(--ink-muted); padding-right: 2px; }
 
   /* ── 프로모션 리뷰 ──────────────────────────────────────── */
-  /* 개요 : 이름 → 값 두 칸짜리 줄을 화면 폭에 맞춰 여러 단으로 흘립니다 */
-  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-           gap: 0 26px; }
-  .facts > div { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px;
-                 padding: 7px 0; border-bottom: 1px solid var(--hairline); font-size: 12.5px; }
-  .facts .k { color: var(--ink-muted); text-align: right; }
-  .facts .v { color: var(--ink); font-weight: 550; overflow-wrap: anywhere; }
+  /* 개요 : 6칸짜리 격자에 얹어 줄마다 1·2·3단을 섞습니다.
+     좁은 화면에서는 아래 미디어 쿼리에서 전부 한 줄씩 내려갑니다. */
+  .facts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .facts > div { grid-column: span 6; display: flex; flex-direction: column; gap: 3px;
+                 padding: 9px 16px 9px 0; border-bottom: 1px solid var(--hairline); }
+  .facts > div.half  { grid-column: span 3; }
+  .facts > div.third { grid-column: span 2; }
+  .facts .k { font-size: 10.5px; letter-spacing: .06em; color: var(--ink-muted); }
+  .facts .v { font-size: 13px; font-weight: 550; color: var(--ink); overflow-wrap: anywhere; }
   .facts .v.none { color: var(--ink-muted); font-weight: 400; }
+  .facts > div.title .v { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
 
   /* 리뷰 표 : 항목 이름은 우측, 값은 좌측 — 기존 시트 리뷰와 같은 배치 */
   table.rv { width: 100%; min-width: 0; }
@@ -486,7 +489,11 @@
     /* 탭과 리뷰 : 좁은 화면에서는 항목 이름 칸을 줄이고 표는 가로로 흘립니다 */
     .tabs button { font-size: 12.5px; padding: 8px 10px; }
     .tabs .hint { display: none; }
-    .facts > div { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; font-size: 12px; }
+    /* 개요는 항목 하나에 한 줄씩 */
+    .facts > div,
+    .facts > div.half,
+    .facts > div.third { grid-column: span 6; padding: 8px 0; }
+    .facts > div.title .v { font-size: 15px; }
     table.rv { width: max-content; }
     table.rv td.k, table.rv th.k { width: auto; }
     table.rv td.d { width: auto; }
@@ -678,8 +685,9 @@
        월마감 후 붙여넣는 시트라 취소·환불이 반영된 값입니다. 자사몰 전용입니다.
        원장(약 77,000행)을 그대로 읽지 않고 요약만 읽어, 고객 연락처가 브라우저로
        내려가지 않게 하고 로딩도 가볍게 유지합니다.
-         · 일자별요약   주문일 · 제품라인 · 매출 · 수량            (전 기간, 가벼움)
-         · 주문라인요약 + 주문번호 · 주문자ID · 첫구매             (2024~, 행사기간 계산용)
+         · 일자별요약   주문일 · 제품라인 · 매출 · 수량                       (전 기간, 가벼움)
+         · 주문라인요약 + 주문번호 · 주문자 휴대전화 · 주문자ID · 첫구매      (2024~, 행사기간 계산용)
+       고객은 휴대전화번호로 가릅니다 — 아이디를 여러 개 써도 한 명으로 셉니다.
        gid 는 탭을 누르면 주소 끝 #gid=... 에 나옵니다.
        비워 두면 리뷰는 일일매출RAWDATA(잠정치)로 계산합니다. */
     ORDER_SHEET_ID:  '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
@@ -1626,7 +1634,6 @@
   /* 리뷰 시트의 열 이름입니다. 시트에서 이름이 바뀌면 여기에 표기만 더해 주세요. */
   var RV_COLS = {
     이름:     ['프로모션명'],
-    대상:     ['대상'],
     시작:     ['전략시작일'],
     종료:     ['전략종료일'],
     기간:     ['행사기간'],
@@ -1637,6 +1644,7 @@
     전략:     ['전략'],
     타입:     ['전략타입'],
     타입세부: ['전략타입(세부)'],
+    비회원:   ['비회원구매가능여부', '비회원구매가능', '비회원구매여부'],
     적립금:   ['적립금중복사용가능여부'],
     타겟모수: ['타겟모수'],
     발신채널: ['발신채널'],
@@ -1655,6 +1663,7 @@
 
   /* 시트에 이렇게 적혀 있으면 '값 없음'으로 봅니다 */
   var RV_BLANK = { '': 1, '-': 1, '–': 1, '—': 1, 'err': 1, '알수없음': 1, '해당없음': 1,
+                   '(비어있음)': 1, '정보없음': 1,
                    '#VALUE!': 1, '#DIV/0!': 1, '#N/A': 1, '#REF!': 1,
                    '#NAME?': 1, '#NUM!': 1, '#ERROR!': 1 };
 
@@ -1717,12 +1726,12 @@
 
   function rvReadRow(row, C) {
     return {
-      이름: rvText(row, C.이름), 대상: rvText(row, C.대상),
+      이름: rvText(row, C.이름),
       시작: rvDate(row, C.시작), 종료: rvDate(row, C.종료), 기간: rvText(row, C.기간),
       라인: rvText(row, C.라인), 제품: rvText(row, C.제품),
       발신타겟: rvText(row, C.발신타겟), 구매채널: rvText(row, C.구매채널),
       전략: rvText(row, C.전략), 타입: rvText(row, C.타입), 타입세부: rvText(row, C.타입세부),
-      적립금: rvText(row, C.적립금),
+      비회원: rvText(row, C.비회원), 적립금: rvText(row, C.적립금),
       발신채널: rvText(row, C.발신채널),
       발신일: rvDate(row, C.발신일), 발신일원문: rvText(row, C.발신일),
       발신시각: rvText(row, C.발신시각),
@@ -1895,6 +1904,7 @@
   var ORD_LINE_COLS = {
     d:     ['주문일', '날짜'],
     ord:   ['주문번호', '자사몰net주문번호'],
+    phone: ['주문자휴대전화', '구매자휴대전화', '휴대전화', '연락처', '주문자연락처'],
     cust:  ['주문자ID', '주문자아이디'],
     first: ['첫구매', '첫주문'],
     line:  ['제품라인'],
@@ -1929,6 +1939,9 @@
       rows.push({
         d: d,
         ord: rvText(r, C.ord),
+        /* 고객을 가르는 기준은 휴대전화번호입니다. 한 사람이 아이디를 여러 개
+           쓰거나 비회원으로 사도 같은 번호면 한 명으로 셉니다. */
+        phone: rvText(r, C.phone),
         cust: rvText(r, C.cust),
         /* '첫주문' 이 적힌 줄이 그 고객의 생애 첫 주문입니다 */
         first: !!rvText(r, C.first),
@@ -1939,7 +1952,8 @@
       if (!min || d < min) min = d;
       if (d > max) max = d;
     }
-    return rows.length ? { rows: rows, min: min, max: max } : null;
+    /* 휴대전화 열이 없으면 주문자ID로 세고, 화면에 그렇게 적습니다 */
+    return rows.length ? { rows: rows, min: min, max: max, 폰있음: C.phone >= 0 } : null;
   }
 
   function loadOrdTab(which) {
@@ -1950,7 +1964,7 @@
     ordError[which] = null;
     return tabNameByGid(CONFIG.ORDER_SHEET_ID, gid).then(function (title) {
       return sheetValuesOf(CONFIG.ORDER_SHEET_ID,
-        quoteTab(title, which === 'daily' ? 'A1:D' : 'A1:G'));
+        quoteTab(title, which === 'daily' ? 'A1:F' : 'A1:J'));
     }).then(function (vals) {
       ORD[which] = which === 'daily' ? parseOrdDaily(vals) : parseOrdLine(vals);
       ordState[which] = ORD[which] ? 'ready' : 'error';
@@ -2003,28 +2017,33 @@
       if (r.d < lo || r.d > hi) continue;
       if (lineHit(r.line, 라인)) 대상주문[r.ord] = 1;
     }
+    var 폰기준 = O.폰있음;
     var 총 = 0, 품목 = 0, 품목plus = 0, 품목수량 = 0, 총수량 = 0;
-    var 고객 = {}, 신규 = {}, 주문 = {};
+    var 고객 = {}, 신규 = {}, 주문 = {}, 무키주문 = {};
     for (i = 0; i < O.rows.length; i++) {
       r = O.rows[i];
       if (r.d < lo || r.d > hi) continue;
       총 += r.amt; 총수량 += r.qty;
       if (r.ord) 주문[r.ord] = 1;
-      if (r.cust) { 고객[r.cust] = 1; if (r.first) 신규[r.cust] = 1; }
+
+      var 키 = 폰기준 ? r.phone : r.cust;
+      if (키) { 고객[키] = 1; if (r.first) 신규[키] = 1; }
+      else if (r.ord) 무키주문[r.ord] = 1;   /* 번호가 비어 있어 셀 수 없는 주문 */
+
       if (lineHit(r.line, 라인)) { 품목 += r.amt; 품목수량 += r.qty; }
       if (대상주문[r.ord]) 품목plus += r.amt;
     }
-    var 고객수 = 0, 신규수 = 0, k;
+    var 고객수 = 0, 신규수 = 0, 주문수 = 0, 무키수 = 0, k;
     for (k in 고객) 고객수++;
     for (k in 신규) 신규수++;
-    var 주문수 = 0;
     for (k in 주문) 주문수++;
+    for (k in 무키주문) 무키수++;
 
     return { 시작: lo, 끝: hi, 잘림: hi !== to,
              총매출: 총, 총수량: 총수량, 품목매출: 품목, 품목수량: 품목수량,
              품목plus매출: 품목plus,
              구매고객수: 고객수, 신규고객수: 신규수, 기존고객수: 고객수 - 신규수,
-             주문수: 주문수 };
+             주문수: 주문수, 기준: 폰기준 ? '휴대전화번호' : '주문자ID', 번호없는주문: 무키수 };
   }
 
   /** 이 구간을 마감 요약이 온전히 덮고 있는지 */
@@ -2259,21 +2278,34 @@
     return html;
   }
 
+  /**
+   * 개요. 세 번째 값이 한 줄에 몇 칸으로 들어갈지입니다 —
+   * title 은 한 줄 전체, half 는 2단, third 는 3단.
+   * 좁은 화면에서는 CSS 가 전부 한 줄씩 내립니다.
+   */
   function rvOverviewCard(ctx, csv) {
     var i = ctx.p.정보;
     var t = [
-      ['프로모션명', ctx.p.이름], ['대상', i.대상],
-      ['전략시작일', rvDay(ctx.from)], ['전략종료일', rvDay(ctx.to)],
-      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일')],
-      ['제품라인', i.라인], ['제품', i.제품], ['발신타겟', i.발신타겟],
-      ['구매채널', i.구매채널], ['전략', i.전략], ['전략타입', i.타입],
-      ['전략타입(세부)', i.타입세부], ['적립금 중복사용', i.적립금]
+      ['프로모션명', ctx.p.이름, 'title'],
+      ['전략시작일', rvDay(ctx.from), 'third'],
+      ['전략종료일', rvDay(ctx.to), 'third'],
+      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일'), 'third'],
+      ['제품라인', i.라인, 'half'],
+      ['제품', i.제품, 'half'],
+      ['발신타겟', i.발신타겟, 'half'],
+      ['구매채널', i.구매채널, 'half'],
+      ['전략타입', i.타입, 'third'],
+      ['전략타입(세부)', i.타입세부, 'third'],
+      ['전략', i.전략, 'third'],
+      ['비회원구매가능여부', i.비회원, 'half'],
+      ['적립금 중복사용', i.적립금, 'half']
     ];
     csv.push(['[개요]']);
     var rows = t.map(function (x) {
       csv.push([x[0], x[1] || '']);
-      return '<div><span class="k">' + esc(x[0]) + '</span><span class="v' +
-             (x[1] ? '' : ' none') + '">' + esc(x[1] || '미입력') + '</span></div>';
+      return '<div class="' + x[2] + '"><span class="k">' + esc(x[0]) + '</span>' +
+             '<span class="v' + (x[1] ? '' : ' none') + '">' +
+             esc(x[1] || '미입력') + '</span></div>';
     }).join('');
     return rvCard('개요', '리뷰 시트 입력값입니다',
       '<div class="body"><div class="facts">' + rows + '</div></div>');
@@ -2371,9 +2403,18 @@
 
     var n = ['유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + ').'];
     if (주문계산) {
-      n.push('고객수는 <b>자사몰주문RAWDATA</b>에서 주문자ID를 세어 낸 값입니다 — ' +
-             '기간 안에 두 번 산 고객도 한 명으로 셉니다. ' +
+      n.push('고객수는 <b>자사몰주문RAWDATA</b>에서 <b>' + esc(ctx.주문.기준) +
+             '</b>의 고유 개수를 세어 낸 값입니다 — 기간 안에 두 번 샀거나 아이디를 ' +
+             '여러 개 써도 번호가 같으면 한 명으로 셉니다. ' +
              '신규는 <b>첫구매</b> 열이 찍힌 고객입니다.');
+      if (ctx.주문.기준 !== '휴대전화번호') {
+        n.push('주문라인요약 탭에 <b>주문자 휴대전화</b> 열이 없어 주문자ID로 세었습니다 — ' +
+               '수식에 A열을 넣으시면 휴대전화 기준으로 바뀝니다.');
+      }
+      if (ctx.주문.번호없는주문) {
+        n.push('번호가 비어 있어 셀 수 없는 주문이 ' + rvCnt(ctx.주문.번호없는주문, '건') +
+               ' 있습니다 — 그만큼 고객수가 실제보다 적게 잡힙니다.');
+      }
       if (ctx.시트구매고객 !== null && ctx.시트구매고객 !== undefined &&
           Math.round(ctx.시트구매고객) !== Math.round(ctx.구매고객)) {
         n.push('리뷰 시트에 적힌 구매고객수는 ' + rvCnt(ctx.시트구매고객, '명') + ' 입니다 — 화면 값과 다릅니다.');
@@ -2498,7 +2539,8 @@
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
       body + '</tbody></table></div></div>',
       (ctx.주문
-        ? '나누는 값은 행사기간에 <b>실제로 주문한 고객 수</b>입니다 — 주문 원장의 주문자ID를 세어 냈습니다.'
+        ? '나누는 값은 행사기간에 <b>실제로 주문한 고객 수</b>입니다 — 주문 원장의 ' +
+          esc(ctx.주문.기준) + '를 세어 냈습니다.'
         : '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. 주문 원장이 이 기간을 덮으면 ' +
           '실제 주문 고객 수로 바뀝니다.') +
       '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
