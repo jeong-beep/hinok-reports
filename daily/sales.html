@@ -1770,6 +1770,22 @@
     if (!isFinite(n)) return null;
     return pct ? n / 100 : n;
   }
+  /**
+   * 시각. 시트는 하루를 1로 본 소수로 줍니다 — 0.3333… 은 오전 8:00 입니다.
+   * 글자로 적혀 있으면 적힌 그대로 씁니다.
+   */
+  function rvTime(row, i) {
+    if (i < 0) return '';
+    var raw = row[i];
+    if (typeof raw === 'number' && isFinite(raw)) {
+      var 분 = Math.round((raw - Math.floor(raw)) * 1440) % 1440;
+      var h = Math.floor(분 / 60), m = 분 % 60;
+      return (h < 12 ? '오전 ' : '오후 ') + (h % 12 || 12) +
+             ':' + (m < 10 ? '0' : '') + m;
+    }
+    return rvText(row, i);
+  }
+
   function rvISO(y, m, d) {
     return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
   }
@@ -1798,7 +1814,7 @@
       비회원: rvText(row, C.비회원), 적립금: rvText(row, C.적립금),
       발신채널: rvText(row, C.발신채널),
       발신일: rvDate(row, C.발신일), 발신일원문: rvText(row, C.발신일),
-      발신시각: rvText(row, C.발신시각),
+      발신시각: rvTime(row, C.발신시각),
       타겟모수: rvNum(row, C.타겟모수), 발신모수: rvNum(row, C.발신모수),
       열람수: rvNum(row, C.열람수), 클릭수: rvNum(row, C.클릭수),
       유입: rvNum(row, C.유입), 구매고객: rvNum(row, C.구매고객),
