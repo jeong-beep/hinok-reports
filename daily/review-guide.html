@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프로모션 리뷰 매뉴얼 · 희녹</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#ffffff; --surface:#ffffff; --surface-2:#f2f5f7;
+    --ink:#15191d; --ink-2:#4c545c; --ink-muted:#8b939c;
+    --hairline:#e6e9eb; --border:rgba(15,23,32,0.10);
+    --accent:#1d6fa5; --accent-soft:#e8f1fa;
+    --good:#0ca30c; --serious:#c1543a; --memo:#e07a1f;
+    --shadow: 0 1px 2px rgba(15,23,32,.04), 0 8px 24px -12px rgba(15,23,32,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --plane:#14171a; --surface:#1c2024; --surface-2:#23282d;
+      --ink:#f2f4f6; --ink-2:#c1c8ce; --ink-muted:#8b939c;
+      --hairline:#2c3237; --border:rgba(255,255,255,0.10);
+      --accent:#3e8cc4; --accent-soft:#1c2a3d;
+      --good:#0ca30c; --serious:#c96a50; --memo:#f0a04b;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:#14171a; --surface:#1c2024; --surface-2:#23282d;
+    --ink:#f2f4f6; --ink-2:#c1c8ce; --ink-muted:#8b939c;
+    --hairline:#2c3237; --border:rgba(255,255,255,0.10);
+    --accent:#3e8cc4; --accent-soft:#1c2a3d;
+    --good:#0ca30c; --serious:#c96a50; --memo:#f0a04b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --plane:#ffffff; --surface:#ffffff; --surface-2:#f2f5f7;
+    --ink:#15191d; --ink-2:#4c545c; --ink-muted:#8b939c;
+    --hairline:#e6e9eb; --border:rgba(15,23,32,0.10);
+    --accent:#1d6fa5; --accent-soft:#e8f1fa;
+    --good:#0ca30c; --serious:#c1543a; --memo:#e07a1f;
+    --shadow: 0 1px 2px rgba(15,23,32,.04), 0 8px 24px -12px rgba(15,23,32,.18);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--plane); color: var(--ink);
+         font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+                      "Pretendard", "Noto Sans KR", "맑은 고딕", sans-serif;
+         font-size: 15px; line-height: 1.75; -webkit-text-size-adjust: 100%; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 30px 20px 90px; }
+
+  .top { display: flex; align-items: flex-end; gap: 13px; margin-bottom: 6px; }
+  .top .mark { width: 3px; height: 46px; background: var(--accent); border-radius: 2px;
+               flex: 0 0 auto; }
+  h1 { margin: 0; font-size: 23px; font-weight: 660; letter-spacing: -.02em; }
+  .sub { margin: 3px 0 0; font-size: 13px; color: var(--ink-muted); }
+  .updated { font-size: 12px; color: var(--ink-muted); margin: 14px 0 26px;
+             padding-bottom: 18px; border-bottom: 1px solid var(--hairline); }
+  .updated a { color: var(--accent); }
+
+  h2 { font-size: 18px; font-weight: 650; letter-spacing: -.01em;
+       margin: 46px 0 12px; padding-bottom: 8px;
+       border-bottom: 2px solid var(--accent); text-wrap: balance; }
+  h3 { font-size: 15px; font-weight: 640; margin: 28px 0 8px; text-wrap: balance; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 21px; }
+  li { margin-bottom: 5px; }
+  b, strong { font-weight: 650; color: var(--ink); }
+  code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: .89em;
+         background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+         word-break: keep-all; }
+  a { color: var(--accent); }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 14px;
+               border: 1px solid var(--hairline); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { padding: 8px 12px; text-align: left; vertical-align: top;
+           border-bottom: 1px solid var(--hairline); }
+  thead th { background: var(--surface-2); font-weight: 640; font-size: 12.5px;
+             white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.mono, th.mono { font-family: ui-monospace, "SF Mono", Consolas, monospace;
+                     font-size: 12.5px; white-space: nowrap; }
+  .req { color: var(--serious); font-weight: 700; }
+
+  .note { background: var(--surface); border: 1px solid var(--hairline);
+          border-left: 4px solid var(--accent); border-radius: 10px;
+          padding: 12px 16px; margin: 0 0 16px; font-size: 14px;
+          box-shadow: var(--shadow); }
+  .warn { border-left-color: var(--serious);
+          background: color-mix(in srgb, var(--serious) 6%, transparent); }
+  .memo { border-left-color: var(--memo);
+          background: color-mix(in srgb, var(--memo) 7%, transparent); }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+
+  pre { background: var(--surface-2); border: 1px solid var(--hairline);
+        border-radius: 10px; padding: 12px 14px; overflow-x: auto;
+        font-family: ui-monospace, "SF Mono", Consolas, monospace;
+        font-size: 12.5px; line-height: 1.65; margin: 0 0 14px; }
+  pre code { background: none; padding: 0; }
+
+  .toc { background: var(--surface); border: 1px solid var(--hairline);
+         border-radius: 12px; padding: 16px 20px; margin-bottom: 8px;
+         box-shadow: var(--shadow); }
+  .toc ol { margin: 0; padding-left: 20px; font-size: 14px; }
+  .toc li { margin-bottom: 3px; }
+
+  .foot { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--hairline);
+          font-size: 12.5px; color: var(--ink-muted); }
+  @media (max-width: 640px) {
+    body { font-size: 14.5px; }
+    .wrap { padding: 22px 14px 70px; }
+    h1 { font-size: 20px; }
+    h2 { font-size: 16.5px; margin-top: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top">
+  <div class="mark"></div>
+  <div>
+    <h1>프로모션 리뷰 매뉴얼</h1>
+    <p class="sub">일일매출현황 → 프로모션 리뷰 탭이 어떻게 굴러가는지</p>
+  </div>
+</div>
+<p class="updated">
+  마지막 갱신 2026.08.04 ·
+  화면 <a href="./sales.html">일일매출현황</a>
+</p>
+
+<div class="toc">
+  <ol>
+    <li><a href="#map">어느 시트가 어디에 쓰이나</a></li>
+    <li><a href="#review">리뷰 시트 — 프로모션 한 줄 쓰기</a></li>
+    <li><a href="#basis">마감 기준과 잠정 기준</a></li>
+    <li><a href="#item">행사품목을 무엇으로 가르나</a></li>
+    <li><a href="#cards">카드별로 숫자가 어디서 오나</a></li>
+    <li><a href="#compare">프로모션 비교</a></li>
+    <li><a href="#memo">메모 달기</a></li>
+    <li><a href="#trouble">오류가 뜰 때</a></li>
+    <li><a href="#rules">알아두면 좋은 규칙</a></li>
+  </ol>
+</div>
+
+<h2 id="map">1. 어느 시트가 어디에 쓰이나</h2>
+
+<p>리뷰 화면은 <b>워크북 하나</b>(자사몰주문RAWDATA)에서 네 개의 탭을 읽습니다.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>탭</th><th class="mono">gid</th><th>무엇을 담나</th><th>없으면</th></tr></thead>
+<tbody>
+<tr><td><b>프로모션 리뷰</b></td><td class="mono">1003712761</td>
+    <td>프로모션 정보와 발신 실적 — 사람이 적습니다</td>
+    <td>리뷰가 아예 안 뜹니다</td></tr>
+<tr><td><b>일자별요약</b></td><td class="mono">1971945306</td>
+    <td>날짜 × 제품라인 × 상품코드 매출·수량</td>
+    <td>잠정 기준으로 물러섭니다</td></tr>
+<tr><td><b>주문라인요약</b></td><td class="mono">133654312</td>
+    <td>주문 한 줄씩 — 고객수·추가구매매출을 여기서 냅니다</td>
+    <td>고객수가 시트 입력값이 됩니다</td></tr>
+<tr><td><b>memo</b></td><td class="mono">145275417</td>
+    <td>특이사항 — 화면의 줄·칸에 주황 표시로 붙습니다</td>
+    <td>메모만 빠지고 리뷰는 그대로</td></tr>
+</tbody>
+</table></div>
+
+<p>뒤의 세 탭은 <b>QUERY 수식</b>으로 시트1(원본)에서 뽑아냅니다. 사람이 값을 적는 곳은
+<b>프로모션 리뷰</b>와 <b>memo</b> 둘뿐입니다.</p>
+
+<div class="note">
+  <p><b>열 이름으로 찾습니다.</b> 열 순서를 바꾸거나 중간에 열을 끼워 넣어도 안 깨집니다.
+  다만 <b>열 이름을 바꾸면</b> 못 찾습니다. 이름을 바꾸셨다면 알려 주세요 — 별칭으로 등록하면 됩니다.</p>
+</div>
+
+<h2 id="review">2. 리뷰 시트 — 프로모션 한 줄 쓰기</h2>
+
+<p><b>한 줄이 발신 한 번</b>입니다. 카카오·SMS로 두 대상에게 보냈으면 네 줄이 됩니다.
+프로모션 정보(기간·제품라인 등)는 줄마다 똑같이 적으셔도 되고, 첫 줄에만 적고 나머지는
+비워두셔도 됩니다 — 빈 칸은 같은 프로모션의 다른 줄에서 채워집니다.</p>
+
+<h3>프로모션을 설명하는 열</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>열 이름</th><th>적는 값</th></tr></thead>
+<tbody>
+<tr><td><span class="req">프로모션명</span></td><td>리뷰를 묶는 기준입니다. 화면 제목이 됩니다</td></tr>
+<tr><td><span class="req">전략시작일</span></td><td><code>2026.07.20</code> · 프로모션명과 함께 묶음을 가릅니다</td></tr>
+<tr><td>전략종료일</td><td>비우면 시작일 하루짜리로 봅니다</td></tr>
+<tr><td>행사기간</td><td>비우면 날짜에서 계산합니다</td></tr>
+<tr><td>제품라인</td><td><code>OIL</code> · 쉼표로 여러 개 <code>OIL, THB</code> · <code>ALL</code>이면 전체</td></tr>
+<tr><td>전략상품코드</td><td>SKU 단위로 가를 때. <a href="#item">4번</a> 참고</td></tr>
+<tr><td>제품 · 전략내용 · 전략타입 · 전략타입(세부)</td><td>개요 카드에 그대로 표시됩니다</td></tr>
+<tr><td>구매채널</td><td>비우면 <b>자사몰</b>로 봅니다</td></tr>
+<tr><td>비회원구매가능여부 · 적립금중복사용가능여부</td><td>개요 카드 표시용</td></tr>
+<tr><td>비교대상</td><td>나란히 볼 프로모션명. <a href="#compare">6번</a> 참고</td></tr>
+</tbody>
+</table></div>
+
+<h3>발신 한 건을 적는 열</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>열 이름</th><th>적는 값</th></tr></thead>
+<tbody>
+<tr><td>발신타겟</td><td><code>구매이력 있는 고객</code> 처럼. 프로모션명 끝에 <code>(구매고객)</code>으로 적어도 인식합니다</td></tr>
+<tr><td>발신채널</td><td><code>카카오</code> · <code>SMS</code></td></tr>
+<tr><td>발신일 · 발신시각</td><td>시각은 시트의 시간 서식 그대로 두시면 <code>오전 8:00</code>으로 나옵니다</td></tr>
+<tr><td>타겟모수</td><td>보낼 수 있었던 명단 크기 — 도달률을 보려면 필요합니다</td></tr>
+<tr><td>발신모수</td><td>실제로 보낸 건수</td></tr>
+<tr><td>열람수 · 클릭수 · 유입고객수</td><td>재지 못하는 값은 <b>비워 두세요</b></td></tr>
+</tbody>
+</table></div>
+
+<div class="note warn">
+  <p><b>못 재는 값은 0 이 아니라 빈칸입니다.</b> 문자는 열람을 잴 수 없는데 유입수를 열람수 칸에
+  적으면 열람률·클릭률이 엉뚱하게 나옵니다(클릭률 100% 같은 값). 비워두면 화면에 <code>—</code>로
+  표시되고 비율도 내지 않습니다.</p>
+</div>
+
+<h3>고객·매출을 손으로 적는 열 (선택)</h3>
+<p>주문 원장이 그 기간을 덮으면 <b>자동 계산값이 이깁니다.</b> 원장이 안 닿는 옛날 프로모션에만
+쓰입니다 — <code>구매고객수</code> · <code>-신규고객수</code> · <code>-기존고객수</code> ·
+<code>판매상품수량(전략상품)</code> · <code>행사품목+추가구매품목매출</code>.</p>
+
+<h2 id="basis">3. 마감 기준과 잠정 기준</h2>
+
+<p>리뷰 맨 위 띠에 <b>마감</b> 또는 <b>잠정</b> 배지가 뜹니다.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>배지</th><th>출처</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td><b>마감</b></td><td>자사몰주문RAWDATA</td>
+    <td>월마감 후 붙여넣은 데이터 — <b>취소·환불이 반영</b>된 값</td></tr>
+<tr><td><b>잠정</b></td><td>일일매출RAWDATA</td>
+    <td>매일 모으는 데이터 — 취소·환불이 아직 안 빠짐 (실제보다 높음)</td></tr>
+</tbody>
+</table></div>
+
+<p>마감으로 계산하려면 <b>네 조건이 모두</b> 맞아야 합니다.</p>
+<ol>
+  <li>구매채널이 자사몰</li>
+  <li>행사기간이 일자별요약 안에 있음</li>
+  <li>직전 7일·직전 30일 구간이 들어 있음</li>
+  <li>작년 동기간 구간이 들어 있음</li>
+</ol>
+
+<div class="note">
+  <p>하나라도 어긋나면 <b>네 구간 모두</b> 잠정으로 냅니다. 소스를 섞으면 증감률이 한쪽으로
+  기울기 때문입니다. 왜 잠정이 됐는지는 띠 아래에 이유가 적힙니다.</p>
+</div>
+
+<p><b>원장을 최신까지 붙여넣으시면</b> 그만큼 마감으로 나오는 프로모션이 늘어납니다.</p>
+
+<h2 id="item">4. 행사품목을 무엇으로 가르나</h2>
+
+<p>"행사품목매출", "행사품목 구매고객수" 같은 값은 <b>어떤 주문 줄이 행사품목인지</b>를
+정해야 낼 수 있습니다. 두 가지 방법이 있고, 자동으로 골라 씁니다.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>리뷰 시트</th><th>요약 탭 상품코드</th><th>기준</th></tr></thead>
+<tbody>
+<tr><td>전략상품코드 있음</td><td>둘 다 있음</td><td><b>상품코드</b> — 매출·수량·고객 전부</td></tr>
+<tr><td>전략상품코드 있음</td><td>주문라인요약만</td><td>고객·추가구매는 상품코드, 매출·수량은 제품라인</td></tr>
+<tr><td>전략상품코드 있음</td><td>없음</td><td>제품라인 — <b>화면에 그렇게 적습니다</b></td></tr>
+<tr><td>비어 있음</td><td>—</td><td>제품라인</td></tr>
+</tbody>
+</table></div>
+
+<h3>언제 전략상품코드가 필요한가</h3>
+<ul>
+  <li>한 라인 안에서 <b>일부 SKU만</b> 행사일 때 (OIL 라인 중 7mL만)</li>
+  <li>여러 라인에 걸친 행사인데 라인 전체를 세면 안 될 때</li>
+</ul>
+<p>여러 라인 전체가 대상이면 제품라인에 <code>OIL, THB</code>처럼 쉼표로 적는 편이 간단합니다.</p>
+
+<div class="note">
+  <p><b>상품코드는 정확히 일치해야 합니다.</b> <code>P0001</code>을 적으면 <code>P00011</code>은
+  안 잡힙니다. 제품라인은 부분일치라 <code>OIL</code>이 <code>OIL7</code>도 잡습니다.</p>
+</div>
+
+<h2 id="cards">5. 카드별로 숫자가 어디서 오나</h2>
+
+<h3>개요</h3>
+<p>전부 리뷰 시트 입력값입니다. 제품라인을 비우면 프로모션명에서 추정하고,
+추정했다는 사실을 화면에 적습니다.</p>
+
+<h3>발신 성과</h3>
+<p>한 열이 발신 한 건. 모수·열람수·클릭수는 <b>시트 입력값</b>, 비율은 자동계산입니다.</p>
+<ul>
+  <li>타겟대비 비중 = 발신모수 ÷ 타겟모수</li>
+  <li>열람률 = 열람수 ÷ <b>발신모수</b></li>
+  <li>클릭률 = 클릭수 ÷ <b>열람수</b></li>
+</ul>
+
+<h3>구매고객정보</h3>
+<div class="note warn">
+  <p><b>구매고객수는 행사품목을 산 사람만 셉니다.</b> 행사기간에 왔지만 행사품목을 안 산
+  손님은 빠집니다. 그 아래 <b>행사기간 전체 구매고객수</b>와 <b>행사품목 구매 비율</b>이
+  같이 나옵니다.</p>
+</div>
+<ul>
+  <li>고객은 <b>휴대전화번호</b>의 고유 개수로 셉니다 — 아이디를 여러 개 써도 한 명</li>
+  <li>신규는 원장의 <b>첫구매</b> 열이 찍힌 고객</li>
+  <li>유추전환율 = 행사품목 구매고객수 ÷ 유입고객수 합계</li>
+</ul>
+<p class="sub">유추전환율은 분자와 분모의 모집단이 완전히 같지는 않습니다 —
+발신을 안 받고 들어와 산 사람도 분자에 들어갑니다. 프로모션끼리 견주는 용도로만 보세요.</p>
+
+<h3>프로모션 전후 증감</h3>
+<ul>
+  <li>직전 7일 = 시작일 전날부터 7일 · 직전 30일 = 시작일 전날부터 30일</li>
+  <li><b>작년 동기간 = 작년 같은 날짜</b> (2월 29일만 28일로 맞춤)</li>
+  <li>일평균은 달력일 기준</li>
+  <li>행사품목+추가구매품목매출 = <b>행사품목이 든 주문의 전체 금액</b> — 같이 산 다른 상품까지</li>
+</ul>
+
+<h3>객단가</h3>
+<p>줄마다 나누는 값이 다릅니다 — 분자에 없는 사람을 분모에 넣지 않기 위해서입니다.</p>
+<ul>
+  <li>객단가(총매출) ÷ <b>행사기간 전체</b> 구매고객</li>
+  <li>객단가(행사품목+추가구매) · 객단가(행사품목만) ÷ <b>행사품목</b> 구매고객</li>
+</ul>
+
+<h2 id="compare">6. 프로모션 비교</h2>
+
+<p>리뷰 시트 <b>비교대상</b> 열에 프로모션명을 적으면 맨 아래 비교 카드가 뜹니다.
+쉼표로 여러 개 적을 수 있습니다.</p>
+
+<pre><code>비교대상
+캄앤밸런스 룸 스프레이 런칭</code></pre>
+
+<ul>
+  <li><b>비교 대상도 리뷰 시트에 있어야 합니다</b> — 이름만으로는 기간·발신·매출을 알 수 없습니다</li>
+  <li>비우면 카드가 아예 안 뜹니다</li>
+  <li>못 찾으면 "찾지 못했습니다"라고 적습니다 — 조용히 빠지지 않습니다</li>
+</ul>
+
+<h3>선런칭과 본런칭이 갈려 있을 때</h3>
+<p>이름이 같고 <b>전략시작일만 다른 묶음</b>이 <b>60일 안에</b> 붙어 있으면 하나로 합쳐 봅니다.
+기간은 처음 시작부터 마지막 종료까지, 발신은 전부 더합니다. 합쳤다는 사실과 기간·발신 건수를
+카드 각주에 적습니다.</p>
+<p>60일보다 멀리 떨어진 같은 이름(매년 반복되는 프로모션)은 <b>안 합칩니다</b> — 가장 최근 것을 씁니다.</p>
+
+<div class="note">
+  <p><b>기준 줄을 먼저 보세요.</b> 한쪽이 마감이고 한쪽이 잠정이면 매출 줄을 나란히 놓기
+  어렵습니다. 잠정은 취소·환불이 안 빠져서 높게 나옵니다.</p>
+</div>
+
+<h2 id="memo">7. 메모 달기</h2>
+
+<div class="note memo">
+  <p>memo 탭에 한 줄 적으면 화면의 그 자리에 <b>주황 테두리와 점</b>이 생기고, 누르면 내용이 뜹니다.
+  일일매출현황의 메모와 같은 방식입니다.</p>
+</div>
+
+<div class="tablewrap"><table>
+<thead><tr><th>열 이름</th><th>필수</th><th>적는 값</th></tr></thead>
+<tbody>
+<tr><td>프로모션명</td><td class="req">필수</td><td>리뷰 시트와 같은 이름</td></tr>
+<tr><td>항목</td><td class="req">필수</td><td>메모를 붙일 줄 이름 — <b>비우면 프로모션 전체</b></td></tr>
+<tr><td>메모</td><td class="req">필수</td><td>내용</td></tr>
+<tr><td>전략시작일</td><td></td><td>같은 이름이 여러 개일 때 가르려면</td></tr>
+<tr><td>발신채널 · 발신일</td><td></td><td>발신 성과 표에서 <b>칸 하나</b>를 지목할 때</td></tr>
+<tr><td>작성자 · 작성일</td><td></td><td>메모 아래 작게 표시됩니다</td></tr>
+</tbody>
+</table></div>
+
+<h3>어디에 붙나</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>카드</th><th>붙는 자리</th></tr></thead>
+<tbody>
+<tr><td>구매고객정보 · 전후 증감 · 객단가</td><td><b>값 칸</b> (값이 하나뿐이라)</td></tr>
+<tr><td>발신 성과 · 프로모션 비교</td><td><b>항목명 칸</b> — "이 줄 전체"라는 뜻</td></tr>
+<tr><td>항목을 비운 메모</td><td>리뷰 맨 위 <b>주황 띠</b></td></tr>
+</tbody>
+</table></div>
+
+<p>발신 성과에서 <code>발신채널</code>·<code>발신일</code>을 함께 적으면 그 <b>발신 칸 하나</b>에만 붙습니다.</p>
+
+<h3>항목 이름 적는 법</h3>
+<p>화면에 보이는 줄 이름 그대로. <b>앞의 <code>-</code> 와 띄어쓰기는 무시</b>하니
+<code>신규 고객 비율</code>이라고 적어도 <code>-신규고객비율</code> 줄에 붙습니다.
+없는 이름을 적으면 아무 데도 안 붙습니다.</p>
+
+<pre><code>프로모션명              항목                    메모
+캄 앤 밸런스 오일 런칭                          카카오 채널 정리 직후라 도달률이 낮았습니다
+캄 앤 밸런스 오일 런칭   열람수                  문자는 열람을 잴 수 없습니다
+캄 앤 밸런스 오일 런칭   행사기간매출(일평균)      작년 여름 세일 탓에 기저가 높습니다</code></pre>
+
+<p class="sub">메모는 화면 전용이라 CSV에는 안 들어갑니다.</p>
+
+<h2 id="trouble">8. 오류가 뜰 때</h2>
+
+<p>화면이 원인을 직접 말해 줍니다. 문구별로 할 일이 다릅니다.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>화면에 뜨는 말</th><th>원인과 조치</th></tr></thead>
+<tbody>
+<tr><td>요약 탭 첫 칸이 <code>#REF!</code> 입니다</td>
+    <td>QUERY 결과가 펼쳐질 자리가 막혔습니다. 표 <b>오른쪽·아래를 비우세요</b></td></tr>
+<tr><td>필요한 열은 […] 인데 읽은 이름은 […] 입니다</td>
+    <td>두 이름을 대조해 보세요. <code>sum 매출</code>이 보이면 QUERY <b>label</b>이 빠진 것,
+        엉뚱한 열들이 보이면 <b>두 탭의 수식이 바뀌어</b> 들어간 것입니다</td></tr>
+<tr><td>요약 탭이 비어 있습니다</td>
+    <td>수식이 아직 계산 중입니다. 잠시 뒤 새로고침</td></tr>
+<tr><td>열 이름은 맞는데 읽을 자료 줄이 없습니다</td>
+    <td>주문일 칸이 날짜로 안 들어가 있거나 결과가 없습니다</td></tr>
+<tr><td>리뷰 시트에 등록된 프로모션이 없습니다</td>
+    <td>리뷰 탭에 <b>프로모션명</b>과 <b>전략시작일</b>이 둘 다 있어야 한 줄로 인식됩니다</td></tr>
+</tbody>
+</table></div>
+
+<div class="note">
+  <p><b>수식을 고치실 땐 빈 탭에서 먼저 돌려 보세요.</b> 결과와 행 수를 확인한 뒤 원래 자리에
+  옮기면 그동안 대시보드가 멈추지 않습니다. 되돌리기도 쉽습니다 — 값이 아니라 수식이라
+  이전 수식을 다시 붙여넣으면 즉시 복구됩니다.</p>
+</div>
+
+<h2 id="rules">9. 알아두면 좋은 규칙</h2>
+
+<h3>프로모션 묶는 법</h3>
+<p><b>프로모션명 + 전략시작일</b>이 같으면 한 프로모션입니다. 프로모션명 끝의
+<code>(구매고객)</code> 같은 괄호는 떼어내 발신타겟으로 옮깁니다 — 대상만 갈라 적어도
+한 프로모션으로 묶입니다.</p>
+
+<h3>화면에 뜨는 프로모션</h3>
+<p>promotion을 고르면 그 제품라인(또는 같은 이름)에 걸린 리뷰가 펼쳐집니다.
+안 고르면 리뷰 탭 자체가 안 보입니다.</p>
+
+<h3>CSV 다운로드</h3>
+<p>화면에 보이는 모든 표가 그대로 들어갑니다. 휴대폰에서는 담당자에게만 보입니다.</p>
+
+<h3>관리자 화면 미리보기</h3>
+<p>담당자 계정에는 계정 정보 옆에 <b>일반 화면 미리보기</b> 버튼이 있습니다.
+팀원들이 보는 것과 똑같은 화면을 확인할 수 있고, 주소에 <code>?view=guest</code>가 붙습니다.
+팀원 계정에는 이 버튼이 없고 주소에도 아무것도 안 붙습니다.</p>
+
+<h3>데이터가 어디까지 브라우저로 오나</h3>
+<p>요약 탭만 읽습니다. 원본 7만여 줄은 내려오지 않습니다. 다만 고객을 세려면
+휴대전화번호가 필요해서 <b>주문라인요약의 번호는 브라우저로 옵니다</b>.
+읽기 권한은 보는 사람의 구글 계정으로 확인하므로, 시트 열람 권한이 없으면 아무것도 안 보입니다.</p>
+
+<div class="foot">
+  <p>고칠 것이나 헷갈리는 것이 있으면 알려 주세요 — 이 문서도 같이 갱신합니다.<br>
+  이 문서는 <code>daily/review-guide.html</code> 이고,
+  화면 코드는 <code>daily/sales.html</code> 한 파일에 들어 있습니다.</p>
+</div>
+
+</div>
+</body>
+</html>

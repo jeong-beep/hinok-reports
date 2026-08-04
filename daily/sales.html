@@ -265,6 +265,10 @@
   .rv-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
             font-size: 12.5px; color: var(--ink-muted); }
   .rv-top .sp { flex: 1 1 auto; }
+  /* 시트를 어떻게 채우는지 적어 둔 문서 — 새 탭으로 엽니다 */
+  .rv-top .rv-guide { color: var(--accent); text-decoration: none; font-weight: 600;
+                      border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  .rv-top .rv-guide:hover { border-bottom-color: var(--accent); }
 
   /* 프로모션마다 상세가 이어집니다 */
   .rv-sec { margin-top: 30px; scroll-margin-top: 96px; }
@@ -2517,6 +2521,8 @@
 
     var html = 안내 +
       '<div class="rv-top"><span>프로모션 ' + 목록.length + '건</span>' +
+      '<a class="rv-guide" href="./review-guide.html" target="_blank" rel="noopener">' +
+      '매뉴얼</a>' +
       '<span class="sp"></span>' +
       '<button class="ghost" type="button" data-csv="rv">CSV 다운로드</button></div>';
     상세.forEach(function (ctx, i) {
