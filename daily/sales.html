@@ -279,6 +279,8 @@
   #rvVs td.g, #rvVs th.g { background: var(--surface-2); font-weight: 620; }
   #rvVs td.k { width: 190px; }
   #rvVs td.c, #rvVs td.num { min-width: 150px; }
+  /* 비교표는 프로모션끼리 눈으로 맞대 보는 표라 값을 가운데로 세웁니다 */
+  #rvVs td.c, #rvVs td.num, #rvVs th.c { text-align: center; }
   #rvVs .src { display: inline-block; margin-left: 5px; font-size: 10px; font-weight: 600;
                color: var(--ink-muted); border: 1px solid var(--hairline);
                border-radius: 999px; padding: 0 5px; vertical-align: middle; }
@@ -1709,7 +1711,7 @@
     제품:     ['제품'],
     발신타겟: ['발신타겟'],
     구매채널: ['구매채널'],
-    전략:     ['전략'],
+    전략:     ['전략내용', '전략'],
     타입:     ['전략타입'],
     타입세부: ['전략타입(세부)'],
     비회원:   ['비회원구매가능여부', '비회원구매가능', '비회원구매여부'],
@@ -3043,7 +3045,6 @@
                       : '<span class="pill prov">잠정</span>'; }, 'txt'],
       ['총 발신모수', function (c) { return rvCnt(발신합(c).발신); }],
       ['총 유입고객수', function (c) { return rvCnt(발신합(c).유입); }],
-      ['1천건당 유입', function (c) { return rvCnt(발신합(c).천당); }, '', true],
       ['카카오 발신모수', function (c) { return rvCnt(카카오(c, '발신')); }],
       ['카카오 열람률', function (c) { return rvPct(카카오율(c, '열람수', '발신모수')); }, '', true],
       ['카카오 클릭률', function (c) { return rvPct(카카오율(c, '클릭수', '열람수')); }, '', true],
