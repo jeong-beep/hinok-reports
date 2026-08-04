@@ -1995,7 +1995,7 @@
       if (r.d < lo || r.d > hi) continue;
       if (opt.ch && r.ch !== opt.ch) continue;
       if (opt.promo) { if (r.promo !== opt.promo) continue; }
-      else if (opt.line && r.line.toUpperCase().indexOf(opt.line.toUpperCase()) < 0) continue;
+      else if (!lineHit(r.line, opt.line)) continue;
       amt += r.amt; qty += r.qty;
     }
     var 일수 = calDays(lo, hi);
@@ -2130,8 +2130,19 @@
     });
   }
 
+  /**
+   * 제품라인이 맞는지. 쉼표로 여러 개를 적을 수 있습니다 — 한 행사가 여러 라인에
+   * 걸치는 경우(오일 + 핸드밤처럼)를 위해서입니다. 하나라도 맞으면 맞는 것으로 봅니다.
+   */
   function lineHit(값, 찾을것) {
-    return !찾을것 || String(값).toUpperCase().indexOf(String(찾을것).toUpperCase()) >= 0;
+    if (!찾을것) return true;
+    var v = String(값).toUpperCase();
+    var list = String(찾을것).toUpperCase().split(/[,、·\/]+/);
+    for (var i = 0; i < list.length; i++) {
+      var one = list[i].replace(/^\s+|\s+$/g, '');
+      if (one && v.indexOf(one) >= 0) return true;
+    }
+    return false;
   }
 
   /** rvSum 과 같은 모양을 돌려줍니다 — 부르는 쪽이 소스를 몰라도 되게 합니다 */
@@ -2174,7 +2185,12 @@
     }
     var 폰기준 = O.폰있음;
     var 총 = 0, 품목 = 0, 품목plus = 0, 품목수량 = 0, 총수량 = 0;
+    /* 고객을 두 벌로 셉니다.
+       전체  = 행사기간에 산 모든 사람 (매장이 얼마나 붐볐나)
+       품목  = 그중 행사품목이 든 주문을 한 사람 (프로모션이 실제로 움직인 사람)
+       전환율·객단가처럼 프로모션 성과를 재는 값은 품목 쪽을 분모로 써야 합니다. */
     var 고객 = {}, 신규 = {}, 주문 = {}, 무키주문 = {};
+    var 품목고객 = {}, 품목신규 = {}, 품목주문 = {};
     for (i = 0; i < O.rows.length; i++) {
       r = O.rows[i];
       if (r.d < lo || r.d > hi) continue;
@@ -2186,19 +2202,22 @@
       else if (r.ord) 무키주문[r.ord] = 1;   /* 번호가 비어 있어 셀 수 없는 주문 */
 
       if (lineHit(r.line, 라인)) { 품목 += r.amt; 품목수량 += r.qty; }
-      if (대상주문[r.ord]) 품목plus += r.amt;
+      if (대상주문[r.ord]) {
+        품목plus += r.amt;
+        품목주문[r.ord] = 1;
+        if (키) { 품목고객[키] = 1; if (r.first) 품목신규[키] = 1; }
+      }
     }
-    var 고객수 = 0, 신규수 = 0, 주문수 = 0, 무키수 = 0, k;
-    for (k in 고객) 고객수++;
-    for (k in 신규) 신규수++;
-    for (k in 주문) 주문수++;
-    for (k in 무키주문) 무키수++;
+    function 세기(o) { var n = 0, k; for (k in o) n++; return n; }
+    var 고객수 = 세기(고객), 품목고객수 = 세기(품목고객), 품목신규수 = 세기(품목신규);
 
     return { 시작: lo, 끝: hi, 잘림: hi !== to,
              총매출: 총, 총수량: 총수량, 품목매출: 품목, 품목수량: 품목수량,
              품목plus매출: 품목plus,
-             구매고객수: 고객수, 신규고객수: 신규수, 기존고객수: 고객수 - 신규수,
-             주문수: 주문수, 기준: 폰기준 ? '휴대전화번호' : '주문자ID', 번호없는주문: 무키수 };
+             전체구매고객수: 고객수, 전체주문수: 세기(주문),
+             구매고객수: 품목고객수, 신규고객수: 품목신규수,
+             기존고객수: 품목고객수 - 품목신규수, 주문수: 세기(품목주문),
+             기준: 폰기준 ? '휴대전화번호' : '주문자ID', 번호없는주문: 세기(무키주문) };
   }
 
   /** 이 구간을 마감 요약이 온전히 덮고 있는지 */
@@ -2455,9 +2474,10 @@
     if (마감 && ordState.line === 'ready') {
       ctx.주문 = ordStats(from, to, 라인);
       if (ctx.주문) {
-        ctx.구매고객 = ctx.주문.구매고객수;
+        ctx.구매고객 = ctx.주문.구매고객수;          /* 행사품목이 든 주문을 한 사람만 */
         ctx.신규고객 = ctx.주문.신규고객수;
         ctx.기존고객 = ctx.주문.기존고객수;
+        ctx.전체구매고객 = ctx.주문.전체구매고객수;  /* 행사기간에 산 모든 사람 */
       }
     }
 
@@ -2582,15 +2602,22 @@
     var 신규 = 주문계산 ? ctx.신규고객 : i.신규고객;
     var 기존 = 주문계산 ? ctx.기존고객 : i.기존고객;
 
-    var t = [
-      ['구매고객수', rvCnt(구매, '명'), false],
-      ['-유추전환율', rvPct(rvDiv(구매, ctx.유입합)), true],
-      ['-신규고객수', rvCnt(신규, '명'), true],
-      ['-신규고객비율', rvPct(rvDiv(신규, 구매)), true],
-      ['-기존고객수', rvCnt(기존, '명'), true],
-      ['-기존고객비율', rvPct(rvDiv(기존, 구매)), true]
-    ];
-    if (주문계산) t.push(['-주문건수', rvCnt(ctx.주문.주문수, '건'), true]);
+    var t = [];
+    /* 행사품목을 산 사람만 센 값이 먼저입니다 — 프로모션 성과는 이 사람들이 냈습니다.
+       매장 전체 손님은 그 아래에 참여율과 함께 둡니다. */
+    t.push([주문계산 ? '행사품목 구매고객수' : '구매고객수', rvCnt(구매, '명'), false]);
+    t.push(['-유추전환율', rvPct(rvDiv(구매, ctx.유입합)), true]);
+    t.push(['-신규고객수', rvCnt(신규, '명'), true]);
+    t.push(['-신규고객비율', rvPct(rvDiv(신규, 구매)), true]);
+    t.push(['-기존고객수', rvCnt(기존, '명'), true]);
+    t.push(['-기존고객비율', rvPct(rvDiv(기존, 구매)), true]);
+    if (주문계산) {
+      t.push(['-주문건수', rvCnt(ctx.주문.주문수, '건'), true]);
+      t.push(['행사기간 전체 구매고객수', rvCnt(ctx.전체구매고객, '명'), false]);
+      t.push(['-행사품목 구매 비율',
+              rvPct(rvDiv(구매, ctx.전체구매고객)), true]);
+      t.push(['-행사기간 전체 주문건수', rvCnt(ctx.주문.전체주문수, '건'), true]);
+    }
 
     csv.push([]); csv.push(['[구매고객정보]']);
     var body = t.map(function (x) {
@@ -2605,6 +2632,10 @@
              '</b>의 고유 개수를 세어 낸 값입니다 — 기간 안에 두 번 샀거나 아이디를 ' +
              '여러 개 써도 번호가 같으면 한 명으로 셉니다. ' +
              '신규는 <b>첫구매</b> 열이 찍힌 고객입니다.');
+      n.push(ctx.품목필터있음
+        ? ('맨 윗줄은 <b>행사품목이 든 주문을 한 사람</b>만 센 값입니다 — 행사기간에 왔지만 ' +
+           '행사품목을 안 산 손님은 빠집니다. 유추전환율·신규비율·객단가도 이 사람들 기준입니다.')
+        : '제품라인이 전체(ALL)라 행사기간에 산 모든 사람이 곧 행사품목 구매고객입니다.');
       if (ctx.주문.기준 !== '휴대전화번호') {
         n.push('주문라인요약 탭에 <b>주문자 휴대전화</b> 열이 없어 주문자ID로 세었습니다 — ' +
                '수식에 A열을 넣으시면 휴대전화 기준으로 바뀝니다.');
@@ -2721,12 +2752,21 @@
   function rvAovCard(ctx, csv) {
     var 구매 = ctx.구매고객, 행사 = ctx.행사, 품목 = ctx.품목;
     var 추가 = ctx.주문 ? ctx.주문.품목plus매출 : ctx.p.정보.추가매출;
+    /* 분자와 분모의 사람이 같아야 합니다.
+       총매출은 행사기간에 산 모든 사람이 만든 값이므로 전체 구매고객수로 나누고,
+       행사품목이 얽힌 두 줄은 행사품목을 산 사람 수로 나눕니다. */
+    var 전체 = (ctx.전체구매고객 === null || ctx.전체구매고객 === undefined)
+      ? 구매 : ctx.전체구매고객;
     var t = [
       ['계산 기준 구매고객수', rvCnt(구매, '명'), false],
-      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 구매)), true],
+      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 전체)), true],
       ['객단가(행사품목+추가구매품목)', rvWon(rvDiv(추가, 구매)), true],
       ['객단가(행사품목만)', rvWon(rvDiv(품목 && 품목.amt, 구매)), true]
     ];
+    if (ctx.전체구매고객 !== null && ctx.전체구매고객 !== undefined &&
+        ctx.전체구매고객 !== 구매) {
+      t.splice(1, 0, ['행사기간 전체 구매고객수', rvCnt(전체, '명'), false]);
+    }
     csv.push([]); csv.push(['[객단가]']);
     var body = t.map(function (x) {
       csv.push([x[0], rvPlain(x[1])]);
@@ -2737,10 +2777,12 @@
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
       body + '</tbody></table></div></div>',
       (ctx.주문
-        ? '나누는 값은 행사기간에 <b>실제로 주문한 고객 수</b>입니다 — 주문 원장의 ' +
-          esc(ctx.주문.기준) + '를 세어 냈습니다.'
+        ? '나누는 값이 줄마다 다릅니다 — <b>객단가(총매출)</b>은 행사기간에 산 ' +
+          '<b>모든 고객</b>으로, 행사품목이 얽힌 두 줄은 <b>행사품목을 산 고객</b>으로 ' +
+          '나눕니다. 분자에 없는 사람을 분모에 넣지 않기 위해서입니다. ' +
+          '고객 수는 주문 원장의 ' + esc(ctx.주문.기준) + '를 세어 냈습니다.'
         : '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. 주문 원장이 이 기간을 덮으면 ' +
-          '실제 주문 고객 수로 바뀝니다.') +
+          '행사품목을 산 고객 수로 바뀝니다.') +
       '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
   }
 
@@ -2886,7 +2928,7 @@
       ['카카오 발신모수', function (c) { return rvCnt(카카오(c, '발신')); }],
       ['카카오 열람률', function (c) { return rvPct(카카오율(c, '열람수', '발신모수')); }, '', true],
       ['카카오 클릭률', function (c) { return rvPct(카카오율(c, '클릭수', '열람수')); }, '', true],
-      ['구매고객수', function (c) { return rvCnt(c.구매고객, '명'); }],
+      ['행사품목 구매고객수', function (c) { return rvCnt(c.구매고객, '명'); }],
       ['-유추전환율', function (c) { return rvPct(rvDiv(c.구매고객, c.유입합)); }, '', true],
       ['-신규고객비율', function (c) {
         var 신규 = c.주문 ? c.신규고객 : c.p.정보.신규고객;
