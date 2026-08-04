@@ -284,6 +284,14 @@
   #rvVs .src { display: inline-block; margin-left: 5px; font-size: 10px; font-weight: 600;
                color: var(--ink-muted); border: 1px solid var(--hairline);
                border-radius: 999px; padding: 0 5px; vertical-align: middle; }
+  /* 프로모션 전체에 달린 메모 — 기준 띠 바로 아래 */
+  .rv-memo { background: color-mix(in srgb, var(--memo) 7%, transparent);
+             border: 1px solid color-mix(in srgb, var(--memo) 35%, transparent);
+             border-left-width: 4px; border-radius: 10px; padding: 10px 14px;
+             font-size: 12.5px; line-height: 1.7; margin-bottom: 14px; color: var(--ink-2); }
+  .rv-memo .mp-t + .mp-t { margin-top: 7px; padding-top: 7px;
+                           border-top: 1px dashed var(--hairline); }
+  .mp-t .who { display: block; margin-top: 3px; font-size: 10.5px; color: var(--ink-muted); }
   .rv-warn { background: color-mix(in srgb, var(--serious) 8%, transparent);
              border: 1px solid color-mix(in srgb, var(--serious) 30%, transparent);
              color: var(--serious); border-radius: 10px; padding: 10px 14px;
@@ -709,6 +717,7 @@
        탭은 이름 대신 gid 로 찾으므로 탭 이름을 바꾸셔도 그대로 동작합니다. */
     REVIEW_SHEET_ID: '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
     REVIEW_GID: 1003712761,
+    REVIEW_MEMO_GID: 145275417,   // 프로모션 리뷰 memo 탭
     /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
     비교기준: [7, 30],
     /* 이 페이지에 걸리는 프로모션은 전부 펼칩니다. 걸리는 게 없어 전체 목록을
@@ -1733,6 +1742,18 @@
     비교대상: ['비교대상', '비교프로모션', '벤치마크']
   };
 
+  /* 리뷰 memo 탭 — 프로모션명·항목·메모 셋만 있으면 됩니다. 나머지는 있으면 씁니다. */
+  var RVMEMO_COLS = {
+    이름:     ['프로모션명', '캠페인', '캠페인명'],
+    시작:     ['전략시작일'],
+    항목:     ['항목', '지표', '위치'],
+    발신채널: ['발신채널'],
+    발신일:   ['발신일'],
+    메모:     ['메모', '내용', '비고', '특이사항'],
+    작성일:   ['작성일', '기록일'],
+    작성자:   ['작성자', '기록자']
+  };
+
   /* 시트에 이렇게 적혀 있으면 '값 없음'으로 봅니다 */
   var RV_BLANK = { '': 1, '-': 1, '–': 1, '—': 1, 'err': 1, '알수없음': 1, '해당없음': 1,
                    '(비어있음)': 1, '정보없음': 1,
@@ -1949,6 +1970,79 @@
     });
     list.sort(function (a, b) { return a.시작 < b.시작 ? 1 : a.시작 > b.시작 ? -1 : 0; });
     return list;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     리뷰 메모 — 리뷰 화면의 줄·칸에 특이사항을 붙입니다
+     ── 일일매출의 memo 탭과 같은 모양(주황 테두리 + 점 + 팝업)이지만,
+        날짜 격자가 아니라 카드 안의 항목을 찾아 붙습니다.
+     ═══════════════════════════════════════════════════════ */
+  var REVIEW_MEMO = [];
+
+  /** 항목 이름 맞추기 — 띄어쓰기와 앞의 '-' 는 무시합니다 */
+  function rvmNorm(s) {
+    return rvNorm(s).replace(/^[-\u2013\u2014\u3131]+/, '');
+  }
+
+  function parseReviewMemo(vals) {
+    if (!vals || vals.length < 2) return [];
+    var C = mapBy(vals[0] || [], RVMEMO_COLS);
+    if (C.이름 < 0 || C.메모 < 0) return [];
+    var out = [], seen = {};
+    for (var i = 1; i < vals.length; i++) {
+      var r = vals[i] || [];
+      var 이름 = splitName(rvText(r, C.이름)).이름;
+      var 글 = rvText(r, C.메모);
+      if (!이름 || !글) continue;
+      var m = {
+        이름: 이름, 시작: rvDate(r, C.시작),
+        항목: rvText(r, C.항목),
+        발신채널: rvText(r, C.발신채널), 발신일: rvDate(r, C.발신일),
+        메모: 글, 작성일: rvDate(r, C.작성일), 작성자: rvText(r, C.작성자)
+      };
+      var k = [m.이름, m.시작, m.항목, m.발신채널, m.발신일, m.메모].join('|');
+      if (seen[k]) continue;
+      seen[k] = 1;
+      out.push(m);
+    }
+    return out;
+  }
+
+  /**
+   * 이 리뷰의 이 항목에 붙은 메모.
+   * r 을 주면 그 발신을 지목한 메모만, 안 주면 발신을 안 가린 '줄 전체' 메모만 돌려줍니다.
+   * 전략시작일을 적은 메모는 그 묶음에만, 안 적은 메모는 같은 이름 전체에 붙습니다.
+   */
+  function rvMemoPick(ctx, 항목, r) {
+    if (!REVIEW_MEMO.length) return null;
+    var 이름 = rvNorm(ctx.p.이름), 항 = rvmNorm(항목);
+    var out = REVIEW_MEMO.filter(function (m) {
+      if (rvNorm(m.이름) !== 이름) return false;
+      if (m.시작 && m.시작 !== ctx.p.시작 && String(ctx.p.키).indexOf(m.시작) < 0) return false;
+      if (rvmNorm(m.항목) !== 항) return false;
+      var 지목 = !!(m.발신채널 || m.발신일);
+      if (!r) return !지목;
+      if (!지목) return false;
+      if (m.발신채널 && rvNorm(m.발신채널) !== rvNorm(r.발신채널)) return false;
+      if (m.발신일 && m.발신일 !== r.발신일) return false;
+      return true;
+    });
+    return out.length ? out : null;
+  }
+
+  /* 그린 칸에서 메모를 찾아가기 위한 임시 목록 — 화면을 다시 그릴 때마다 비웁니다 */
+  var rvMemoBag = [];
+
+  /** 메모가 붙은 칸을 만듭니다. 없으면 평범한 칸입니다. */
+  function rvTd(cls, inner, memos) {
+    if (!memos || !memos.length) return '<td class="' + cls + '">' + inner + '</td>';
+    var ids = memos.map(function (m) {
+      var i = rvMemoBag.indexOf(m);
+      if (i < 0) { i = rvMemoBag.length; rvMemoBag.push(m); }
+      return i;
+    });
+    return '<td class="' + cls + ' hasmemo" tabindex="0" data-rvm="' + ids.join(',') + '">' +
+           inner + '</td>';
   }
 
   /** 지금 고른 promotion 에 해당하는 리뷰인지 */
@@ -2328,9 +2422,16 @@
       tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_GID).then(function (title) {
         return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:BZ'));
       }),
-      loadOrdTab('daily')
+      loadOrdTab('daily'),
+      /* 메모는 없어도 리뷰는 나와야 하므로 실패해도 그냥 빈 목록으로 둡니다 */
+      (CONFIG.REVIEW_MEMO_GID === null || CONFIG.REVIEW_MEMO_GID === undefined)
+        ? Promise.resolve([])
+        : tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_MEMO_GID).then(function (title) {
+            return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:Z'));
+          }).catch(function () { return []; })
     ]).then(function (res) {
       REVIEW = parseReview(res[0]);
+      REVIEW_MEMO = parseReviewMemo(res[2]);
       reviewState = 'ready';
       renderReview();
     }).catch(function (e) {
@@ -2411,6 +2512,7 @@
       : '';
 
     var csv = [];
+    rvMemoBag = [];
     var 상세 = 상세목록.map(rvContext);
 
     var html = 안내 +
@@ -2506,7 +2608,22 @@
         w.push('행사기간이 주문라인요약 범위 밖이라 고객수는 리뷰 시트 입력값을 씁니다.');
       }
     }
-    return out + (w.length ? '<div class="rv-warn">' + w.join('<br>') + '</div>' : '');
+    /* 항목을 안 적은 메모는 프로모션 전체에 대한 것입니다 */
+    var 전체메모 = rvMemoPick(ctx, '', null);
+    var 메모띠 = 전체메모
+      ? '<div class="rv-memo">' + 전체메모.map(function (m) {
+          return '<div class="mp-t">' + esc(m.메모) + rvMemoWho(m) + '</div>';
+        }).join('') + '</div>'
+      : '';
+    return out + 메모띠 + (w.length ? '<div class="rv-warn">' + w.join('<br>') + '</div>' : '');
+  }
+
+  /** 작성자·작성일이 적혀 있으면 메모 끝에 작게 붙입니다 */
+  function rvMemoWho(m) {
+    var t = [];
+    if (m.작성자) t.push(m.작성자);
+    if (m.작성일) t.push(m.작성일.replace(/-/g, '.'));
+    return t.length ? '<span class="who">' + esc(t.join(' · ')) + '</span>' : '';
   }
 
   /** 프로모션 하나의 계산 결과를 모읍니다 — 그리는 쪽은 이 값만 봅니다 */
@@ -2683,9 +2800,9 @@
       var 값 = 발신.map(x[1]);
       csv.push([x[0]].concat(값.map(rvPlain)));
       return '<tr' + (x[2] === 'chline' ? ' class="chline"' : '') + '>' +
-        '<td class="k">' + esc(x[0]) + '</td>' +
-        값.map(function (v) {
-          return '<td class="' + (글자 ? 's' : 's num') + '">' + v + '</td>';
+        rvTd('k', esc(x[0]), rvMemoPick(ctx, x[0], null)) +
+        값.map(function (v, i) {
+          return rvTd(글자 ? 's' : 's num', v, rvMemoPick(ctx, x[0], 발신[i]));
         }).join('') + '</tr>';
     }).join('');
 
@@ -2727,8 +2844,8 @@
     csv.push([]); csv.push(['[구매고객정보]']);
     var body = t.map(function (x) {
       csv.push([x[0], rvPlain(x[1])]);
-      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) +
-             '</td><td class="v num">' + x[1] + '</td></tr>';
+      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
+             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
     }).join('');
 
     var n = ['유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + ').'];
@@ -2818,7 +2935,7 @@
       csv.push([x.k, rvPlain(x.v), x.a ? rvPlain(x.a) : '',
                 x.b ? rvPlain(x.b) : '', x.c ? rvPlain(x.c) : '']);
       return '<tr' + (x.sub ? ' class="sub"' : '') + '><td class="k">' + esc(x.k) + '</td>' +
-             '<td class="v num">' + x.v + '</td>' +
+             rvTd('v num', x.v, rvMemoPick(ctx, x.k, null)) +
              '<td class="d num">' + 칸(x.a === null ? '' : x.a) + '</td>' +
              '<td class="d num">' + 칸(x.b === null ? '' : x.b) + '</td>' +
              '<td class="d num">' + 칸(x.c === null ? '' : x.c) + '</td></tr>';
@@ -2891,8 +3008,8 @@
     csv.push([]); csv.push(['[객단가]']);
     var body = t.map(function (x) {
       csv.push([x[0], rvPlain(x[1])]);
-      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) +
-             '</td><td class="v num">' + x[1] + '</td></tr>';
+      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
+             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
     }).join('');
     return rvCard('객단가', '매출 ÷ 구매고객수로 자동계산',
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
@@ -3084,7 +3201,7 @@
       var 값 = 열.map(function (col) { return x[1](col.ctx); });
       csv.push([x[0]].concat(값.map(rvPlain)));
       return '<tr' + (x[3] ? ' class="sub"' : '') + '>' +
-        '<td class="k">' + esc(x[0]) + '</td>' +
+        rvTd('k', esc(x[0]), rvMemoPick(ctx, x[0], null)) +
         값.map(function (v, i) {
           return '<td class="' + (x[2] === 'txt' ? 'c' : 'num') + (i ? '' : ' g') + '">' +
                  v + '</td>';
@@ -3557,6 +3674,7 @@
   }
 
   function openMemo(cell) {
+    if (cell.dataset.rvm !== undefined) return openReviewMemo(cell);
     var d = cell.dataset.md, ch = cell.dataset.mc, code = cell.dataset.mp || '';
     var list = memoAt(d, ch, code) || memoAt(d, ch) || [];
     if (!list.length) return;
@@ -3580,6 +3698,36 @@
       texts.map(function (x) { return '<div class="mp-t">' + esc(x) + '</div>'; }).join('');
     document.body.appendChild(popEl);
 
+    var r = cell.getBoundingClientRect(), pr = popEl.getBoundingClientRect();
+    var left = Math.min(Math.max(8, r.left), window.innerWidth - pr.width - 8);
+    var top = r.bottom + 6;
+    if (top + pr.height > window.innerHeight - 8) top = Math.max(8, r.top - pr.height - 6);
+    popEl.style.left = left + 'px';
+    popEl.style.top = top + 'px';
+  }
+
+  /** 리뷰 카드의 메모 — 머리글에 프로모션명과 항목을 적습니다 */
+  function openReviewMemo(cell) {
+    var list = String(cell.dataset.rvm).split(',').map(function (i) { return rvMemoBag[+i]; })
+                 .filter(Boolean);
+    if (!list.length) return;
+    closeMemo();
+    openCell = cell;
+    cell.classList.add('open');
+
+    var 첫 = list[0];
+    popEl = document.createElement('div');
+    popEl.className = 'memopop';
+    popEl.innerHTML = '<div class="mp-h">' + esc(첫.이름) +
+      (첫.항목 ? ' · ' + esc(첫.항목) : '') + '</div>' +
+      list.map(function (m) {
+        return '<div class="mp-t">' + esc(m.메모) + rvMemoWho(m) + '</div>';
+      }).join('');
+    document.body.appendChild(popEl);
+    위치잡기(cell);
+  }
+
+  function 위치잡기(cell) {
     var r = cell.getBoundingClientRect(), pr = popEl.getBoundingClientRect();
     var left = Math.min(Math.max(8, r.left), window.innerWidth - pr.width - 8);
     var top = r.bottom + 6;
