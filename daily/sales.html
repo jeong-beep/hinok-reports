@@ -874,6 +874,7 @@
   function hintFor(e) {
     var m = String(e && e.message || ''), s = (e && e.status) || 0, reason = (e && e.reason) || '';
     if (e && e.kind === 'columns') return m + ' 열 이름을 원래대로 두거나, 옮기더라도 이름은 유지해 주세요.';
+    if (e && e.kind === 'ordshape') return e.고침;
     if (reason === 'SERVICE_DISABLED' || /has not been used in project|API .*disabled/i.test(m)) {
       return 'Google Cloud 프로젝트에서 Sheets API가 꺼져 있습니다. ' +
              'console.cloud.google.com → API 및 서비스 → "Google Sheets API" 사용 설정 후 1~2분 뒤 새로고침하세요.';
@@ -2111,6 +2112,53 @@
     return rows.length ? { rows: rows, min: min, max: max, 폰있음: C.phone >= 0 } : null;
   }
 
+  /**
+   * 요약 탭을 읽긴 했는데 쓸 수 없을 때, 무엇이 어긋났는지 짚어 줍니다.
+   * 수식을 고치다 #REF! 이 뜨거나 label 을 빠뜨려 헤더 이름이 바뀌는 일이 잦은데,
+   * 그때 '잠시 후 다시 시도'라고만 하면 원인을 찾을 길이 없습니다.
+   */
+  var ORD_TAB_필요열 = {
+    daily: '주문일 · 제품라인 · 매출 · 수량',
+    line:  '주문일 · 주문번호 · 주문자휴대전화 · 주문자ID · 첫구매 · 제품라인 · 매출 · 수량'
+  };
+  function ordShapeError(which, vals) {
+    var 머리 = (vals && vals[0]) || [];
+    var 이름들 = [];
+    for (var i = 0; i < 머리.length; i++) {
+      var s = String(머리[i] === undefined || 머리[i] === null ? '' : 머리[i]);
+      if (s) 이름들.push(s);
+    }
+    var 첫칸 = 이름들[0] || '';
+    var e, 오류값 = /^#(REF|N\/A|VALUE|DIV\/0|NAME|NUM|ERROR)/i.test(첫칸);
+
+    /* 이 글은 부르는 쪽에서 esc() 로 감싸 내보내므로 태그 없이 평문으로 씁니다 */
+    if (오류값) {
+      e = new Error('요약 탭에 ' + 첫칸 + ' 이(가) 떠 있습니다');
+      e.고침 = '요약 탭 첫 칸이 ' + 첫칸 + ' 입니다 — 수식이 결과를 펼치지 못하고 있습니다. ' +
+               '표 오른쪽·아래에 다른 값이 있으면 비우고, QUERY 의 열 문자와 범위를 확인해 주세요.';
+    } else if (!이름들.length) {
+      e = new Error('요약 탭이 비어 있습니다');
+      e.고침 = '요약 탭이 비어 있습니다 — 수식이 아직 계산 중이거나 결과가 없습니다. ' +
+               '셀이 채워진 뒤 새로고침해 주세요.';
+    } else {
+      /* 헤더는 멀쩡한데 못 읽었다면 자료 줄이 없거나 날짜가 날짜로 안 읽히는 것입니다 */
+      var C = mapBy(머리, which === 'daily' ? ORD_DAILY_COLS : ORD_LINE_COLS);
+      var 헤더OK = C.d >= 0 && C.amt >= 0 && (which === 'daily' || C.ord >= 0);
+      if (헤더OK) {
+        e = new Error('요약 탭에 자료 줄이 없습니다');
+        e.고침 = '열 이름은 맞는데 읽을 자료 줄이 없습니다 — 수식이 아직 계산 중이거나, ' +
+                 '주문일 칸이 날짜로 안 들어가 있습니다. 첫 줄 아래에 값이 채워졌는지 봐 주세요.';
+      } else {
+        e = new Error('요약 탭에서 필요한 열을 찾지 못했습니다');
+        e.고침 = '필요한 열은 [' + ORD_TAB_필요열[which] + '] 인데, ' +
+                 '탭 첫 줄에서 읽은 이름은 [' + 이름들.join(' · ') + '] 입니다. ' +
+                 'QUERY 의 label 로 이름을 맞춰 주세요 — label 을 빠뜨리면 sum 매출 처럼 이름이 바뀝니다.';
+      }
+    }
+    e.kind = 'ordshape';
+    return e;
+  }
+
   function loadOrdTab(which) {
     var gid = which === 'daily' ? CONFIG.ORDER_DAILY_GID : CONFIG.ORDER_LINE_GID;
     if (gid === null || gid === undefined) { ordState[which] = 'off'; return Promise.resolve(); }
@@ -2123,7 +2171,7 @@
     }).then(function (vals) {
       ORD[which] = which === 'daily' ? parseOrdDaily(vals) : parseOrdLine(vals);
       ordState[which] = ORD[which] ? 'ready' : 'error';
-      if (!ORD[which]) ordError[which] = new Error('요약 탭에서 읽을 수 있는 줄이 없습니다');
+      if (!ORD[which]) ordError[which] = ordShapeError(which, vals);
     }).catch(function (e) {
       ordError[which] = e;
       ordState[which] = 'error';
