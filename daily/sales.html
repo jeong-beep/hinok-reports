@@ -212,7 +212,8 @@
   .promosum .s .v small { font-size: 11px; font-weight: 500; color: var(--ink-2); }
 
   /* ── 탭 : 판매 현황 / 프로모션 리뷰 ─────────────────────── */
-  .tabs { display: flex; align-items: center; gap: 2px; margin-bottom: 14px;
+  /* 컨트롤바와 함께 상단에 붙습니다 — dock 안에 있어 같이 따라옵니다 */
+  .tabs { display: flex; align-items: center; gap: 2px; margin: 10px 0 0;
           border-bottom: 1px solid var(--hairline); }
   .tabs button { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-muted);
                  background: transparent; border: 0; border-bottom: 2px solid transparent;
@@ -276,6 +277,11 @@
   .rv-more { margin-top: 26px; text-align: center; font-size: 12.5px; color: var(--ink-muted); }
 
   /* 프로모션 비교 — 지표가 행, 프로모션이 열. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
+  /* 발신 성과 — 카카오 열은 옅은 노랑으로 갈라 둡니다. 두 테마 모두 같은 색이라
+     글자색도 함께 고정해야 어두운 테마에서 읽힙니다. */
+  #rvSend td.kko { background: #fff2cc; color: #15191d; }
+  #rvSend tr.em td { font-weight: 700; }
+  #rvSend tr.em td.kko { background: #ffe9a8; }
   #rvVs td.g, #rvVs th.g { background: var(--surface-2); font-weight: 620; }
   #rvVs td.k { width: 190px; }
   #rvVs td.c, #rvVs td.num { min-width: 150px; }
@@ -608,14 +614,14 @@
           <span class="icon">🔄</span><span class="text">다시 불러오기</span>
         </button>
       </div>
+
+      <div class="tabs" id="tabs" role="tablist" hidden>
+        <button type="button" role="tab" data-tab="sales" aria-selected="true">판매 현황</button>
+        <button type="button" role="tab" data-tab="review" aria-selected="false">프로모션 리뷰</button>
+      </div>
     </div>
 
     <div id="loading" class="status"><div class="spinner"></div><span>시트에서 불러오는 중…</span></div>
-
-    <div class="tabs" id="tabs" role="tablist" hidden>
-      <button type="button" role="tab" data-tab="sales" aria-selected="true">판매 현황</button>
-      <button type="button" role="tab" data-tab="review" aria-selected="false">프로모션 리뷰</button>
-    </div>
 
     <div id="dash" hidden>
       <div class="promosum" id="promoSum" hidden></div>
@@ -2069,6 +2075,16 @@
   /* 그린 칸에서 메모를 찾아가기 위한 임시 목록 — 화면을 다시 그릴 때마다 비웁니다 */
   var rvMemoBag = [];
 
+  /** 코드가 만든 메모 한 건 — memo 탭에서 온 것과 같은 모양으로 붙습니다 */
+  function 자동메모(이름, 항목, 글) {
+    return 글 ? [{ 이름: 이름, 항목: 항목, 메모: 글, 작성자: '', 작성일: '', 자동: true }] : null;
+  }
+  /** 시트 메모와 자동 메모를 한 칸에 같이 답니다 */
+  function 메모합(a, b) {
+    var out = (a || []).concat(b || []);
+    return out.length ? out : null;
+  }
+
   /** 메모가 붙은 칸을 만듭니다. 없으면 평범한 칸입니다. */
   function rvTd(cls, inner, memos) {
     if (!memos || !memos.length) return '<td class="' + cls + '">' + inner + '</td>';
@@ -2794,7 +2810,7 @@
              '<span class="v' + (x[1] ? '' : ' none') + '">' +
              esc(x[1] || '미입력') + '</span></div>';
     }).join('');
-    return rvCard('개요', '리뷰 시트 입력값입니다',
+    return rvCard('개요', '',
       '<div class="body"><div class="facts">' + rows + '</div></div>');
   }
 
@@ -2804,13 +2820,10 @@
    * 발신일 → 대상 → 채널 순으로 세웁니다.
    */
   function rvSendCard(ctx, csv) {
-    var CH = ['카카오톡', '알림톡', 'SMS문자', '문자'];
-    var 발신 = ctx.p.발신.slice().sort(function (a, b) {
-      var x = (a.발신일 || a.발신일원문 || ''), y = (b.발신일 || b.발신일원문 || '');
-      if (x !== y) return x < y ? -1 : 1;
-      if (a.발신타겟 !== b.발신타겟) return a.발신타겟 < b.발신타겟 ? -1 : 1;
-      var i = CH.indexOf(a.발신채널), j = CH.indexOf(b.발신채널);
-      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+    /* 열 순서는 리뷰 시트에 적힌 줄 순서 그대로입니다 — 따로 정렬하지 않습니다 */
+    var 발신 = ctx.p.발신;
+    var 카카오칸 = 발신.map(function (r) {
+      return String(r.발신채널 || '').indexOf('카카오') >= 0 ? ' kko' : '';
     });
 
     /* [이름, 발신 하나에서 값을 내는 함수, 글자줄인지] */
@@ -2822,11 +2835,11 @@
       ['발신시각', function (r) { return esc(r.발신시각 || '—'); }, 'txt'],
       ['타겟모수', function (r) { return rvCnt(r.타겟모수); }],
       ['발신모수', function (r) { return rvCnt(r.발신모수); }],
-      ['타겟대비 비중', function (r) { return rvPct(rvDiv(r.발신모수, r.타겟모수)); }],
+      ['타겟대비 비중', function (r) { return rvPct(rvDiv(r.발신모수, r.타겟모수)); }, 'em'],
       ['열람수', function (r) { return rvCnt(r.열람수); }],
-      ['열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }],
+      ['열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }, 'em'],
       ['클릭수', function (r) { return rvCnt(r.클릭수); }],
-      ['클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }],
+      ['클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }, 'em'],
       ['유입고객수', function (r) { return rvCnt(r.유입); }]
     ];
 
@@ -2835,10 +2848,11 @@
       var 글자 = x[2] === 'chline' || x[2] === 'txt';
       var 값 = 발신.map(x[1]);
       csv.push([x[0]].concat(값.map(rvPlain)));
-      return '<tr' + (x[2] === 'chline' ? ' class="chline"' : '') + '>' +
+      var 줄클래스 = x[2] === 'chline' ? ' class="chline"' : (x[2] === 'em' ? ' class="em"' : '');
+      return '<tr' + 줄클래스 + '>' +
         rvTd('k', esc(x[0]), rvMemoPick(ctx, x[0], null)) +
         값.map(function (v, i) {
-          return rvTd(글자 ? 's' : 's num', v, rvMemoPick(ctx, x[0], 발신[i]));
+          return rvTd((글자 ? 's' : 's num') + 카카오칸[i], v, rvMemoPick(ctx, x[0], 발신[i]));
         }).join('') + '</tr>';
     }).join('');
 
@@ -2848,8 +2862,7 @@
       n.push('유입고객수 열이 없어 <b>클릭수</b>를 유입고객수로 봤습니다 — ' +
              '지금까지 리뷰에서 두 값이 늘 같았습니다.');
     }
-    return rvCard('발신 성과',
-      '한 열이 한 발신입니다 · 모수·열람수·클릭수는 리뷰 시트 입력값 · 비율은 자동계산',
+    return rvCard('발신 성과', '',
       '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvSend"><tbody>' +
       body + '</tbody></table></div></div>', n.join('<br>'));
   }
@@ -2889,14 +2902,13 @@
       n.push('고객수는 <b>자사몰주문RAWDATA</b>에서 <b>' + esc(ctx.주문.기준) +
              '</b>의 고유 개수를 세어 낸 값입니다 — 기간 안에 두 번 샀거나 아이디를 ' +
              '여러 개 써도 번호가 같으면 한 명으로 셉니다. ' +
-             '신규는 <b>첫구매</b> 열이 찍힌 고객입니다.');
+             '<b>신규고객수</b>는 이 프로모션에서 처음 산 사람이 아니라 ' +
+             '<b>희녹에서 생애 첫 구매</b>를 한 고객입니다 — 주문 원장의 <b>첫구매</b> 열이 ' +
+             '찍힌 줄로 셉니다.');
       n.push(ctx.품목필터있음
         ? ('맨 윗줄은 <b>행사품목이 든 주문을 한 사람</b>만 센 값입니다 — 행사기간에 왔지만 ' +
            '행사품목을 안 산 손님은 빠집니다. 유추전환율·신규비율·객단가도 이 사람들 기준입니다.')
         : '제품라인이 전체(ALL)라 행사기간에 산 모든 사람이 곧 행사품목 구매고객입니다.');
-      n.push('행사품목을 가르는 기준은 ' + (ctx.주문코드기준
-        ? '<b>상품코드 ' + esc(ctx.전략코드) + '</b>'
-        : '<b>제품라인 ' + esc(ctx.라인 || '전체') + '</b>') + '입니다.');
       if (ctx.주문.기준 !== '휴대전화번호') {
         n.push('주문라인요약 탭에 <b>주문자 휴대전화</b> 열이 없어 주문자ID로 세었습니다 — ' +
                '수식에 A열을 넣으시면 휴대전화 기준으로 바뀝니다.');
@@ -2915,8 +2927,7 @@
     }
     n.push('구매고객수의 직전 기간·작년 대비는 화면에 내지 않습니다.');
 
-    return rvCard('구매고객정보',
-      주문계산 ? '주문 원장에서 자동계산' : '고객수는 리뷰 시트 입력값 · 비율은 자동계산',
+    return rvCard('구매고객정보', '',
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
       body + '</tbody></table></div></div>', n.join('<br>'));
   }
@@ -2932,11 +2943,18 @@
     var 전략수량 = ctx.p.정보.전략수량;
 
     var t = [];
-    function 줄(k, v, a, b, c, sub) { t.push({ k: k, v: v, a: a, b: b, c: c, sub: !!sub }); }
+    function 줄(k, v, a, b, c, sub, 메모) {
+      t.push({ k: k, v: v, a: a, b: b, c: c, sub: !!sub, 메모: 메모 || null });
+    }
     function 칸(x) { return x === undefined ? rvNA('—') : x; }
 
     줄('행사기간매출', rvWon(행사 && 행사.amt));
-    줄('행사품목+추가구매품목매출', rvWon(추가));
+    /* 이 줄은 행사품목까지 포함한 값이라, 순수 추가구매분을 메모로 덧붙입니다 */
+    var 추가만 = (추가 === null || 추가 === undefined || !품목) ? null : 추가 - 품목.amt;
+    줄('행사품목+추가구매품목매출', rvWon(추가), null, null, null, false,
+       자동메모(ctx.p.이름, '행사품목+추가구매품목매출', 추가만 === null ? '' :
+         '행사품목을 뺀 추가구매품목만 ' + rvPlain(rvWon(추가만)) + ' 입니다 — ' +
+         '행사품목이 든 주문에 같이 담긴 다른 상품의 금액입니다.'));
     줄('행사품목매출', rvWon(품목 && 품목.amt));
     줄('행사기간매출(일평균)', rvWon(행사 && 행사.매출일평균),
        rvDelta(행사 && 행사.매출일평균, ctx.전7 && ctx.전7.매출일평균),
@@ -2957,24 +2975,20 @@
     줄('-직전 1주일 판매수량(일평균)', rvCnt(ctx.품목전7 && ctx.품목전7.수량일평균, '개'),
        null, null, null, true);
 
-    var head = '<thead><tr><th class="k"></th><th class="c">값</th>' +
-      '<th class="c">직전 7일 평균대비</th><th class="c">직전 30일 평균대비</th>' +
-      '<th class="c">작년 동기간 대비</th></tr></thead>';
+    var head = '<thead><tr><th class="k"></th><th class="c">값</th></tr></thead>';
 
     csv.push([]); csv.push(['[프로모션 전후 증감]']);
     csv.push(['항목', '값', '직전 7일 평균대비', '직전 30일 평균대비', '작년 동기간 대비']);
     var body = t.map(function (x) {
       if (x.head) {
         csv.push([x.head]);
-        return '<tr class="head"><td class="k">' + esc(x.head) + '</td><td colspan="4"></td></tr>';
+        return '<tr class="head"><td class="k">' + esc(x.head) + '</td><td></td></tr>';
       }
+      /* 증감 세 값은 화면에서 뺐지만 CSV 에는 그대로 남깁니다 */
       csv.push([x.k, rvPlain(x.v), x.a ? rvPlain(x.a) : '',
                 x.b ? rvPlain(x.b) : '', x.c ? rvPlain(x.c) : '']);
       return '<tr' + (x.sub ? ' class="sub"' : '') + '><td class="k">' + esc(x.k) + '</td>' +
-             rvTd('v num', x.v, rvMemoPick(ctx, x.k, null)) +
-             '<td class="d num">' + 칸(x.a === null ? '' : x.a) + '</td>' +
-             '<td class="d num">' + 칸(x.b === null ? '' : x.b) + '</td>' +
-             '<td class="d num">' + 칸(x.c === null ? '' : x.c) + '</td></tr>';
+             rvTd('v num', x.v, 메모합(rvMemoPick(ctx, x.k, null), x.메모)) + '</tr>';
     }).join('');
 
     var n = [];
@@ -3017,7 +3031,7 @@
              '다만 이번 달처럼 아직 마감 전인 구간은 취소·환불이 덜 반영돼 있을 수 있습니다.');
     }
 
-    return rvCard('프로모션 전후 증감', '원본에서 자동계산',
+    return rvCard('프로모션 전후 증감', '',
       '<div class="body flush"><div class="tablewrap"><table class="rv">' + head +
       '<tbody>' + body + '</tbody></table></div></div>',
       n.join('<br>'));
@@ -3032,22 +3046,17 @@
     var 전체 = (ctx.전체구매고객 === null || ctx.전체구매고객 === undefined)
       ? 구매 : ctx.전체구매고객;
     var t = [
-      ['계산 기준 구매고객수', rvCnt(구매, '명'), false],
-      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 전체)), true],
-      ['객단가(행사품목+추가구매품목)', rvWon(rvDiv(추가, 구매)), true],
-      ['객단가(행사품목만)', rvWon(rvDiv(품목 && 품목.amt, 구매)), true]
+      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 전체)), false],
+      ['객단가(행사품목+추가구매품목)', rvWon(rvDiv(추가, 구매)), false],
+      ['객단가(행사품목만)', rvWon(rvDiv(품목 && 품목.amt, 구매)), false]
     ];
-    if (ctx.전체구매고객 !== null && ctx.전체구매고객 !== undefined &&
-        ctx.전체구매고객 !== 구매) {
-      t.splice(1, 0, ['행사기간 전체 구매고객수', rvCnt(전체, '명'), false]);
-    }
     csv.push([]); csv.push(['[객단가]']);
     var body = t.map(function (x) {
       csv.push([x[0], rvPlain(x[1])]);
       return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
              rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
     }).join('');
-    return rvCard('객단가', '매출 ÷ 구매고객수로 자동계산',
+    return rvCard('객단가', '',
       '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
       body + '</tbody></table></div></div>',
       (ctx.주문
