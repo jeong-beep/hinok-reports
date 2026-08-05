@@ -223,16 +223,10 @@
   .tabs[hidden] { display: none; }
 
   /* ── 프로모션 리뷰 ──────────────────────────────────────── */
-  /* 개요 : 한 줄에 한 항목. 이름은 오른쪽에 붙이고 값이 그 옆에 섭니다. */
-  .facts > div { display: grid; grid-template-columns: 150px var(--vcols, minmax(0, 1fr));
-                 gap: 16px;
-                 align-items: baseline; padding: 8px 0;
-                 border-bottom: 1px solid var(--hairline); }
-  .facts > div:last-child { border-bottom: 0; }
-  .facts .k { font-size: 11.5px; color: var(--ink-muted); text-align: right; }
-  .facts .v { font-size: 13px; font-weight: 550; color: var(--ink); overflow-wrap: anywhere; }
-  .facts .v.none { color: var(--ink-muted); font-weight: 400; }
-  .facts > div.title .v { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  /* 개요 : 다른 카드와 같은 표입니다 — 항목 이름 칸이 왼쪽에 붙고 가로로 흐릅니다 */
+  #rvOverview td.v { white-space: normal; word-break: keep-all; min-width: 220px;
+                     font-weight: 550; }
+  #rvOverview tr.title td.v { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
 
   /* 리뷰 표 : 항목 이름은 우측, 값은 좌측 — 기존 시트 리뷰와 같은 배치 */
   table.rv { width: 100%; min-width: 0; }
@@ -290,11 +284,17 @@
                                              width: auto; line-height: 1.55; }
   table.rv.cmb td.c, table.rv.cmb th.c { text-align: center; width: 110px; }
   /* 프로모션 비교 — 카드마다 열이 하나씩 붙습니다. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
-  table.rv td.g, table.rv th.g, .facts .v.g { background: var(--surface-2); }
+  table.rv td.g, table.rv th.g { background: var(--surface-2); }
   table.rv thead th.c { text-align: center; padding: 7px 10px; }
   table.rv thead th .when { display: block; margin-top: 2px; font-size: 10px;
                             font-weight: 500; color: var(--ink-muted); white-space: nowrap; }
   table.rv thead th .pill { padding: 0 6px; font-size: 10px; }
+  /* 표가 가로로 넘칠 때 항목 이름 칸은 왼쪽에 붙여 둡니다 — 옆으로 밀어도
+     무슨 줄인지 보여야 합니다. 뒤 칸이 비쳐 보이지 않게 바탕을 깔아 둡니다.
+     판매처·상품 표에서 이미 쓰고 있는 방식과 같습니다. */
+  table.rv td.k { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+  table.rv th.k { position: sticky; left: 0; z-index: 3; background: var(--surface-2); }
+  table.rv tr.head td.k, table.rv tr.chline td.k { background: var(--surface-2); }
   /* 프로모션이 갈리는 자리에 세로선 — 남의 발신과 붙어 보이면 안 됩니다 */
   table.rv td.grp { border-left: 2px solid var(--border); }
   table.rv thead th.c + th.c { border-left: 2px solid var(--border); }
@@ -302,9 +302,6 @@
   table.rv td.g ~ td, table.rv td.g { text-align: center; }
   .rv-src .cmp-tag { border: 1px solid var(--hairline); border-radius: 999px;
                      padding: 1px 9px; font-size: 11px; }
-  /* 개요 : 비교가 붙으면 맨 위에 어느 칸이 누구 것인지 적습니다 */
-  .facts .cmphead .v { font-size: 11.5px; font-weight: 650; color: var(--ink-2); }
-  .facts .v.g { border-radius: 4px; padding: 0 6px; margin: -2px 0; }
   /* 구매조합 : 조합 이름이 프로모션마다 달라 표를 위아래로 둡니다 */
   .combo-one + .combo-one { border-top: 1px solid var(--hairline); }
   .combo-h { padding: 9px 16px 7px; font-size: 12px; font-weight: 650; color: var(--ink-2);
@@ -541,12 +538,7 @@
     [data-csv] { display: none; }
     html.is-admin [data-csv] { display: inline-block; }
 
-    /* 비교 열이 붙으면 표가 넓어집니다 — 가로로 흘리되 항목 이름 칸은 왼쪽에 붙여
-       두어야 옆으로 밀어도 무슨 줄인지 보입니다. */
-    table.rv td.k { position: sticky; left: 0; z-index: 2; background: var(--surface);
-                    max-width: 116px; white-space: normal; word-break: keep-all; }
-    table.rv th.k { position: sticky; left: 0; z-index: 3; background: var(--surface-2); }
-    table.rv tr.head td.k, table.rv tr.chline td.k { background: var(--surface-2); }
+    table.rv td.k { max-width: 116px; white-space: normal; word-break: keep-all; }
     table.rv thead th.c { min-width: 118px; }
     .noteflo { font-size: 12.5px; padding: 9px 12px; margin-bottom: 10px; }
     .card > .head .headavg { font-size: 11px; }
@@ -569,9 +561,7 @@
 
     /* 탭과 리뷰 : 좁은 화면에서는 항목 이름 칸을 줄이고 표는 가로로 흘립니다 */
     .tabs button { font-size: 12.5px; padding: 8px 10px; }
-    .facts > div { grid-template-columns: 104px var(--vcols, minmax(0, 1fr)); gap: 10px; }
-    .facts .k { font-size: 11px; }
-    .facts > div.title .v { font-size: 15px; }
+    #rvOverview td.v { min-width: 180px; }
     table.rv { width: max-content; }
     table.rv td.k, table.rv th.k { width: auto; }
     table.rv td.d { width: auto; }
@@ -3067,11 +3057,9 @@
     return html;
   }
 
-  /** 개요 — 한 줄에 한 항목씩 세로로 나열합니다 */
+  /** 개요 — 한 줄에 한 항목. 다른 카드와 같은 표라 비교 열도 같은 방식으로 붙습니다 */
   function rvOverviewCard(ctx, csv) {
     /* 발신타겟은 발신마다 다를 수 있으므로(구매고객·비구매고객) 모아서 보여줍니다 */
-
-    /* 값은 열마다 다시 냅니다 — 비교 프로모션이 옆에 설 수 있어서요 */
     function 타겟모음(c) {
       var 본것 = {}, out = [];
       c.p.발신.forEach(function (r) {
@@ -3101,27 +3089,19 @@
     var 열 = rv열(ctx);
     csv.push(['[개요]']);
     if (열.length > 1) csv.push([''].concat(열.map(function (x) { return x.이름; })));
-    var rows = t.map(function (x) {
+    var body = t.map(function (x) {
       var 값 = 열.map(function (col) { return x[1](col.ctx) || ''; });
       csv.push([x[0]].concat(값));
-      return '<div' + (x[2] ? ' class="' + x[2] + '"' : '') +
-             '><span class="k">' + esc(x[0]) + '</span>' +
+      return '<tr' + (x[2] ? ' class="' + x[2] + '"' : '') +
+             '><td class="k">' + esc(x[0]) + '</td>' +
              값.map(function (v, i) {
-               return '<span class="v' + (v ? '' : ' none') +
-                      (열.length > 1 && !i ? ' g' : '') + '">' +
-                      esc(v || '미입력') + '</span>';
-             }).join('') + '</div>';
+               return '<td class="v' + (열.length > 1 && !i ? ' g' : '') + '">' +
+                      (v ? esc(v) : rvNA('미입력')) + '</td>';
+             }).join('') + '</tr>';
     }).join('');
-    /* 비교가 붙으면 어느 칸이 누구 것인지 맨 위에 한 줄로 적습니다 */
-    var 이름줄 = 열.length > 1
-      ? '<div class="cmphead"><span class="k"></span>' + 열.map(function (x, i) {
-          return '<span class="v' + (i ? '' : ' g') + '">' + esc(x.이름) + '</span>';
-        }).join('') + '</div>'
-      : '';
-    var 폭 = 열.length > 1
-      ? ' style="--vcols: repeat(' + 열.length + ', minmax(0, 1fr))"' : '';
     return rvCard('개요', '',
-      '<div class="body"><div class="facts"' + 폭 + '>' + 이름줄 + rows + '</div></div>');
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvOverview">' +
+      rv머리(ctx) + '<tbody>' + body + '</tbody></table></div></div>');
   }
 
   /**
