@@ -223,10 +223,16 @@
   .tabs[hidden] { display: none; }
 
   /* ── 프로모션 리뷰 ──────────────────────────────────────── */
+  /* 리뷰 카드의 글자 단계 — 카드마다 다르면 안 됩니다
+       표 머리(프로모션 이름) 12 / 650 · 그 아래 기간 10.5 / 500
+       표 머리(열 이름)       10.5 / 600
+       항목 이름              12.5 / 400 · 하위 항목 12 / 400
+       값                     12.5 / 620
+       구분 띠(head·chline)   12.5 / 620 + 옅은 바탕
+       각주                   11.5 / 400 */
+
   /* 개요 : 다른 카드와 같은 표입니다 — 항목 이름 칸이 왼쪽에 붙고 가로로 흐릅니다 */
-  #rvOverview td.v { white-space: normal; word-break: keep-all; min-width: 220px;
-                     font-weight: 550; }
-  #rvOverview tr.title td.v { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  #rvOverview td.v { white-space: normal; word-break: keep-all; min-width: 220px; }
 
   /* 리뷰 표 : 항목 이름은 우측, 값은 좌측 — 기존 시트 리뷰와 같은 배치 */
   table.rv { width: 100%; min-width: 0; }
@@ -234,14 +240,14 @@
   table.rv th.k, table.rv td.k { text-align: right; color: var(--ink-2); white-space: nowrap; }
   table.rv td.k { width: 210px; }
   table.rv tr.sub td.k { color: var(--ink-muted); font-size: 12px; }
-  table.rv tr.head td { background: var(--surface-2); font-weight: 700; }
+  table.rv tr.head td { background: var(--surface-2); font-weight: 620; }
   table.rv td.v { text-align: left; font-weight: 620; }
   table.rv td.d { text-align: center; width: 132px; font-size: 12px; }
   .na { color: var(--ink-muted); font-weight: 400; }
 
   /* 발신 성과 : 지표가 행, 발신이 열 */
   #rvSend td.k { width: 150px; }
-  #rvSend td.s { text-align: center; }
+  #rvSend td.s { text-align: center; font-weight: 620; }
   #rvSend tr.chline td { background: var(--surface-2); font-weight: 620; }
 
   .rv-note { font-size: 11.5px; color: var(--ink-muted); line-height: 1.7;
@@ -276,17 +282,20 @@
      글자색도 함께 고정해야 어두운 테마에서 읽힙니다. */
   /* 발신채널 줄은 tr.chline 바탕색이 깔려 있어, 그보다 뒤에 같은 무게로 적어야 이깁니다 */
   #rvSend tr td.kko { background: #fff2cc; color: #15191d; }
-  #rvSend tr.em td { font-weight: 700; }
+  #rvSend tr.em td { font-weight: 620; }
   /* 병합된 칸은 가운데로 — 두 열에 걸쳐 있어 왼쪽에 붙으면 어디 것인지 헷갈립니다 */
   #rvSend td[colspan] { text-align: center; }
   /* 구매조합 — 조합 이름은 여러 줄이라 왼쪽에 붙이고 줄바꿈을 허용합니다 */
   table.rv.cmb td.combo, table.rv.cmb th.k { text-align: left; white-space: normal;
                                              width: auto; line-height: 1.55; }
-  table.rv.cmb td.c, table.rv.cmb th.c { text-align: center; width: 110px; }
+  table.rv.cmb td.c { text-align: center; width: 110px; font-weight: 620; }
+  table.rv.cmb th.c { text-align: center; width: 110px; }
   /* 프로모션 비교 — 카드마다 열이 하나씩 붙습니다. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
   table.rv td.g, table.rv th.g { background: var(--surface-2); }
   table.rv thead th.c { text-align: center; padding: 7px 10px; }
-  table.rv thead th .when { display: block; margin-top: 2px; font-size: 10px;
+  /* 프로모션 이름은 열 이름이 아니라 '누구 칸인지' 라 한 단계 크게 둡니다 */
+  table.rv thead th.nm { font-size: 12px; font-weight: 650; }
+  table.rv thead th .when { display: block; margin-top: 2px; font-size: 10.5px;
                             font-weight: 500; color: var(--ink-muted); white-space: nowrap; }
   table.rv thead th .pill { padding: 0 6px; font-size: 10px; }
   /* 표가 가로로 넘칠 때 항목 이름 칸은 왼쪽에 붙여 둡니다 — 옆으로 밀어도
@@ -2992,7 +3001,7 @@
   /** 프로모션 이름 칸 — 아래에 기간과 마감/잠정 배지를 답니다 */
   function rv이름칸(x, i, 폭) {
     var c = x.ctx;
-    return '<th class="c' + (i ? '' : ' g') + '"' + (폭 > 1 ? ' colspan="' + 폭 + '"' : '') +
+    return '<th class="c nm' + (i ? '' : ' g') + '"' + (폭 > 1 ? ' colspan="' + 폭 + '"' : '') +
       '>' + esc(x.이름) + '<small class="when">' +
       c.from.replace(/-/g, '.') + '~' + c.to.slice(5).replace('-', '.') + ' · ' +
       calDays(c.from, c.to) + '일 ' +
@@ -3068,7 +3077,7 @@
       return out.join(' · ');
     }
     var t = [
-      ['프로모션명', function (c) { return c.p.이름; }, 'title'],
+      ['프로모션명', function (c) { return c.p.이름; }, ''],
       ['전략시작일', function (c) { return rvDay(c.from); }, ''],
       ['전략종료일', function (c) { return rvDay(c.to); }, ''],
       ['행사기간', function (c) {
