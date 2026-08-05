@@ -694,16 +694,18 @@
   var CONFIG = {
     CLIENT_ID:  '490629671344-150ivr5s67rv02odtt5fo285us2ef6tp.apps.googleusercontent.com',
     DOMAIN:     'hinok.life',
-    SHEET_ID:   '1TaUTDagfp3bl0e6vHDUNWkerPHIh1FBuH9ctiO6WEq4',
-    /* 첫 행(헤더)까지 함께 읽어 열을 "이름"으로 찾습니다.
+    /* 원본 시트. 아래 주문 원장·리뷰와 같은 파일('DAILYSALEASRAWDATA')입니다 —
+       읽는 탭이 한 파일에 모여 있어 열람 권한도 이 파일 하나면 됩니다. */
+    SHEET_ID:   '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
+    /* 탭은 이름 대신 gid 로 찾습니다 — 탭 이름을 바꾸셔도 그대로 동작합니다.
+       gid 는 탭을 누르면 주소 끝 #gid=... 에 나옵니다.
+       첫 행(헤더)까지 함께 읽어 열은 "이름"으로 찾으므로,
        열 순서가 바뀌거나 중간에 열이 추가돼도 화면이 깨지지 않습니다. */
-    DATA_RANGE: '시트1!A1:Z',
-    MEMO_RANGE: 'memo!A1:D',          // 날짜 · 판매처 · 상품코드 · 메모
-    /* 한 줄 코멘트 탭. 지금 시트의 탭 이름에 오타(flaoting)가 있어
-       두 표기를 모두 시도합니다 — 나중에 고치셔도 그대로 동작합니다. */
-    NOTE_RANGES: ["'flaoting comments'!A1:B", "'floating comments'!A1:B"],
+    DATA_GID: 225619214,              // 일일매출정보
+    MEMO_GID: 1323367654,             // 메모 — 날짜 · 판매처 · 제품라인 · 상품코드 · 메모
+    NOTE_GID: 1881090590,             // 플로팅코멘트 — 날짜 · comments
     /* 제품군 정의 탭 (이름 · 제품라인 · 구분). 없으면 아래 기본값을 씁니다.
-       기획전은 시트1의 promo 열에서 자동으로 읽으므로 여기 적을 필요가 없습니다. */
+       기획전은 일일매출정보 탭의 promo 열에서 자동으로 읽으므로 여기 적을 필요가 없습니다. */
     PROMO_RANGE: "'promotion'!A1:C",
     제품군_기본: [
       { 이름: '캄 앤 밸런스 오일', 제품라인: 'OIL', 구분: '진행 중' },
@@ -712,7 +714,7 @@
     RECENT_DAYS: 30,
 
     /* 프로모션 리뷰 — 프로모션 정보와 발신 데이터를 적어 두는 탭입니다.
-       아래 주문 원장과 같은 파일('자사몰주문RAWDATA') 안에 있어, 이 파일 하나만
+       위 원본 시트와 같은 파일('DAILYSALEASRAWDATA') 안에 있어, 이 파일 하나만
        열람 권한이 있으면 리뷰가 다 보입니다.
        탭은 이름 대신 gid 로 찾으므로 탭 이름을 바꾸셔도 그대로 동작합니다. */
     REVIEW_SHEET_ID: '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
@@ -724,7 +726,7 @@
        보여줄 때만, 상세를 이 건수까지로 끊습니다. */
     리뷰_상세_최대: 5,
 
-    /* 프로모션 리뷰의 매출·고객 데이터 — '자사몰주문RAWDATA'의 요약 탭입니다.
+    /* 프로모션 리뷰의 매출·고객 데이터 — 'DAILYSALEASRAWDATA'의 요약 탭입니다.
        월마감 후 붙여넣는 시트라 취소·환불이 반영된 값입니다. 자사몰 전용입니다.
        원장(약 77,000행)을 그대로 읽지 않고 요약만 읽어, 고객 연락처가 브라우저로
        내려가지 않게 하고 로딩도 가볍게 유지합니다.
@@ -893,8 +895,12 @@
     if (s === 401) return '로그인 세션이 만료되었습니다. 페이지를 새로고침해 다시 로그인해 주세요.';
     if (s === 403) return '이 계정에는 시트 열람 권한이 없습니다. 시트 소유자에게 뷰어 권한을 요청하세요.';
     if (s === 404) return '시트를 찾을 수 없습니다. 파일 상단 CONFIG.SHEET_ID가 맞는지 확인해 주세요.';
+    if (/gid .* 에 해당하는 탭이 없습니다/.test(m)) {
+      return '그 gid 의 탭이 파일에 없습니다. 탭을 누르고 주소 끝 #gid=… 를 확인해 ' +
+             'CONFIG 의 DATA_GID · MEMO_GID · NOTE_GID 를 맞춰 주세요.';
+    }
     if (s === 400 && /range|parse/i.test(m)) {
-      return '탭 이름이나 범위가 맞지 않습니다. CONFIG.DATA_RANGE의 탭 이름이 시트와 같은지 확인해 주세요.';
+      return '탭 이름이나 범위가 맞지 않습니다. CONFIG 의 gid 가 가리키는 탭이 맞는지 확인해 주세요.';
     }
     if (s === 429) return '잠시 요청이 몰렸습니다. 1분 뒤 "데이터 새로고침"을 눌러 주세요.';
     return '잠시 후 다시 시도해 주세요. 계속되면 위 메시지를 그대로 공유해 주세요.';
@@ -938,6 +944,12 @@
   /** 탭 이름을 A1 표기의 범위로 감쌉니다 (이름 안의 작은따옴표는 두 번 적습니다) */
   function quoteTab(name, span) {
     return "'" + String(name).replace(/'/g, "''") + "'!" + span;
+  }
+  /** gid 로 찾은 탭에서 값을 읽습니다 */
+  function valuesByGid(sheetId, gid, span) {
+    return tabNameByGid(sheetId, gid).then(function (title) {
+      return sheetValuesOf(sheetId, quoteTab(title, span));
+    });
   }
 
   /* ═══════════════════════════════════════════════════════
@@ -1010,24 +1022,17 @@
     return '열 인식: ' + parts.join(' · ') + ' — 시트 첫 행의 이름으로 찾습니다.';
   }
 
-  /** 후보 범위를 차례로 시도해 첫 성공을 돌려줍니다 (탭 이름 표기 차이 대응) */
-  function firstAvailable(ranges) {
-    var i = 0;
-    function attempt() {
-      if (i >= ranges.length) return Promise.resolve([]);
-      return sheetValues(ranges[i++]).catch(attempt);
-    }
-    return attempt();
-  }
+  /** 없어도 화면이 도는 탭 — 못 읽으면 빈 값으로 넘깁니다 */
+  function 없으면빈값(p) { return p.catch(function () { return []; }); }
 
   function loadAll() {
     showLoading(true);
     clearErr();
     Promise.all([
-      sheetValues(CONFIG.DATA_RANGE),
-      sheetValues(CONFIG.MEMO_RANGE).catch(function () { return []; }),
-      firstAvailable(CONFIG.NOTE_RANGES),
-      sheetValues(CONFIG.PROMO_RANGE).catch(function () { return []; })
+      valuesByGid(CONFIG.SHEET_ID, CONFIG.DATA_GID, 'A1:Z'),
+      없으면빈값(valuesByGid(CONFIG.SHEET_ID, CONFIG.MEMO_GID, 'A1:Z')),
+      없으면빈값(valuesByGid(CONFIG.SHEET_ID, CONFIG.NOTE_GID, 'A1:B')),
+      없으면빈값(sheetValues(CONFIG.PROMO_RANGE))
     ]).then(function (res) {
       DATA = parseRows(res[0], res[1], res[2], res[3]);
       var now = new Date();
@@ -1166,12 +1171,12 @@
     return out;
   }
 
-  /** memo 탭 → [{d, ch, code, text}] */
+  /** memo 탭 → [{d, ch, line, code, text}] */
   function parseMemos(vals) {
     if (!vals || !vals.length) return [];
     var C;
     try { C = mapColumns(vals[0], ['date']); } catch (e) { return []; }
-    var chI = C.ch, codeI = C.code, txtI = -1;
+    var chI = C.ch, lineI = C.line, codeI = C.code, txtI = -1;
     var head = vals[0];
     for (var c = 0; c < head.length; c++) {
       var nm = String(head[c] || '').replace(/\s+/g, '');
@@ -1179,7 +1184,7 @@
     }
     if (txtI < 0) txtI = head.length - 1;
 
-    /* 날짜·판매처·상품코드·내용이 모두 같은 줄은 한 번만 씁니다.
+    /* 날짜·판매처·제품라인·상품코드·내용이 모두 같은 줄은 한 번만 씁니다.
        시트에 같은 메모가 여러 줄 들어가 있어도 화면에는 하나로 보입니다. */
     var out = [], seen = {};
     for (var i = 1; i < vals.length; i++) {
@@ -1191,10 +1196,11 @@
       var m = {
         d: serialToISO(r[C.date]),
         ch: MEMO_CH_ALIAS[ch] || ch,
+        line: codeStr(lineI >= 0 ? r[lineI] : ''),
         code: codeStr(codeI >= 0 ? r[codeI] : ''),
         text: text
       };
-      var key = m.d + '' + m.ch + '' + m.code + '' + m.text;
+      var key = m.d + '' + m.ch + '' + m.line + '' + m.code + '' + m.text;
       if (seen[key]) continue;
       seen[key] = 1;
       out.push(m);
@@ -1207,19 +1213,43 @@
   function buildMemoIndex() {
     memoIdx = {};
     (DATA.memos || []).forEach(function (m) {
-      var keys = ['d:' + m.d + '|c:' + m.ch];
-      if (m.code) keys.push('d:' + m.d + '|c:' + m.ch + '|p:' + m.code);
+      var 바탕 = 'd:' + m.d + '|c:' + m.ch;
+      /* 날짜·판매처만으로 찾는 자리(판매처별 표)에는 상품을 적은 메모까지 다 걸립니다.
+         제품라인과 상품코드는 각각 자기 이름으로 한 칸씩 더 색인해 둡니다. */
+      var keys = [바탕];
+      if (m.line) keys.push(바탕 + '|l:' + m.line);
+      if (m.code) keys.push(바탕 + '|p:' + m.code);
       keys.forEach(function (k) { (memoIdx[k] = memoIdx[k] || []).push(m); });
     });
   }
-  function memoAt(d, ch, code) {
-    return memoIdx['d:' + d + '|c:' + ch + (code ? '|p:' + code : '')] || null;
+  /**
+   * 그 칸에 붙는 메모. 제품라인과 상품코드는 같은 방식으로 걸립니다 —
+   * 시트에 적힌 쪽만 따지고, 비워 둔 쪽은 무엇이든 맞는 것으로 봅니다.
+   * 둘 다 적힌 메모는 둘 다 맞아야 붙습니다.
+   */
+  function memoAt(d, ch, code, line) {
+    var 바탕 = 'd:' + d + '|c:' + ch;
+    if (!code && !line) return memoIdx[바탕] || null;
+
+    var out = [], seen = [];
+    [line ? 바탕 + '|l:' + line : null, code ? 바탕 + '|p:' + code : null]
+      .forEach(function (k) {
+        if (!k) return;
+        (memoIdx[k] || []).forEach(function (m) {
+          if (m.line && line && m.line !== line) return;
+          if (m.code && code && m.code !== code) return;
+          if (seen.indexOf(m) >= 0) return;
+          seen.push(m);
+          out.push(m);
+        });
+      });
+    return out.length ? out : null;
   }
-  /** 해당 판매처·날짜의 메모 중 상품코드가 없는 것 (m2 날짜 헤더용) */
+  /** 해당 판매처·날짜의 메모 중 제품라인·상품코드가 모두 없는 것 (m2 날짜 헤더용) */
   function memoDateOnly(d, ch) {
     var all = memoIdx['d:' + d + '|c:' + ch];
     if (!all) return null;
-    var only = all.filter(function (m) { return !m.code; });
+    var only = all.filter(function (m) { return !m.code && !m.line; });
     return only.length ? only : null;
   }
 
@@ -3648,10 +3678,11 @@
       var row = [p[0], p[1], p[2], p[3] || '', pavg, psum];
       seq.forEach(function (k) {
         var v = A.pV[pi][k], dd = A.win[k];
-        var cm = chForMemo ? memoAt(dd, chForMemo, p[1]) : null;
+        var cm = chForMemo ? memoAt(dd, chForMemo, p[1], p[0]) : null;
         body += '<td class="num' + al + (v ? '' : ' zero') + (cm ? ' hasmemo' : '') + '"' +
                 (cm ? ' data-md="' + dd + '" data-mc="' + esc(chForMemo) + '" data-mp="' + esc(p[1]) +
-                      '" tabindex="0"' : '') + '>' + (v ? val(v) : '·') + '</td>';
+                      '" data-ml="' + esc(p[0] || '') + '" tabindex="0"' : '') +
+                '>' + (v ? val(v) : '·') + '</td>';
         row.push(v || '');
       });
       body += '</tr>';
@@ -3675,11 +3706,12 @@
 
   function openMemo(cell) {
     if (cell.dataset.rvm !== undefined) return openReviewMemo(cell);
-    var d = cell.dataset.md, ch = cell.dataset.mc, code = cell.dataset.mp || '';
-    var list = memoAt(d, ch, code) || memoAt(d, ch) || [];
+    var d = cell.dataset.md, ch = cell.dataset.mc;
+    var code = cell.dataset.mp || '', line = cell.dataset.ml || '';
+    var list = memoAt(d, ch, code, line) || memoAt(d, ch) || [];
     if (!list.length) return;
 
-    /* 같은 메모가 여러 상품코드에 걸려 있으면 판매처 표에서는 한 번만 보여줍니다 */
+    /* 같은 메모가 여러 제품라인·상품코드에 걸려 있으면 판매처 표에서는 한 번만 보여줍니다 */
     var texts = [], seenTxt = {};
     list.forEach(function (m) {
       if (seenTxt[m.text]) return;
@@ -3694,7 +3726,7 @@
     popEl = document.createElement('div');
     popEl.className = 'memopop';
     popEl.innerHTML = '<div class="mp-h">' + md(d) + ' · ' + esc(ch) +
-      (code ? ' · ' + esc(code) : '') + '</div>' +
+      (line ? ' · ' + esc(line) : '') + (code ? ' · ' + esc(code) : '') + '</div>' +
       texts.map(function (x) { return '<div class="mp-t">' + esc(x) + '</div>'; }).join('');
     document.body.appendChild(popEl);
 
