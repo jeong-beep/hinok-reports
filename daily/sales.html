@@ -2426,13 +2426,21 @@
    * 상품코드가 맞는지. 쉼표로 여러 개를 적을 수 있습니다.
    * 제품라인과 달리 부분일치를 쓰지 않습니다 — P0001 이 P00011 까지 잡으면 안 됩니다.
    */
+  /**
+   * 상품코드 끝의 v1 · v2 는 값을 올릴 때 붙이는 꼬리라 같은 상품입니다.
+   * S10000 = S10000v1 = S10000v2 — 맞추거나 묶을 때는 떼고 봅니다.
+   */
+  function 코드정리(s) {
+    return rvNorm(s).replace(/[vV]\d+$/, '');
+  }
+
   function codeHit(값, 찾을것) {
     if (!찾을것) return true;
-    var v = rvNorm(값).toUpperCase();
+    var v = 코드정리(값).toUpperCase();
     if (!v) return false;
     var list = String(찾을것).toUpperCase().split(/[,、·\/]+/);
     for (var i = 0; i < list.length; i++) {
-      var one = rvNorm(list[i]).toUpperCase();
+      var one = 코드정리(list[i]).toUpperCase();
       if (one && v === one) return true;
     }
     return false;
@@ -2566,12 +2574,14 @@
       if (정기배송인가(r) && !itemHit(r, 조건)) { 정기뺌 = true; continue; }
       var 키 = (폰기준 ? r.phone : r.cust) || '';
       if (!키) { if (r.ord) 번호없음[r.ord] = 1; continue; }
-      var 품명 = r.name || r.sku || r.line;
+      var 품명 = r.name || 코드정리(r.sku) || r.line;
       if (!품명) continue;
       if (!사람[키]) 사람[키] = { 품목: {}, 매출: 0 };
+      var 담김 = 사람[키].품목[품명];
+      if (!담김) 담김 = 사람[키].품목[품명] = { 이름: 품명, 수량: 0, 행사: false };
+      담김.수량 += (r.qty || 0);
       /* 행사품목이면 표시해 둡니다 — 조합 이름 맨 앞에 세우려고요 */
-      if (itemHit(r, 조건)) 사람[키].품목[품명] = 1;
-      else if (!사람[키].품목[품명]) 사람[키].품목[품명] = 0;
+      if (itemHit(r, 조건)) 담김.행사 = true;
       사람[키].매출 += r.amt || 0;
     }
 
@@ -2579,13 +2589,14 @@
     for (k in 사람) {
       사람수++;
       var 목록 = [];
-      for (n in 사람[k].품목) 목록.push(n);
+      for (n in 사람[k].품목) 목록.push(사람[k].품목[n]);
       /* 행사품목을 앞에, 나머지는 가나다순 — 줄마다 같은 품목이 먼저 와야 눈에 붙습니다 */
       목록.sort(function (a, b) {
-        var 차 = (사람[k].품목[b] ? 1 : 0) - (사람[k].품목[a] ? 1 : 0);
-        return 차 || a.localeCompare(b, 'ko');
+        var 차 = (b.행사 ? 1 : 0) - (a.행사 ? 1 : 0);
+        return 차 || a.이름.localeCompare(b.이름, 'ko');
       });
-      var 열쇠 = 목록.join('');
+      /* 수량까지 열쇠에 넣습니다 — 두 개 산 사람과 한 개 산 사람은 다른 조합입니다 */
+      var 열쇠 = 목록.map(function (x) { return x.이름 + '×' + x.수량; }).join('');
       if (!조합[열쇠]) 조합[열쇠] = { 품목: 목록, 고객수: 0, 매출: 0 };
       조합[열쇠].고객수++;
       조합[열쇠].매출 += 사람[k].매출;
@@ -3338,11 +3349,15 @@
 
     csv.push([]); csv.push(['[구매조합]']);
     csv.push(['조합', '고객수', '비중']);
+    /* 품목 하나를 '이름 2개' 로 적습니다 — 수량까지 같아야 같은 조합입니다 */
+    function 한품목(x) { return x.이름 + ' ' + rvPlain(rvCnt(x.수량, '개')); }
     var body = 위.map(function (g) {
-      var 이름 = g.품목.join(' & ');
+      var 이름 = g.품목.map(한품목).join(' & ');
       csv.push([이름, g.고객수, rvPlain(rvPct(rvDiv(g.고객수, 분모)))]);
       /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
-      var 보임 = g.품목.map(esc).join(' &<br>');
+      var 보임 = g.품목.map(function (x) {
+        return esc(x.이름) + ' <b>' + esc(rvPlain(rvCnt(x.수량, '개'))) + '</b>';
+      }).join(' &<br>');
       return '<tr>' + rvTd('k combo', 보임, rvMemoPick(ctx, 이름, null)) +
              '<td class="c num">' + rvCnt(g.고객수, '명') + '</td>' +
              '<td class="c num">' + rvPct(rvDiv(g.고객수, 분모)) + '</td></tr>';
@@ -3361,8 +3376,8 @@
              '한 조합으로 봅니다 — 사람은 ' + esc(C.기준) + '로 가릅니다.'];
     n.push('비중 = 그 조합 고객수 ÷ <b>행사품목 구매고객수</b>(' + rvPlain(rvCnt(분모, '명')) + ').' +
            ' 한 사람은 한 조합에만 들어가므로 비중을 다 더하면 100%가 됩니다.');
-    n.push('수량은 보지 않습니다 — 같은 상품을 두 개 샀어도 조합은 한 가지입니다. ' +
-           '조합 이름은 <b>행사품목</b>을 앞에 두고 나머지를 가나다순으로 적습니다.');
+    n.push('<b>수량까지 같아야 같은 조합입니다</b> — 오일을 두 개 산 사람과 한 개 산 사람은 ' +
+           '다른 줄로 갑니다. 조합 이름은 <b>행사품목</b>을 앞에 두고 나머지를 가나다순으로 적습니다.');
     n.push('<b>정기배송 품목은 빼고 셉니다</b> — 상품코드가 <b>R</b>로 시작하는 줄입니다. ' +
            '프로모션과 무관하게 그달에 나가는 주문이라 조합에 들어가면 함께 산 것처럼 보입니다.');
     if (C.번호없는주문) {
