@@ -2791,9 +2791,6 @@
       ['열람률', function (r) { return rvPct(rvDiv(r.열람수, r.발신모수)); }],
       ['클릭수', function (r) { return rvCnt(r.클릭수); }],
       ['클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.열람수)); }],
-      /* 문자는 열람을 잴 수 없어 클릭률이 안 나옵니다. 발신모수로 나눈 이 줄은
-         채널이 달라도 같은 분모라 카카오와 문자를 나란히 볼 수 있습니다. */
-      ['발신 대비 클릭률', function (r) { return rvPct(rvDiv(r.클릭수, r.발신모수)); }],
       ['유입고객수', function (r) { return rvCnt(r.유입); }]
     ];
 
@@ -2810,9 +2807,7 @@
     }).join('');
 
     var n = ['타겟대비 비중 = 발신모수 ÷ 타겟모수 · 열람률 = 열람수 ÷ 발신모수 · ' +
-             '클릭률 = 클릭수 ÷ <b>열람수</b>. 문자처럼 열람수를 알 수 없는 채널은 비율도 내지 않습니다.',
-             '<b>발신 대비 클릭률 = 클릭수 ÷ 발신모수</b> — 분모가 발신모수라 열람을 못 재는 ' +
-             '채널에서도 나옵니다. 카카오와 문자를 나란히 놓고 볼 때는 이 줄을 보세요.'];
+             '클릭률 = 클릭수 ÷ <b>열람수</b>. 문자처럼 열람수를 알 수 없는 채널은 비율도 내지 않습니다.'];
     if (ctx.p.발신.some(function (r) { return r.유입추정; })) {
       n.push('유입고객수 열이 없어 <b>클릭수</b>를 유입고객수로 봤습니다 — ' +
              '지금까지 리뷰에서 두 값이 늘 같았습니다.');
@@ -3170,13 +3165,6 @@
       ['카카오 발신모수', function (c) { return rvCnt(카카오(c, '발신')); }],
       ['카카오 열람률', function (c) { return rvPct(카카오율(c, '열람수', '발신모수')); }, '', true],
       ['카카오 클릭률', function (c) { return rvPct(카카오율(c, '클릭수', '열람수')); }, '', true],
-      ['발신 대비 클릭률', function (c) {
-        var a = null, b = null;
-        c.p.발신.forEach(function (r) {
-          if (r.클릭수 !== null && r.클릭수 !== undefined) a = (a || 0) + r.클릭수;
-          if (r.발신모수 !== null && r.발신모수 !== undefined) b = (b || 0) + r.발신모수;
-        });
-        return rvPct(rvDiv(a, b)); }, '', true],
       ['행사품목 구매고객수', function (c) { return rvCnt(c.구매고객, '명'); }],
       ['-유추전환율', function (c) { return rvPct(rvDiv(c.구매고객, c.유입합)); }, '', true],
       ['-신규고객비율', function (c) {
