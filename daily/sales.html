@@ -463,6 +463,11 @@
     content: ''; position: absolute; top: 2px; right: 2px;
     width: 5px; height: 5px; border-radius: 50%; background: var(--memo); }
   td.hasmemo.open, th.hasmemo.open { outline-width: 3px; }
+  /* 코드가 만든 메모 — 특이사항이 아니라 참고 값이라 테두리 없이 점선 밑줄만 둡니다 */
+  td.hasmemo.auto, th.hasmemo.auto { outline: 0;
+    text-decoration: underline dotted var(--ink-muted); text-underline-offset: 4px; }
+  td.hasmemo.auto::after, th.hasmemo.auto::after { display: none; }
+  td.hasmemo.auto.open, th.hasmemo.auto.open { outline: 2px solid var(--memo); }
 
   .memopop { position: fixed; z-index: 200; max-width: min(340px, 88vw);
              background: var(--surface); color: var(--ink);
@@ -2121,19 +2126,25 @@
     return out.length ? out : null;
   }
 
-  /** 메모가 붙은 칸을 만듭니다. 없으면 평범한 칸입니다. */
+  /**
+   * 메모가 붙은 칸을 만듭니다. 없으면 평범한 칸입니다.
+   * 주황 테두리는 memo 시트에 사람이 적은 특이사항에만 두릅니다 —
+   * 코드가 만든 메모(증감·정기배송·추가구매)까지 두르면 표가 온통 주황이 되고,
+   * 정작 봐야 할 특이사항이 묻힙니다. 그런 칸은 점선 밑줄로만 표시합니다.
+   */
   function rvTd(cls, inner, memos, span) {
     var 폭 = (span && span > 1) ? ' colspan="' + span + '"' : '';
     if (!memos || !memos.length) {
       return '<td class="' + cls + '"' + 폭 + '>' + inner + '</td>';
     }
+    var 자동만 = memos.every(function (m) { return m.자동; });
     var ids = memos.map(function (m) {
       var i = rvMemoBag.indexOf(m);
       if (i < 0) { i = rvMemoBag.length; rvMemoBag.push(m); }
       return i;
     });
-    return '<td class="' + cls + ' hasmemo"' + 폭 + ' tabindex="0" data-rvm="' +
-           ids.join(',') + '">' + inner + '</td>';
+    return '<td class="' + cls + ' hasmemo' + (자동만 ? ' auto' : '') + '"' + 폭 +
+           ' tabindex="0" data-rvm="' + ids.join(',') + '">' + inner + '</td>';
   }
 
   /** 지금 고른 promotion 에 해당하는 리뷰인지 */
@@ -3382,8 +3393,9 @@
     n.push(ctx.마감
       ? '매출·수량은 <b>자사몰주문RAWDATA</b>에서 냅니다 — 월마감 후 시트라 취소·환불이 반영된 값입니다.'
       : '매출·수량은 <b>일일매출RAWDATA</b>에서 냅니다 — 매일 모으는 시트라 취소·환불은 아직 빠져 있습니다.');
-    n.push('<b>직전 7일·직전 30일·작년 동기간 대비 증감</b>은 주황 테두리를 눌러 보시면 뜹니다. ' +
-           'CSV 에도 그대로 들어 있습니다.');
+    n.push('<b>직전 7일·직전 30일·작년 동기간 대비 증감</b>은 점선 밑줄이 그어진 값을 ' +
+           '누르시면 뜹니다. CSV 에도 그대로 들어 있습니다. ' +
+           '주황 테두리는 memo 시트에 적으신 특이사항에만 두릅니다.');
     n.push('행사품목+추가구매품목매출의 메모에 적힌 <b>추가구매 품목 매출</b>은 ' +
            '행사품목이 든 주문에 같이 담긴 다른 상품의 금액입니다.');
     if (ctx.주문 && ctx.주문.정기배송셀수있음) {
