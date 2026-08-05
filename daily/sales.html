@@ -224,7 +224,8 @@
 
   /* ── 프로모션 리뷰 ──────────────────────────────────────── */
   /* 개요 : 한 줄에 한 항목. 이름은 오른쪽에 붙이고 값이 그 옆에 섭니다. */
-  .facts > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px;
+  .facts > div { display: grid; grid-template-columns: 150px var(--vcols, minmax(0, 1fr));
+                 gap: 16px;
                  align-items: baseline; padding: 8px 0;
                  border-bottom: 1px solid var(--hairline); }
   .facts > div:last-child { border-bottom: 0; }
@@ -285,17 +286,30 @@
   /* 병합된 칸은 가운데로 — 두 열에 걸쳐 있어 왼쪽에 붙으면 어디 것인지 헷갈립니다 */
   #rvSend td[colspan] { text-align: center; }
   /* 구매조합 — 조합 이름은 여러 줄이라 왼쪽에 붙이고 줄바꿈을 허용합니다 */
-  #rvCombo td.combo, #rvCombo th.k { text-align: left; white-space: normal; width: auto;
-                                     line-height: 1.55; }
-  #rvCombo td.c, #rvCombo th.c { text-align: center; width: 110px; }
-  #rvVs td.g, #rvVs th.g { background: var(--surface-2); font-weight: 620; }
-  #rvVs td.k { width: 190px; }
-  #rvVs td.c, #rvVs td.num { min-width: 150px; }
-  /* 비교표는 프로모션끼리 눈으로 맞대 보는 표라 값을 가운데로 세웁니다 */
-  #rvVs td.c, #rvVs td.num, #rvVs th.c { text-align: center; }
-  #rvVs .src { display: inline-block; margin-left: 5px; font-size: 10px; font-weight: 600;
-               color: var(--ink-muted); border: 1px solid var(--hairline);
-               border-radius: 999px; padding: 0 5px; vertical-align: middle; }
+  table.rv.cmb td.combo, table.rv.cmb th.k { text-align: left; white-space: normal;
+                                             width: auto; line-height: 1.55; }
+  table.rv.cmb td.c, table.rv.cmb th.c { text-align: center; width: 110px; }
+  /* 프로모션 비교 — 카드마다 열이 하나씩 붙습니다. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
+  table.rv td.g, table.rv th.g, .facts .v.g { background: var(--surface-2); }
+  table.rv thead th.c { text-align: center; padding: 7px 10px; }
+  table.rv thead th .when { display: block; margin-top: 2px; font-size: 10px;
+                            font-weight: 500; color: var(--ink-muted); white-space: nowrap; }
+  table.rv thead th .pill { padding: 0 6px; font-size: 10px; }
+  /* 프로모션이 갈리는 자리에 세로선 — 남의 발신과 붙어 보이면 안 됩니다 */
+  table.rv td.grp { border-left: 2px solid var(--border); }
+  table.rv thead th.c + th.c { border-left: 2px solid var(--border); }
+  /* 비교가 붙으면 값 칸을 가운데로 세웁니다 — 두 프로모션을 눈으로 맞대 보는 표라서요 */
+  table.rv td.g ~ td, table.rv td.g { text-align: center; }
+  .rv-src .cmp-tag { border: 1px solid var(--hairline); border-radius: 999px;
+                     padding: 1px 9px; font-size: 11px; }
+  /* 개요 : 비교가 붙으면 맨 위에 어느 칸이 누구 것인지 적습니다 */
+  .facts .cmphead .v { font-size: 11.5px; font-weight: 650; color: var(--ink-2); }
+  .facts .v.g { border-radius: 4px; padding: 0 6px; margin: -2px 0; }
+  /* 구매조합 : 조합 이름이 프로모션마다 달라 표를 위아래로 둡니다 */
+  .combo-one + .combo-one { border-top: 1px solid var(--hairline); }
+  .combo-h { padding: 9px 16px 7px; font-size: 12px; font-weight: 650; color: var(--ink-2);
+             background: var(--surface-2); }
+  .combo-one .rv-empty { margin: 14px 16px; }
   /* 프로모션 전체에 달린 메모 — 기준 띠 바로 아래 */
   .rv-memo { background: color-mix(in srgb, var(--memo) 7%, transparent);
              border: 1px solid color-mix(in srgb, var(--memo) 35%, transparent);
@@ -522,13 +536,13 @@
     [data-csv] { display: none; }
     html.is-admin [data-csv] { display: inline-block; }
 
-    /* 프로모션 비교는 좁은 화면에서도 봅니다 — 열 폭을 줄이고 가로로 흘리되,
-       항목 이름 칸은 왼쪽에 붙여 두어야 옆으로 밀어도 무슨 줄인지 보입니다. */
-    #rvVs td.c, #rvVs td.num { min-width: 118px; }
-    #rvVs td.k { position: sticky; left: 0; z-index: 2; background: var(--surface);
-                 max-width: 96px; white-space: normal; word-break: keep-all; }
-    #rvVs th.k { position: sticky; left: 0; z-index: 3; background: var(--surface-2); }
-    #rvVs .src { margin-left: 0; margin-top: 2px; }
+    /* 비교 열이 붙으면 표가 넓어집니다 — 가로로 흘리되 항목 이름 칸은 왼쪽에 붙여
+       두어야 옆으로 밀어도 무슨 줄인지 보입니다. */
+    table.rv td.k { position: sticky; left: 0; z-index: 2; background: var(--surface);
+                    max-width: 116px; white-space: normal; word-break: keep-all; }
+    table.rv th.k { position: sticky; left: 0; z-index: 3; background: var(--surface-2); }
+    table.rv tr.head td.k, table.rv tr.chline td.k { background: var(--surface-2); }
+    table.rv thead th.c { min-width: 118px; }
     .noteflo { font-size: 12.5px; padding: 9px 12px; margin-bottom: 10px; }
     .card > .head .headavg { font-size: 11px; }
     /* 좁은 화면에서는 판매처 표도 가로로 스크롤합니다 (행 고정은 이때 동작하지 않습니다) */
@@ -550,7 +564,7 @@
 
     /* 탭과 리뷰 : 좁은 화면에서는 항목 이름 칸을 줄이고 표는 가로로 흘립니다 */
     .tabs button { font-size: 12.5px; padding: 8px 10px; }
-    .facts > div { grid-template-columns: 104px minmax(0, 1fr); gap: 10px; }
+    .facts > div { grid-template-columns: 104px var(--vcols, minmax(0, 1fr)); gap: 10px; }
     .facts .k { font-size: 11px; }
     .facts > div.title .v { font-size: 15px; }
     table.rv { width: max-content; }
@@ -2779,6 +2793,11 @@
                   D.max.replace(/-/g, '.') + '</b></span>';
     else if (ordState.daily === 'off') out += '<span>주문 원장 미연결</span>';
     else if (ordState.daily === 'error') out += '<span>주문 원장을 읽지 못했습니다</span>';
+    if (ctx.비교 && ctx.비교.length) {
+      out += '<span class="cmp-tag">비교 ' + esc(ctx.비교.map(function (x) {
+        return x.이름;
+      }).join(' · ')) + '</span>';
+    }
     out += '</div>';
 
     var w = [];
@@ -2809,6 +2828,20 @@
              (ctx.마감 && D && D.max < DATA.maxDate
                ? ' — 자사몰주문RAWDATA에 최신분을 붙여넣으시면 나머지가 채워집니다.'
                : ' — 아직 지나지 않은 기간입니다.'));
+    }
+    ctx.비교합침.forEach(function (x) {
+      /* 선런칭을 따로 적어 전략시작일이 갈린 경우 — 조용히 합치지 않고 밝힙니다 */
+      w.push('비교 대상 <b>' + esc(x.이름) + '</b> 은(는) 리뷰 시트에 전략시작일이 다른 묶음 ' +
+             x.묶음 + '건으로 나뉘어 있어 하나로 합쳐 봤습니다 — 기간은 ' +
+             x.ctx.from.replace(/-/g, '.') + '~' + x.ctx.to.replace(/-/g, '.') + ', 발신 ' +
+             x.ctx.p.발신.length + '건을 모두 더했습니다.' +
+             (x.ctx.주문 ? '' : ' 매출·고객수는 리뷰 시트 입력값이라 <b>최근 묶음 값만</b> ' +
+              '들어갑니다 — 주문 원장이 이 기간을 덮으면 전체 기간으로 다시 셉니다.'));
+    });
+    if (ctx.비교못찾음.length) {
+      w.push('비교대상 <b>' + esc(ctx.비교못찾음.join(' · ')) + '</b> 은(는) 리뷰 시트에서 ' +
+             '찾지 못해 뺐습니다 — 이름이 다르거나, 그 이름이 지금 보고 있는 프로모션 ' +
+             '하나뿐입니다. 비교하려면 그 프로모션도 리뷰 시트에 한 줄 있어야 합니다.');
     }
     if (ctx.마감 && !ctx.주문) {
       if (ordState.line === 'loading') {
@@ -2841,7 +2874,7 @@
   }
 
   /** 프로모션 하나의 계산 결과를 모읍니다 — 그리는 쪽은 이 값만 봅니다 */
-  function rvContext(p) {
+  function rvContext(p, opt) {
     var i = p.정보;
     var from = p.시작, to = p.종료 || p.시작;
 
@@ -2923,7 +2956,84 @@
       }
     }
 
+    /* 비교대상이 적혀 있으면 그 프로모션도 계산해 둡니다 — 카드마다 열이 붙습니다 */
+    ctx.비교 = []; ctx.비교못찾음 = []; ctx.비교합침 = [];
+    if (!(opt && opt.비교없이)) rvFillCompare(ctx);
+
     return ctx;
+  }
+
+  /**
+   * 리뷰 시트 '비교대상' 열에 적힌 프로모션을 찾아 ctx.비교 에 담습니다.
+   * 비교용 ctx 는 자기 비교대상을 다시 찾지 않습니다 — 두 프로모션이 서로를
+   * 가리켜 놓으면 끝없이 돌기 때문입니다.
+   */
+  function rvFillCompare(ctx) {
+    var 적힌것 = String(ctx.p.정보.비교대상 || '')
+      .split(/[,、·\/\n]+/)
+      .map(function (x) { return x.replace(/^\s+|\s+$/g, ''); })
+      .filter(function (x) { return x; });
+    if (!적힌것.length) return;
+    적힌것.forEach(function (nm) {
+      var p = rvFindPromo(nm, ctx.p.키);
+      if (!p) { ctx.비교못찾음.push(nm); return; }
+      var c = rvContext(p, { 비교없이: true });
+      ctx.비교.push({ 이름: p.이름, ctx: c });
+      if (p.묶음 > 1) ctx.비교합침.push({ 이름: p.이름, 묶음: p.묶음, ctx: c });
+    });
+  }
+
+  /** 카드마다 이 순서로 열이 섭니다 — 맨 앞이 이 프로모션 */
+  function rv열(ctx) {
+    return [{ 이름: ctx.p.이름, ctx: ctx, 이번: true }].concat(ctx.비교);
+  }
+
+  /** 프로모션 이름 칸 — 아래에 기간과 마감/잠정 배지를 답니다 */
+  function rv이름칸(x, i, 폭) {
+    var c = x.ctx;
+    return '<th class="c' + (i ? '' : ' g') + '"' + (폭 > 1 ? ' colspan="' + 폭 + '"' : '') +
+      '>' + esc(x.이름) + '<small class="when">' +
+      c.from.replace(/-/g, '.') + '~' + c.to.slice(5).replace('-', '.') + ' · ' +
+      calDays(c.from, c.to) + '일 ' +
+      (c.마감 ? '<span class="pill final">마감</span>' : '<span class="pill prov">잠정</span>') +
+      '</small></th>';
+  }
+
+  /** 비교 열이 있을 때만 머리줄을 답니다 — 없으면 지금 모습 그대로입니다 */
+  function rv머리(ctx, 폭내기) {
+    if (!ctx.비교.length) return '';
+    return '<thead><tr><th class="k"></th>' + rv열(ctx).map(function (x, i) {
+      return rv이름칸(x, i, 폭내기 ? 폭내기(x) : 1);
+    }).join('') + '</tr></thead>';
+  }
+
+  /**
+   * 항목 × 값 표의 한 줄. x 는 { k, f, sub, 메모 } 이고 f 는 ctx 하나에서 값을 냅니다.
+   * 비교 열이 있으면 값 칸이 그만큼 늘어납니다.
+   */
+  function rv줄(ctx, x, csv) {
+    var 열 = rv열(ctx);
+    var 값 = 열.map(function (col) { return x.f(col.ctx); });
+    csv.push([x.k].concat(값.map(rvPlain)));
+    return '<tr' + (x.sub ? ' class="sub"' : '') + '><td class="k">' + esc(x.k) + '</td>' +
+      값.map(function (v, i) {
+        var 메모 = x.메모 ? x.메모(열[i].ctx) : null;
+        return rvTd('v num' + (열.length > 1 && !i ? ' g' : ''), v,
+                    메모합(rvMemoPick(열[i].ctx, x.k, null), 메모));
+      }).join('') + '</tr>';
+  }
+
+  /** 표 여러 줄 — 머리(head)만 적힌 줄은 구분 띠로 그립니다 */
+  function rv표(ctx, 줄들, csv) {
+    var 칸수 = rv열(ctx).length;
+    return 줄들.map(function (x) {
+      if (x.head) {
+        csv.push([x.head]);
+        return '<tr class="head"><td class="k">' + esc(x.head) + '</td>' +
+               '<td colspan="' + 칸수 + '"></td></tr>';
+      }
+      return rv줄(ctx, x, csv);
+    }).join('');
   }
 
   /** 프로모션 하나의 상세 — 기준 띠 + 카드 여섯 장 */
@@ -2935,7 +3045,7 @@
     return rvSourceStrip(ctx) +
            rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
            rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvVisitCard(ctx, csv) +
-           rvAovCard(ctx, csv) + rvComboCard(ctx, csv) + rvVsCard(ctx, csv);
+           rvAovCard(ctx, csv) + rvComboCard(ctx, csv);
   }
 
   /** 프로모션 하나만 그립니다 — 테스트에서 씁니다 */
@@ -2948,38 +3058,59 @@
 
   /** 개요 — 한 줄에 한 항목씩 세로로 나열합니다 */
   function rvOverviewCard(ctx, csv) {
-    var i = ctx.p.정보;
     /* 발신타겟은 발신마다 다를 수 있으므로(구매고객·비구매고객) 모아서 보여줍니다 */
-    var 타겟 = [], 본것 = {};
-    ctx.p.발신.forEach(function (r) {
-      if (r.발신타겟 && !본것[r.발신타겟]) { 본것[r.발신타겟] = 1; 타겟.push(r.발신타겟); }
-    });
 
+    /* 값은 열마다 다시 냅니다 — 비교 프로모션이 옆에 설 수 있어서요 */
+    function 타겟모음(c) {
+      var 본것 = {}, out = [];
+      c.p.발신.forEach(function (r) {
+        if (r.발신타겟 && !본것[r.발신타겟]) { 본것[r.발신타겟] = 1; out.push(r.발신타겟); }
+      });
+      return out.join(' · ');
+    }
     var t = [
-      ['프로모션명', ctx.p.이름, 'title'],
-      ['전략시작일', rvDay(ctx.from), ''],
-      ['전략종료일', rvDay(ctx.to), ''],
-      ['행사기간', i.기간 || (calDays(ctx.from, ctx.to) + '일'), ''],
-      ['제품라인', i.라인 + (i.라인추정 ? ' (이름에서 추정)' : ''), ''],
-      ['제품', i.제품, ''],
-      ['발신타겟', 타겟.join(' · '), ''],
-      ['구매채널', i.구매채널, ''],
-      ['전략타입', i.타입, ''],
-      ['전략타입(세부)', i.타입세부, ''],
-      ['전략', i.전략, ''],
-      ['비회원구매가능여부', i.비회원, ''],
-      ['적립금 중복사용', i.적립금, '']
+      ['프로모션명', function (c) { return c.p.이름; }, 'title'],
+      ['전략시작일', function (c) { return rvDay(c.from); }, ''],
+      ['전략종료일', function (c) { return rvDay(c.to); }, ''],
+      ['행사기간', function (c) {
+        /* 선런칭+본런칭을 합친 프로모션은 시트에 적힌 기간이 한쪽 것뿐이라 날짜로 냅니다 */
+        return (c.p.묶음 > 1 || !c.p.정보.기간)
+          ? (calDays(c.from, c.to) + '일') : c.p.정보.기간; }, ''],
+      ['제품라인', function (c) {
+        return c.p.정보.라인 + (c.p.정보.라인추정 ? ' (이름에서 추정)' : ''); }, ''],
+      ['제품', function (c) { return c.p.정보.제품; }, ''],
+      ['발신타겟', 타겟모음, ''],
+      ['구매채널', function (c) { return c.p.정보.구매채널; }, ''],
+      ['전략타입', function (c) { return c.p.정보.타입; }, ''],
+      ['전략타입(세부)', function (c) { return c.p.정보.타입세부; }, ''],
+      ['전략', function (c) { return c.p.정보.전략; }, ''],
+      ['비회원구매가능여부', function (c) { return c.p.정보.비회원; }, ''],
+      ['적립금 중복사용', function (c) { return c.p.정보.적립금; }, '']
     ];
+    var 열 = rv열(ctx);
     csv.push(['[개요]']);
+    if (열.length > 1) csv.push([''].concat(열.map(function (x) { return x.이름; })));
     var rows = t.map(function (x) {
-      csv.push([x[0], x[1] || '']);
+      var 값 = 열.map(function (col) { return x[1](col.ctx) || ''; });
+      csv.push([x[0]].concat(값));
       return '<div' + (x[2] ? ' class="' + x[2] + '"' : '') +
              '><span class="k">' + esc(x[0]) + '</span>' +
-             '<span class="v' + (x[1] ? '' : ' none') + '">' +
-             esc(x[1] || '미입력') + '</span></div>';
+             값.map(function (v, i) {
+               return '<span class="v' + (v ? '' : ' none') +
+                      (열.length > 1 && !i ? ' g' : '') + '">' +
+                      esc(v || '미입력') + '</span>';
+             }).join('') + '</div>';
     }).join('');
+    /* 비교가 붙으면 어느 칸이 누구 것인지 맨 위에 한 줄로 적습니다 */
+    var 이름줄 = 열.length > 1
+      ? '<div class="cmphead"><span class="k"></span>' + 열.map(function (x, i) {
+          return '<span class="v' + (i ? '' : ' g') + '">' + esc(x.이름) + '</span>';
+        }).join('') + '</div>'
+      : '';
+    var 폭 = 열.length > 1
+      ? ' style="--vcols: repeat(' + 열.length + ', minmax(0, 1fr))"' : '';
     return rvCard('개요', '',
-      '<div class="body"><div class="facts">' + rows + '</div></div>');
+      '<div class="body"><div class="facts"' + 폭 + '>' + 이름줄 + rows + '</div></div>');
   }
 
   /**
@@ -2988,10 +3119,11 @@
    * 발신일 → 대상 → 채널 순으로 세웁니다.
    */
   function rvSendCard(ctx, csv) {
-    /* 열 순서는 리뷰 시트에 적힌 줄 순서 그대로입니다 — 따로 정렬하지 않습니다 */
-    var 발신 = ctx.p.발신;
-    var 카카오칸 = 발신.map(function (r) {
-      return String(r.발신채널 || '').indexOf('카카오') >= 0 ? ' kko' : '';
+    /* 열 순서는 리뷰 시트에 적힌 줄 순서 그대로입니다 — 따로 정렬하지 않습니다.
+       비교 프로모션이 있으면 그 발신들이 오른쪽에 이어 섭니다. 프로모션 경계를
+       넘어 칸이 병합되면 남의 발신과 한 칸이 되므로, 병합은 묶음 안에서만 합니다. */
+    var 묶음들 = rv열(ctx).map(function (col) {
+      return { 이름: col.이름, ctx: col.ctx, 발신: col.ctx.p.발신, 이번: !!col.이번 };
     });
 
     /* [이름, 발신 하나에서 값을 내는 함수, 글자줄인지] */
@@ -3012,45 +3144,58 @@
     ];
 
     csv.push([]); csv.push(['[발신 성과]']);
+    if (묶음들.length > 1) {
+      var 이름칸 = [''];
+      묶음들.forEach(function (g) {
+        g.발신.forEach(function () { 이름칸.push(g.이름); });
+      });
+      csv.push(이름칸);
+    }
+
     var body = 지표.map(function (x) {
       var 글자 = x[2] === 'chline' || x[2] === 'txt';
-      var 값 = 발신.map(x[1]);
-      csv.push([x[0]].concat(값.map(rvPlain)));
-
-      /* 옆 칸과 값이 같으면 하나로 붙입니다 — 떨어져 있는 같은 값은 안 붙습니다.
-         카카오 색은 발신채널 줄에만 칠하므로, 그 줄만 색까지 같아야 붙입니다. */
       var 색줄 = x[0] === '발신채널';
-      var 묶음 = [];
-      값.forEach(function (v, i) {
-        var 앞 = 묶음[묶음.length - 1];
-        if (앞 && 앞.v === v && (!색줄 || 카카오칸[i] === 카카오칸[앞.첫])) {
-          앞.끝 = i; 앞.n++;
-        } else {
-          묶음.push({ v: v, 첫: i, 끝: i, n: 1 });
-        }
-      });
+      var 줄값 = [x[0]], 칸들 = [], 위로 = [];
 
-      /* 병합된 칸에는 어느 발신인지 표시할 자리가 없어 메모를 못 답니다.
-         그런 메모는 항목 이름 칸으로 올려 붙입니다. */
-      var 위로 = [], 칸메모 = 묶음.map(function (g) {
-        var ms = [];
-        for (var i = g.첫; i <= g.끝; i++) {
-          var m = rvMemoPick(ctx, x[0], 발신[i]);
-          if (m) ms = ms.concat(m);
-        }
-        if (!ms.length) return null;
-        if (g.n > 1) { 위로 = 위로.concat(ms); return null; }
-        return ms;
+      묶음들.forEach(function (g, gi) {
+        var 값 = g.발신.map(x[1]);
+        줄값 = 줄값.concat(값.map(rvPlain));
+        var 카카오칸 = g.발신.map(function (r) {
+          return String(r.발신채널 || '').indexOf('카카오') >= 0 ? ' kko' : '';
+        });
+        /* 옆 칸과 값이 같으면 하나로 붙입니다 — 떨어져 있는 같은 값은 안 붙습니다.
+           카카오 색은 발신채널 줄에만 칠하므로, 그 줄만 색까지 같아야 붙습니다. */
+        var 묶임 = [];
+        값.forEach(function (v, i) {
+          var 앞 = 묶임[묶임.length - 1];
+          if (앞 && 앞.v === v && (!색줄 || 카카오칸[i] === 카카오칸[앞.첫])) {
+            앞.끝 = i; 앞.n++;
+          } else {
+            묶임.push({ v: v, 첫: i, 끝: i, n: 1 });
+          }
+        });
+        묶임.forEach(function (b, bi) {
+          /* 병합된 칸에는 어느 발신인지 표시할 자리가 없어 메모를 못 답니다.
+             그런 메모는 항목 이름 칸으로 올려 붙입니다. */
+          var ms = [];
+          for (var i = b.첫; i <= b.끝; i++) {
+            var m = rvMemoPick(g.ctx, x[0], g.발신[i]);
+            if (m) ms = ms.concat(m);
+          }
+          if (ms.length && b.n > 1) { 위로 = 위로.concat(ms); ms = []; }
+          칸들.push(rvTd((글자 ? 's' : 's num') + (색줄 ? 카카오칸[b.첫] : '') +
+                         (g.이번 && 묶음들.length > 1 ? ' g' : '') +
+                         (bi === 0 && gi > 0 ? ' grp' : ''),
+                         b.v, ms.length ? ms : null, b.n));
+        });
       });
+      csv.push(줄값);
 
       var 줄클래스 = x[2] === 'chline' ? ' class="chline"' : (x[2] === 'em' ? ' class="em"' : '');
+      /* 항목 이름 칸의 메모는 이 프로모션 것만 답니다 — 비교 쪽 줄 메모는 그 칸에 붙습니다 */
       return '<tr' + 줄클래스 + '>' +
-        rvTd('k', esc(x[0]),
-             메모합(rvMemoPick(ctx, x[0], null), 위로.length ? 위로 : null)) +
-        묶음.map(function (g, gi) {
-          return rvTd((글자 ? 's' : 's num') + (색줄 ? 카카오칸[g.첫] : ''),
-                      g.v, 칸메모[gi], g.n);
-        }).join('') + '</tr>';
+        rvTd('k', esc(x[0]), 메모합(rvMemoPick(ctx, x[0], null), 위로.length ? 위로 : null)) +
+        칸들.join('') + '</tr>';
     }).join('');
 
     var n = ['타겟대비 비중 = 발신모수 ÷ 타겟모수 · 열람률 = 열람수 ÷ 발신모수 · ' +
@@ -3060,8 +3205,9 @@
              '지금까지 리뷰에서 두 값이 늘 같았습니다.');
     }
     return rvCard('발신 성과', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvSend"><tbody>' +
-      body + '</tbody></table></div></div>', n.join('<br>'));
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvSend">' +
+      rv머리(ctx, function (x) { return x.ctx.p.발신.length; }) +
+      '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   function rvBuyerCard(ctx, csv) {
@@ -3070,29 +3216,40 @@
     var 신규 = 주문계산 ? ctx.신규고객 : i.신규고객;
     var 기존 = 주문계산 ? ctx.기존고객 : i.기존고객;
 
+    /* 값은 열마다 다시 냅니다 — 비교 프로모션 열이 붙을 수 있어서요 */
+    function 산사람(c) { return c.구매고객; }
+    function 신규수(c) { return c.주문 ? c.신규고객 : c.p.정보.신규고객; }
+    function 기존수(c) { return c.주문 ? c.기존고객 : c.p.정보.기존고객; }
+
     var t = [];
     /* 행사품목을 산 사람만 센 값이 먼저입니다 — 프로모션 성과는 이 사람들이 냈습니다.
        매장 전체 손님은 그 아래에 참여율과 함께 둡니다. */
-    t.push([주문계산 ? '행사품목 구매고객수' : '구매고객수', rvCnt(구매, '명'), false]);
-    t.push(['-유추전환율', rvPct(rvDiv(구매, ctx.유입합)), true]);
-    t.push(['-신규고객수', rvCnt(신규, '명'), true]);
-    t.push(['-신규고객비율', rvPct(rvDiv(신규, 구매)), true]);
-    t.push(['-기존고객수', rvCnt(기존, '명'), true]);
-    t.push(['-기존고객비율', rvPct(rvDiv(기존, 구매)), true]);
+    t.push({ k: 주문계산 ? '행사품목 구매고객수' : '구매고객수',
+             f: function (c) { return rvCnt(산사람(c), '명'); } });
+    t.push({ k: '-유추전환율', sub: true,
+             f: function (c) { return rvPct(rvDiv(산사람(c), c.유입합)); } });
+    t.push({ k: '-신규고객수', sub: true,
+             f: function (c) { return rvCnt(신규수(c), '명'); } });
+    t.push({ k: '-신규고객비율', sub: true,
+             f: function (c) { return rvPct(rvDiv(신규수(c), 산사람(c))); } });
+    t.push({ k: '-기존고객수', sub: true,
+             f: function (c) { return rvCnt(기존수(c), '명'); } });
+    t.push({ k: '-기존고객비율', sub: true,
+             f: function (c) { return rvPct(rvDiv(기존수(c), 산사람(c))); } });
     if (주문계산) {
-      t.push(['-주문건수', rvCnt(ctx.주문.주문수, '건'), true]);
-      t.push(['행사기간 전체 구매고객수', rvCnt(ctx.전체구매고객, '명'), false]);
-      t.push(['-행사품목 구매 비율',
-              rvPct(rvDiv(구매, ctx.전체구매고객)), true]);
-      t.push(['-행사기간 전체 주문건수', rvCnt(ctx.주문.전체주문수, '건'), true]);
+      t.push({ k: '-주문건수', sub: true,
+               f: function (c) { return rvCnt(c.주문 && c.주문.주문수, '건'); } });
+      t.push({ k: '행사기간 전체 구매고객수',
+               f: function (c) { return rvCnt(c.전체구매고객, '명'); } });
+      t.push({ k: '-행사품목 구매 비율', sub: true,
+               f: function (c) { return rvPct(rvDiv(산사람(c), c.전체구매고객)); } });
+      t.push({ k: '-행사기간 전체 주문건수', sub: true,
+               f: function (c) { return rvCnt(c.주문 && c.주문.전체주문수, '건'); } });
     }
 
     csv.push([]); csv.push(['[구매고객정보]']);
-    var body = t.map(function (x) {
-      csv.push([x[0], rvPlain(x[1])]);
-      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
-             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
-    }).join('');
+    if (ctx.비교.length) csv.push([''].concat(rv열(ctx).map(function (x) { return x.이름; })));
+    var body = rv표(ctx, t, csv);
 
     var n = ['유추전환율 = 구매고객수 ÷ 유입고객수 합계(' + rvCnt(ctx.유입합) + ').'];
     if (주문계산) {
@@ -3126,71 +3283,99 @@
     n.push('구매고객수의 직전 기간·작년 대비는 화면에 내지 않습니다.');
 
     return rvCard('구매고객정보', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
-      body + '</tbody></table></div></div>', n.join('<br>'));
+      '<div class="body flush"><div class="tablewrap"><table class="rv">' + rv머리(ctx) +
+      '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   function rvSalesCard(ctx, csv) {
-    var 행사 = ctx.행사, 품목 = ctx.품목;
-    /* 추가구매는 주문번호로 묶어야 나옵니다. 주문 원장이 있으면 계산하고,
-       없으면 리뷰 시트에 적힌 값을 씁니다. */
-    var 추가 = ctx.주문 ? ctx.주문.품목plus매출 : ctx.p.정보.추가매출;
     var 추가계산 = !!ctx.주문;
-    var 일수 = 행사 ? 행사.일수 : calDays(ctx.from, ctx.to);
-    var 추가일평균 = (추가 === null || 추가 === undefined) ? null : 추가 / 일수;
-    var 전략수량 = ctx.p.정보.전략수량;
+    var 일수 = ctx.행사 ? ctx.행사.일수 : calDays(ctx.from, ctx.to);
+
+    /* 값은 열마다 다시 냅니다 — f(c) 는 { v, a, b, c, 메모 } 를 돌려줍니다 */
+    function 추가매출(c) { return c.주문 ? c.주문.품목plus매출 : c.p.정보.추가매출; }
+    function 하루(c) { return c.행사 ? c.행사.일수 : calDays(c.from, c.to); }
 
     var t = [];
-    function 줄(k, v, a, b, c, sub, 메모) {
-      t.push({ k: k, v: v, a: a, b: b, c: c, sub: !!sub, 메모: 메모 || null });
-    }
-    function 칸(x) { return x === undefined ? rvNA('—') : x; }
+    function 줄(k, f, sub) { t.push({ k: k, f: f, sub: !!sub }); }
 
-    var 정기 = ctx.주문 && ctx.주문.정기배송셀수있음 ? ctx.주문.정기배송매출 : null;
-    줄('행사기간매출', rvWon(행사 && 행사.amt), null, null, null, false,
-       자동메모(ctx.p.이름, '행사기간매출',
-         정기 === null ? '' : '정기배송 매출: ' + rvPlain(rvWon(정기))));
+    줄('행사기간매출', function (c) {
+      var 정기 = c.주문 && c.주문.정기배송셀수있음 ? c.주문.정기배송매출 : null;
+      return { v: rvWon(c.행사 && c.행사.amt),
+               메모: 자동메모(c.p.이름, '행사기간매출',
+                 정기 === null ? '' : '정기배송 매출: ' + rvPlain(rvWon(정기))) };
+    });
     /* 이 줄은 행사품목까지 포함한 값이라, 순수 추가구매분을 메모로 덧붙입니다 */
-    var 추가만 = (추가 === null || 추가 === undefined || !품목) ? null : 추가 - 품목.amt;
-    줄('행사품목+추가구매품목매출', rvWon(추가), null, null, null, false,
-       자동메모(ctx.p.이름, '행사품목+추가구매품목매출', 추가만 === null ? '' :
-         '추가구매 품목 매출: ' + rvPlain(rvWon(추가만))));
-    줄('행사품목매출', rvWon(품목 && 품목.amt));
-    줄('행사기간매출(일평균)', rvWon(행사 && 행사.매출일평균),
-       rvDelta(행사 && 행사.매출일평균, ctx.전7 && ctx.전7.매출일평균),
-       rvDelta(행사 && 행사.매출일평균, ctx.전30 && ctx.전30.매출일평균),
-       rvDelta(행사 && 행사.매출일평균, ctx.작년 && ctx.작년.매출일평균));
-    줄('행사품목+추가구매품목매출(일평균)', rvWon(추가일평균));
-    줄('행사품목매출(일평균)', rvWon(품목 && 품목.매출일평균),
-       rvDelta(품목 && 품목.매출일평균, ctx.품목전7 && ctx.품목전7.매출일평균),
-       rvDelta(품목 && 품목.매출일평균, ctx.품목전30 && ctx.품목전30.매출일평균),
-       rvDelta(품목 && 품목.매출일평균, ctx.품목작년 && ctx.품목작년.매출일평균));
+    줄('행사품목+추가구매품목매출', function (c) {
+      var 추가 = 추가매출(c);
+      var 추가만 = (추가 === null || 추가 === undefined || !c.품목) ? null : 추가 - c.품목.amt;
+      return { v: rvWon(추가),
+               메모: 자동메모(c.p.이름, '행사품목+추가구매품목매출', 추가만 === null ? '' :
+                 '추가구매 품목 매출: ' + rvPlain(rvWon(추가만))) };
+    });
+    줄('행사품목매출', function (c) { return { v: rvWon(c.품목 && c.품목.amt) }; });
+    줄('행사기간매출(일평균)', function (c) {
+      var 값 = c.행사 && c.행사.매출일평균;
+      return { v: rvWon(값),
+               a: rvDelta(값, c.전7 && c.전7.매출일평균),
+               b: rvDelta(값, c.전30 && c.전30.매출일평균),
+               c: rvDelta(값, c.작년 && c.작년.매출일평균) };
+    });
+    줄('행사품목+추가구매품목매출(일평균)', function (c) {
+      var 추가 = 추가매출(c);
+      return { v: rvWon((추가 === null || 추가 === undefined) ? null : 추가 / 하루(c)) };
+    });
+    줄('행사품목매출(일평균)', function (c) {
+      var 값 = c.품목 && c.품목.매출일평균;
+      return { v: rvWon(값),
+               a: rvDelta(값, c.품목전7 && c.품목전7.매출일평균),
+               b: rvDelta(값, c.품목전30 && c.품목전30.매출일평균),
+               c: rvDelta(값, c.품목작년 && c.품목작년.매출일평균) };
+    });
     t.push({ head: '판매수량 (전략상품)' });
-    줄('판매상품수량', rvCnt((전략수량 === null || 전략수량 === undefined)
-                             ? (품목 && 품목.qty) : 전략수량, '개'));
-    줄('-행사기간 판매수량(일평균)', rvCnt(품목 && 품목.수량일평균, '개'),
-       rvDelta(품목 && 품목.수량일평균, ctx.품목전7 && ctx.품목전7.수량일평균),
-       rvDelta(품목 && 품목.수량일평균, ctx.품목전30 && ctx.품목전30.수량일평균),
-       rvDelta(품목 && 품목.수량일평균, ctx.품목작년 && ctx.품목작년.수량일평균), true);
-    줄('-직전 1주일 판매수량(일평균)', rvCnt(ctx.품목전7 && ctx.품목전7.수량일평균, '개'),
-       null, null, null, true);
+    줄('판매상품수량', function (c) {
+      var q = c.p.정보.전략수량;
+      return { v: rvCnt((q === null || q === undefined) ? (c.품목 && c.품목.qty) : q, '개') };
+    });
+    줄('-행사기간 판매수량(일평균)', function (c) {
+      var 값 = c.품목 && c.품목.수량일평균;
+      return { v: rvCnt(값, '개'),
+               a: rvDelta(값, c.품목전7 && c.품목전7.수량일평균),
+               b: rvDelta(값, c.품목전30 && c.품목전30.수량일평균),
+               c: rvDelta(값, c.품목작년 && c.품목작년.수량일평균) };
+    }, true);
+    줄('-직전 1주일 판매수량(일평균)', function (c) {
+      return { v: rvCnt(c.품목전7 && c.품목전7.수량일평균, '개') };
+    }, true);
 
-    var head = '<thead><tr><th class="k"></th><th class="c">값</th></tr></thead>';
-
+    var 열 = rv열(ctx);
     csv.push([]); csv.push(['[프로모션 전후 증감]']);
-    csv.push(['항목', '값', '직전 7일 평균대비', '직전 30일 평균대비', '작년 동기간 대비']);
+    var 머리 = ['항목'];
+    열.forEach(function (col) {
+      머리.push((열.length > 1 ? col.이름 + ' ' : '') + '값',
+                '직전 7일 평균대비', '직전 30일 평균대비', '작년 동기간 대비');
+    });
+    csv.push(머리);
+
     var body = t.map(function (x) {
       if (x.head) {
         csv.push([x.head]);
-        return '<tr class="head"><td class="k">' + esc(x.head) + '</td><td></td></tr>';
+        return '<tr class="head"><td class="k">' + esc(x.head) + '</td>' +
+               '<td colspan="' + 열.length + '"></td></tr>';
       }
+      var 각 = 열.map(function (col) { return x.f(col.ctx); });
       /* 증감 세 값은 표에서 빼고 메모로 답니다 — CSV 에는 그대로 남습니다 */
-      csv.push([x.k, rvPlain(x.v), x.a ? rvPlain(x.a) : '',
-                x.b ? rvPlain(x.b) : '', x.c ? rvPlain(x.c) : '']);
-      var 메모 = 메모합(메모합(rvMemoPick(ctx, x.k, null), x.메모),
-                        증감메모(ctx.p.이름, x.k, x.a, x.b, x.c));
+      var 줄값 = [x.k];
+      각.forEach(function (o) {
+        줄값.push(rvPlain(o.v), o.a ? rvPlain(o.a) : '',
+                  o.b ? rvPlain(o.b) : '', o.c ? rvPlain(o.c) : '');
+      });
+      csv.push(줄값);
       return '<tr' + (x.sub ? ' class="sub"' : '') + '><td class="k">' + esc(x.k) + '</td>' +
-             rvTd('v num', x.v, 메모) + '</tr>';
+        각.map(function (o, i) {
+          var 메모 = 메모합(메모합(rvMemoPick(열[i].ctx, x.k, null), o.메모),
+                            증감메모(열[i].ctx.p.이름, x.k, o.a, o.b, o.c));
+          return rvTd('v num' + (열.length > 1 && !i ? ' g' : ''), o.v, 메모);
+        }).join('') + '</tr>';
     }).join('');
 
     var n = [];
@@ -3230,8 +3415,8 @@
       n.push('주문라인요약 탭에 상품코드 열이 없어 <b>구매고객수·추가구매매출만</b> ' +
              '제품라인 기준입니다 — 매출·수량은 상품코드 기준입니다.');
     }
-    if (행사 && 행사.잘림) {
-      n.push('종료일이 아직 오지 않아 <b>' + 행사.끝 + '</b>까지의 실적입니다.');
+    if (ctx.행사 && ctx.행사.잘림) {
+      n.push('종료일이 아직 오지 않아 <b>' + ctx.행사.끝 + '</b>까지의 실적입니다.');
     }
     n.push('작년 동기간은 <b>작년 같은 날짜</b>(' + lastYearOf(ctx.from).replace(/-/g, '.') +
            '~' + lastYearOf(ctx.to).replace(/-/g, '.') + ') 기준입니다' +
@@ -3242,7 +3427,7 @@
     }
 
     return rvCard('프로모션 전후 증감', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv">' + head +
+      '<div class="body flush"><div class="tablewrap"><table class="rv">' + rv머리(ctx) +
       '<tbody>' + body + '</tbody></table></div></div>',
       n.join('<br>'));
   }
@@ -3262,22 +3447,27 @@
           '행사기간(' + ctx.from.replace(/-/g, '.') + ' ~ ' + ctx.to.replace(/-/g, '.') +
           ')을 덮지 못합니다.') + '</div>');
     }
-    var 신규 = ctx.주문 ? ctx.신규고객 : ctx.p.정보.신규고객;
+    /* 비교 프로모션은 유입 탭이 그 기간을 못 덮을 수 있어 칸마다 다시 확인합니다 */
+    function 방문(c) { return c.방문; }
+    function 신규수(c) { return c.주문 ? c.신규고객 : c.p.정보.신규고객; }
+    function 칸(c, f) { var m = 방문(c); return m ? f(m) : rvNA('—'); }
     var t = [
-      ['방문고객수', rvCnt(v.방문, '명'), false],
-      ['-처음방문', rvCnt(v.처음, '명'), true],
-      ['-재방문', rvCnt(v.재방문, '명'), true],
-      ['-재방문율', rvPct(rvDiv(v.재방문, v.방문)), true],
-      ['가입고객수', rvCnt(v.가입, '명'), false],
-      ['-기간 내 가입고객 구매전환율', rvPct(rvDiv(신규, v.가입)), true]
+      { k: '방문고객수', f: function (c) { return 칸(c, function (m) { return rvCnt(m.방문, '명'); }); } },
+      { k: '-처음방문', sub: true,
+        f: function (c) { return 칸(c, function (m) { return rvCnt(m.처음, '명'); }); } },
+      { k: '-재방문', sub: true,
+        f: function (c) { return 칸(c, function (m) { return rvCnt(m.재방문, '명'); }); } },
+      { k: '-재방문율', sub: true,
+        f: function (c) { return 칸(c, function (m) { return rvPct(rvDiv(m.재방문, m.방문)); }); } },
+      { k: '가입고객수', f: function (c) { return 칸(c, function (m) { return rvCnt(m.가입, '명'); }); } },
+      { k: '-기간 내 가입고객 구매전환율', sub: true,
+        f: function (c) {
+          return 칸(c, function (m) { return rvPct(rvDiv(신규수(c), m.가입)); }); } }
     ];
 
     csv.push([]); csv.push(['[유입정보]']);
-    var body = t.map(function (x) {
-      csv.push([x[0], rvPlain(x[1])]);
-      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
-             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
-    }).join('');
+    if (ctx.비교.length) csv.push([''].concat(rv열(ctx).map(function (x) { return x.이름; })));
+    var body = rv표(ctx, t, csv);
 
     var n = ['<b>방문고객수</b>는 새로 열린 세션의 수입니다 — 세션이 살아 있는 동안 여러 번 ' +
              '둘러봐도 한 번으로 셉니다.',
@@ -3290,9 +3480,17 @@
       n.push('유입 탭에 <b>' + v.끝.replace(/-/g, '.') + '</b> 까지만 들어 있어 ' +
              '그때까지의 합계입니다.');
     }
+    var 못덮음 = ctx.비교.filter(function (x) { return !x.ctx.방문; })
+      .map(function (x) { return x.이름; });
+    if (못덮음.length) {
+      n.push('<b>' + esc(못덮음.join(' · ')) + '</b> 은(는) 유입 탭' +
+             (VISIT ? '(' + VISIT.min.replace(/-/g, '.') + ' ~ ' +
+                      VISIT.max.replace(/-/g, '.') + ')' : '') +
+             '이 그 기간을 덮지 못해 비워 두었습니다 — 0 이 아니라 <b>모름</b>입니다.');
+    }
     return rvCard('유입정보', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvVisit"><tbody>' +
-      body + '</tbody></table></div></div>', n.join('<br>'));
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvVisit">' +
+      rv머리(ctx) + '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   function rvAovCard(ctx, csv) {
@@ -3303,20 +3501,29 @@
        행사품목이 얽힌 두 줄은 행사품목을 산 사람 수로 나눕니다. */
     var 전체 = (ctx.전체구매고객 === null || ctx.전체구매고객 === undefined)
       ? 구매 : ctx.전체구매고객;
+    function 추가매출(c) { return c.주문 ? c.주문.품목plus매출 : c.p.정보.추가매출; }
+    function 전체고객(c) {
+      return (c.전체구매고객 === null || c.전체구매고객 === undefined)
+        ? c.구매고객 : c.전체구매고객;
+    }
     var t = [
-      ['객단가(총매출)', rvWon(rvDiv(행사 && 행사.amt, 전체)), false],
-      ['객단가(행사품목+추가구매품목)', rvWon(rvDiv(추가, 구매)), false],
-      ['객단가(행사품목만)', rvWon(rvDiv(품목 && 품목.amt, 구매)), false]
+      { k: '객단가(총매출)',
+        f: function (c) { return rvWon(rvDiv(c.행사 && c.행사.amt, 전체고객(c))); } },
+      { k: '객단가(행사품목+추가구매품목)',
+        f: function (c) { return rvWon(rvDiv(추가매출(c), c.구매고객)); } },
+      { k: '객단가(행사품목만)',
+        f: function (c) { return rvWon(rvDiv(c.품목 && c.품목.amt, c.구매고객)); } },
+      /* 프로모션 비교 카드에 있던 줄입니다 — 카드를 없애면서 여기로 옮겼습니다 */
+      { k: '추가구매 배수', sub: true, f: function (c) {
+          var v = rvDiv(추가매출(c), c.품목 && c.품목.amt);
+          return v === null ? rvNA('—') : (Math.round(v * 1000) / 1000).toFixed(3) + '배'; } }
     ];
     csv.push([]); csv.push(['[객단가]']);
-    var body = t.map(function (x) {
-      csv.push([x[0], rvPlain(x[1])]);
-      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
-             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
-    }).join('');
+    if (ctx.비교.length) csv.push([''].concat(rv열(ctx).map(function (x) { return x.이름; })));
+    var body = rv표(ctx, t, csv);
     return rvCard('객단가', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv"><tbody>' +
-      body + '</tbody></table></div></div>',
+      '<div class="body flush"><div class="tablewrap"><table class="rv">' + rv머리(ctx) +
+      '<tbody>' + body + '</tbody></table></div></div>',
       (ctx.주문
         ? '나누는 값이 줄마다 다릅니다 — <b>객단가(총매출)</b>은 행사기간에 산 ' +
           '<b>모든 고객</b>으로, 행사품목이 얽힌 두 줄은 <b>행사품목을 산 고객</b>으로 ' +
@@ -3324,6 +3531,8 @@
           '고객 수는 주문 원장의 ' + esc(ctx.주문.기준) + '를 세어 냈습니다.'
         : '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. 주문 원장이 이 기간을 덮으면 ' +
           '행사품목을 산 고객 수로 바뀝니다.') +
+      '<br>추가구매 배수 = 행사품목+추가구매품목매출 ÷ 행사품목매출 — 1에 가까울수록 ' +
+      '행사품목만 사 갔다는 뜻입니다.' +
       '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
   }
 
@@ -3335,43 +3544,63 @@
    * 주문라인요약에 상품명 열이 있어야 나옵니다.
    */
   function rvComboCard(ctx, csv) {
-    var C = ctx.조합;
-    if (!C) return '';
-    if (!C.목록.length) {
+    if (!ctx.조합) return '';
+    if (!ctx.조합.목록.length) {
       return rvCard('구매조합', '', rvEmptyBox('행사품목이 든 주문을 찾지 못했습니다.'),
         '구매조합은 <b>주문라인요약</b>의 상품명으로 냅니다.');
     }
-    var 분모 = ctx.구매고객;
-    var 위 = C.목록.slice(0, RV_COMBO_TOP);
-    var 나머지 = C.목록.slice(RV_COMBO_TOP);
-    var 나머지고객 = 0;
-    나머지.forEach(function (g) { 나머지고객 += g.고객수; });
 
-    csv.push([]); csv.push(['[구매조합]']);
-    csv.push(['조합', '고객수', '비중']);
     /* 품목 하나를 '이름 2개' 로 적습니다 — 수량까지 같아야 같은 조합입니다 */
     function 한품목(x) { return x.이름 + ' ' + rvPlain(rvCnt(x.수량, '개')); }
-    var body = 위.map(function (g) {
-      var 이름 = g.품목.map(한품목).join(' & ');
-      csv.push([이름, g.고객수, rvPlain(rvPct(rvDiv(g.고객수, 분모)))]);
-      /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
-      var 보임 = g.품목.map(function (x) {
-        return esc(x.이름) + ' <b>' + esc(rvPlain(rvCnt(x.수량, '개'))) + '</b>';
-      }).join(' &<br>');
-      return '<tr>' + rvTd('k combo', 보임, rvMemoPick(ctx, 이름, null)) +
-             '<td class="c num">' + rvCnt(g.고객수, '명') + '</td>' +
-             '<td class="c num">' + rvPct(rvDiv(g.고객수, 분모)) + '</td></tr>';
-    }).join('');
-    if (나머지.length) {
-      csv.push(['나머지 ' + 나머지.length + '개 조합', 나머지고객,
-                rvPlain(rvPct(rvDiv(나머지고객, 분모)))]);
-      body += '<tr class="sub"><td class="k combo">나머지 ' + 나머지.length + '개 조합</td>' +
-              '<td class="c num">' + rvCnt(나머지고객, '명') + '</td>' +
-              '<td class="c num">' + rvPct(rvDiv(나머지고객, 분모)) + '</td></tr>';
+
+    /* 조합 이름은 프로모션마다 달라 열을 붙일 수 없습니다 — 표를 따로 그립니다 */
+    function 한표(c, 이름, 첫번째) {
+      var C = c.조합;
+      if (!C || !C.목록.length) {
+        return '<div class="combo-one"><div class="combo-h">' + esc(이름) +
+               '</div><div class="rv-empty">이 프로모션은 조합을 낼 수 없습니다 — ' +
+               '주문라인요약이 그 기간을 덮지 못하거나 상품명이 없습니다.</div></div>';
+      }
+      var 분모 = c.구매고객;
+      var 위 = C.목록.slice(0, RV_COMBO_TOP);
+      var 나머지 = C.목록.slice(RV_COMBO_TOP);
+      var 나머지고객 = 0;
+      나머지.forEach(function (g) { 나머지고객 += g.고객수; });
+
+      csv.push([]); csv.push(['[구매조합] ' + 이름]);
+      csv.push(['조합', '고객수', '비중']);
+      var body = 위.map(function (g) {
+        var 조합이름 = g.품목.map(한품목).join(' & ');
+        csv.push([조합이름, g.고객수, rvPlain(rvPct(rvDiv(g.고객수, 분모)))]);
+        /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
+        var 보임 = g.품목.map(function (x) {
+          return esc(x.이름) + ' <b>' + esc(rvPlain(rvCnt(x.수량, '개'))) + '</b>';
+        }).join(' &<br>');
+        return '<tr>' + rvTd('k combo', 보임, rvMemoPick(c, 조합이름, null)) +
+               '<td class="c num">' + rvCnt(g.고객수, '명') + '</td>' +
+               '<td class="c num">' + rvPct(rvDiv(g.고객수, 분모)) + '</td></tr>';
+      }).join('');
+      if (나머지.length) {
+        csv.push(['나머지 ' + 나머지.length + '개 조합', 나머지고객,
+                  rvPlain(rvPct(rvDiv(나머지고객, 분모)))]);
+        body += '<tr class="sub"><td class="k combo">나머지 ' + 나머지.length + '개 조합</td>' +
+                '<td class="c num">' + rvCnt(나머지고객, '명') + '</td>' +
+                '<td class="c num">' + rvPct(rvDiv(나머지고객, 분모)) + '</td></tr>';
+      }
+      var head = '<thead><tr><th class="k">조합</th><th class="c">고객수</th>' +
+                 '<th class="c">비중</th></tr></thead>';
+      return '<div class="combo-one' + (첫번째 ? ' g' : '') + '">' +
+             (ctx.비교.length ? '<div class="combo-h">' + esc(이름) + ' · 행사품목 구매고객 ' +
+              rvPlain(rvCnt(분모, '명')) + '</div>' : '') +
+             '<div class="tablewrap"><table class="rv cmb" id="rvCombo' + (첫번째 ? '' : '2') + '">' +
+             head + '<tbody>' + body + '</tbody></table></div></div>';
     }
 
-    var head = '<thead><tr><th class="k">조합</th><th class="c">고객수</th>' +
-               '<th class="c">비중</th></tr></thead>';
+    var 표들 = rv열(ctx).map(function (col, i) {
+      return 한표(col.ctx, col.이름, i === 0);
+    }).join('');
+
+    var C = ctx.조합, 분모 = ctx.구매고객;
     var n = ['한 사람이 행사기간에 여러 번 샀으면 <b>행사품목이 든 주문</b>을 모두 합쳐 ' +
              '한 조합으로 봅니다 — 사람은 ' + esc(C.기준) + '로 가릅니다.'];
     n.push('비중 = 그 조합 고객수 ÷ <b>행사품목 구매고객수</b>(' + rvPlain(rvCnt(분모, '명')) + ').' +
@@ -3380,13 +3609,16 @@
            '다른 줄로 갑니다. 조합 이름은 <b>행사품목</b>을 앞에 두고 나머지를 가나다순으로 적습니다.');
     n.push('<b>정기배송 품목은 빼고 셉니다</b> — 상품코드가 <b>R</b>로 시작하는 줄입니다. ' +
            '프로모션과 무관하게 그달에 나가는 주문이라 조합에 들어가면 함께 산 것처럼 보입니다.');
+    if (ctx.비교.length) {
+      n.push('조합 이름은 프로모션마다 달라 한 표에 나란히 놓을 수 없습니다 — ' +
+             '위가 이 프로모션, 아래가 비교 대상입니다. 비중의 분모도 각자의 ' +
+             '행사품목 구매고객수입니다.');
+    }
     if (C.번호없는주문) {
       n.push('번호가 비어 있어 사람을 가릴 수 없는 주문 ' + rvPlain(rvCnt(C.번호없는주문, '건')) +
              '은 빠졌습니다.');
     }
-    return rvCard('구매조합', '',
-      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvCombo">' +
-      head + '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
+    return rvCard('구매조합', '', '<div class="body flush">' + 표들 + '</div>', n.join('<br>'));
   }
 
   /* ── 프로모션 비교 ──────────────────────────────────────── */
@@ -3469,135 +3701,6 @@
     });
     if (!덩어리.length) return null;
     return rvMergePromos(덩어리[덩어리.length - 1]);   /* 가장 최근 덩어리 */
-  }
-
-  /**
-   * 프로모션 비교 — 리뷰 시트 '비교대상' 열에 적은 프로모션과 나란히 놓습니다.
-   * 지표가 행, 프로모션이 열입니다 (발신 성과 표와 같은 방향).
-   */
-  function rvVsCard(ctx, csv) {
-    var 적힌것 = String(ctx.p.정보.비교대상 || '')
-      .split(/[,、·\/\n]+/)
-      .map(function (s) { return s.trim(); })
-      .filter(function (s) { return s; });
-    if (!적힌것.length) return '';
-
-    var 열 = [{ ctx: ctx, 이름: ctx.p.이름 }], 못찾음 = [], 합친것 = [];
-    적힌것.forEach(function (nm) {
-      var p = rvFindPromo(nm, ctx.p.키);
-      if (!p) { 못찾음.push(nm); return; }
-      var c = rvContext(p);
-      열.push({ ctx: c, 이름: p.이름 });
-      if (p.묶음 > 1) 합친것.push({ 이름: p.이름, 묶음: p.묶음, ctx: c });
-    });
-    if (열.length < 2) {
-      return rvCard('프로모션 비교', '리뷰 시트 비교대상 열',
-        '<div class="body">' + rvEmptyBox('비교할 프로모션을 찾지 못했습니다',
-          '리뷰 시트에 <b>' + esc(적힌것.join(' · ')) + '</b> 이(가) 없습니다. ' +
-          '비교하려면 그 프로모션도 리뷰 시트에 한 줄 있어야 합니다 — ' +
-          '이름만으로는 기간·발신·매출을 알 수 없습니다.') + '</div>');
-    }
-
-    /* [이름, ctx 하나에서 값을 내는 함수, 하위줄인지] */
-    function 발신합(c) { return rvEffSum(c.p.발신); }
-    function 추가(c) { return c.주문 ? c.주문.품목plus매출 : c.p.정보.추가매출; }
-    function 카카오(c, key) {
-      return rvEffSum(c.p.발신.filter(function (r) {
-        return String(r.발신채널 || '').indexOf('카카오') >= 0;
-      }))[key];
-    }
-    function 카카오율(c, 위, 아래) {
-      var 목록 = c.p.발신.filter(function (r) {
-        return String(r.발신채널 || '').indexOf('카카오') >= 0;
-      });
-      var a = null, b = null;
-      목록.forEach(function (r) {
-        if (r[위] !== null && r[위] !== undefined) a = (a || 0) + r[위];
-        if (r[아래] !== null && r[아래] !== undefined) b = (b || 0) + r[아래];
-      });
-      return rvDiv(a, b);
-    }
-
-    var 지표 = [
-      ['기간', function (c) {
-        return esc(c.from.replace(/-/g, '.') + ' ~ ' + c.to.slice(5).replace('-', '.') +
-                   ' · ' + calDays(c.from, c.to) + '일'); }, 'txt'],
-      ['기준', function (c) {
-        return c.마감 ? '<span class="pill final">마감</span>'
-                      : '<span class="pill prov">잠정</span>'; }, 'txt'],
-      ['총 발신모수', function (c) { return rvCnt(발신합(c).발신); }],
-      ['총 유입고객수', function (c) { return rvCnt(발신합(c).유입); }],
-      ['카카오 발신모수', function (c) { return rvCnt(카카오(c, '발신')); }],
-      ['카카오 열람률', function (c) { return rvPct(카카오율(c, '열람수', '발신모수')); }, '', true],
-      ['카카오 클릭률', function (c) { return rvPct(카카오율(c, '클릭수', '열람수')); }, '', true],
-      ['행사품목 구매고객수', function (c) { return rvCnt(c.구매고객, '명'); }],
-      ['-유추전환율', function (c) { return rvPct(rvDiv(c.구매고객, c.유입합)); }, '', true],
-      ['-신규고객비율', function (c) {
-        var 신규 = c.주문 ? c.신규고객 : c.p.정보.신규고객;
-        var v = rvDiv(신규, c.구매고객);
-        /* 원장에서 센 값과 시트 입력값이 섞이면 비교가 어긋나므로 출처를 붙입니다 */
-        return v === null ? rvPct(null)
-          : rvPct(v) + '<small class="src">' + (c.주문 ? '원장' : '시트') + '</small>'; },
-        '', true],
-      ['행사품목 판매수량', function (c) {
-        var q = c.p.정보.전략수량;
-        return rvCnt((q === null || q === undefined) ? (c.품목 && c.품목.qty) : q, '개'); }],
-      ['-일 판매속도', function (c) { return rvCnt(c.품목 && c.품목.수량일평균, '개/일'); }, '', true],
-      ['추가구매 배수', function (c) {
-        var v = rvDiv(추가(c), c.품목 && c.품목.amt);
-        return v === null ? rvNA('—') : (Math.round(v * 1000) / 1000).toFixed(3) + '배'; }, '', true],
-      ['행사기간 일평균 매출', function (c) { return rvWon(c.행사 && c.행사.매출일평균); }],
-      ['-직전 30일 대비', function (c) {
-        return rvDelta(c.행사 && c.행사.매출일평균, c.전30 && c.전30.매출일평균); }, '', true],
-      ['-작년 동기간 대비', function (c) {
-        return rvDelta(c.행사 && c.행사.매출일평균, c.작년 && c.작년.매출일평균); }, '', true],
-      ['객단가(행사품목+추가구매품목)', function (c) {
-        return rvWon(rvDiv(추가(c), c.구매고객)); }]
-    ];
-
-    csv.push([]); csv.push(['[프로모션 비교]']);
-    csv.push([''].concat(열.map(function (x) { return x.이름; })));
-
-    var head = '<thead><tr><th class="k"></th>' + 열.map(function (x, i) {
-      return '<th class="c' + (i ? '' : ' g') + '">' + esc(x.이름) + '</th>';
-    }).join('') + '</tr></thead>';
-
-    var body = 지표.map(function (x) {
-      var 값 = 열.map(function (col) { return x[1](col.ctx); });
-      csv.push([x[0]].concat(값.map(rvPlain)));
-      return '<tr' + (x[3] ? ' class="sub"' : '') + '>' +
-        rvTd('k', esc(x[0]), rvMemoPick(ctx, x[0], null)) +
-        값.map(function (v, i) {
-          return '<td class="' + (x[2] === 'txt' ? 'c' : 'num') + (i ? '' : ' g') + '">' +
-                 v + '</td>';
-        }).join('') + '</tr>';
-    }).join('');
-
-    var n = ['맨 왼쪽 칸이 이 프로모션입니다 · 비교 대상은 리뷰 시트 <b>비교대상</b> 열에서 읽습니다.',
-             '<b>기준</b> 줄을 먼저 보세요 — 마감과 잠정이 섞여 있으면 매출 줄을 나란히 ' +
-             '놓기 어렵습니다. 잠정은 취소·환불이 아직 빠져 있어 높게 나옵니다.',
-             '신규고객비율 옆의 <b>원장</b>은 자사몰주문RAWDATA에서 센 값, <b>시트</b>는 ' +
-             '리뷰 시트 입력값입니다.',
-             '추가구매 배수 = 행사품목+추가구매품목매출 ÷ 행사품목매출 — 1에 가까울수록 ' +
-             '행사품목만 사 갔다는 뜻입니다.',
-             '객단가 = <b>행사품목+추가구매품목매출 ÷ 구매고객수</b> — 행사와 무관한 주문까지 ' +
-             '든 총매출 대신 행사품목이 든 주문만 봅니다.'];
-    합친것.forEach(function (x) {
-      /* 선런칭을 따로 적어 전략시작일이 갈린 경우 — 조용히 합치지 않고 밝힙니다 */
-      n.push('<b>' + esc(x.이름) + '</b> 은(는) 리뷰 시트에 전략시작일이 다른 묶음 ' +
-             x.묶음 + '건으로 나뉘어 있어 하나로 합쳐 봤습니다 — 기간은 ' +
-             x.ctx.from.replace(/-/g, '.') + '~' + x.ctx.to.replace(/-/g, '.') + ', 발신 ' +
-             x.ctx.p.발신.length + '건을 모두 더했습니다.' +
-             (x.ctx.주문 ? '' : ' 매출·고객수는 리뷰 시트 입력값이라 <b>최근 묶음 값만</b> ' +
-              '들어갑니다 — 주문 원장이 이 기간을 덮으면 전체 기간으로 다시 셉니다.'));
-    });
-    if (못찾음.length) {
-      n.push('<b>' + esc(못찾음.join(' · ')) + '</b> 은(는) 리뷰 시트에서 찾지 못해 뺐습니다 — ' +
-             '이름이 다르거나, 그 이름이 지금 보고 있는 프로모션 하나뿐입니다.');
-    }
-    return rvCard('프로모션 비교', '비교대상 ' + (열.length - 1) + '건과 나란히',
-      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvVs">' +
-      head + '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   function renderKpis(A) {
