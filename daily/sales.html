@@ -279,9 +279,15 @@
   /* 프로모션 비교 — 지표가 행, 프로모션이 열. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
   /* 발신 성과 — 카카오 열은 옅은 노랑으로 갈라 둡니다. 두 테마 모두 같은 색이라
      글자색도 함께 고정해야 어두운 테마에서 읽힙니다. */
-  #rvSend td.kko { background: #fff2cc; color: #15191d; }
+  /* 발신채널 줄은 tr.chline 바탕색이 깔려 있어, 그보다 뒤에 같은 무게로 적어야 이깁니다 */
+  #rvSend tr td.kko { background: #fff2cc; color: #15191d; }
   #rvSend tr.em td { font-weight: 700; }
-  #rvSend tr.em td.kko { background: #ffe9a8; }
+  /* 병합된 칸은 가운데로 — 두 열에 걸쳐 있어 왼쪽에 붙으면 어디 것인지 헷갈립니다 */
+  #rvSend td[colspan] { text-align: center; }
+  /* 구매조합 — 조합 이름은 여러 줄이라 왼쪽에 붙이고 줄바꿈을 허용합니다 */
+  #rvCombo td.combo, #rvCombo th.k { text-align: left; white-space: normal; width: auto;
+                                     line-height: 1.55; }
+  #rvCombo td.c, #rvCombo th.c { text-align: center; width: 110px; }
   #rvVs td.g, #rvVs th.g { background: var(--surface-2); font-weight: 620; }
   #rvVs td.k { width: 190px; }
   #rvVs td.c, #rvVs td.num { min-width: 150px; }
@@ -727,6 +733,7 @@
     REVIEW_SHEET_ID: '1ovhITlfM3ugs2RSe0ex_JJL5jBsgLWTnUkGnLe6EUpM',
     REVIEW_GID: 1003712761,
     REVIEW_MEMO_GID: 145275417,   // 프로모션 리뷰 memo 탭
+    VISIT_GID: 2036992945,        // 유입(방문) 일자별
     /* 리뷰 표의 비교 기준 — 행사 시작일 직전 며칠을 평균 낼지 */
     비교기준: [7, 30],
     /* 이 페이지에 걸리는 프로모션은 전부 펼칩니다. 걸리는 게 없어 전체 목록을
@@ -2086,15 +2093,18 @@
   }
 
   /** 메모가 붙은 칸을 만듭니다. 없으면 평범한 칸입니다. */
-  function rvTd(cls, inner, memos) {
-    if (!memos || !memos.length) return '<td class="' + cls + '">' + inner + '</td>';
+  function rvTd(cls, inner, memos, span) {
+    var 폭 = (span && span > 1) ? ' colspan="' + span + '"' : '';
+    if (!memos || !memos.length) {
+      return '<td class="' + cls + '"' + 폭 + '>' + inner + '</td>';
+    }
     var ids = memos.map(function (m) {
       var i = rvMemoBag.indexOf(m);
       if (i < 0) { i = rvMemoBag.length; rvMemoBag.push(m); }
       return i;
     });
-    return '<td class="' + cls + ' hasmemo" tabindex="0" data-rvm="' + ids.join(',') + '">' +
-           inner + '</td>';
+    return '<td class="' + cls + ' hasmemo"' + 폭 + ' tabindex="0" data-rvm="' +
+           ids.join(',') + '">' + inner + '</td>';
   }
 
   /** 지금 고른 promotion 에 해당하는 리뷰인지 */
@@ -2201,6 +2211,52 @@
   var ordState = { daily: 'idle', line: 'idle' };   /* idle · off · loading · ready · error */
   var ordError = { daily: null, line: null };
 
+  /* 유입 탭 — 날짜별 방문 지표입니다 */
+  var VISIT_COLS = {
+    d:    ['날짜', '주문일', '일자'],
+    방문: ['방문고객수', '방문자수', '방문수'],
+    처음: ['처음방문', '신규방문', '첫방문'],
+    재방문: ['재방문', '재방문수'],
+    가입: ['신규회원수', '가입고객수', '가입자수', '신규가입']
+  };
+  var VISIT = null;
+  var visitState = 'idle';
+
+  function parseVisit(vals) {
+    if (!vals || vals.length < 2) return null;
+    var C = mapBy(vals[0] || [], VISIT_COLS);
+    if (C.d < 0 || C.방문 < 0) return null;
+    var rows = [], min = '', max = '', i, r, d;
+    for (i = 1; i < vals.length; i++) {
+      r = vals[i] || [];
+      d = rvDate(r, C.d); if (!d) continue;
+      rows.push({ d: d, 방문: rvNum(r, C.방문), 처음: rvNum(r, C.처음),
+                  재방문: rvNum(r, C.재방문), 가입: rvNum(r, C.가입) });
+      if (!min || d < min) min = d;
+      if (d > max) max = d;
+    }
+    return rows.length ? { rows: rows, min: min, max: max } : null;
+  }
+
+  /** 구간 합계. 구간이 탭 범위 밖이면 null 입니다 — 없는 걸 0 으로 보이면 안 됩니다. */
+  function visitSum(from, to) {
+    var V = VISIT;
+    if (!V || !from || !to || from > to) return null;
+    if (from < V.min || from > V.max) return null;
+    var hi = to > V.max ? V.max : to;
+    var out = { 방문: null, 처음: null, 재방문: null, 가입: null,
+                일수: calDays(from, hi), 잘림: hi !== to, 시작: from, 끝: hi };
+    var 있음 = false;
+    V.rows.forEach(function (r) {
+      if (r.d < from || r.d > hi) return;
+      있음 = true;
+      ['방문', '처음', '재방문', '가입'].forEach(function (k) {
+        if (r[k] !== null && r[k] !== undefined) out[k] = (out[k] || 0) + r[k];
+      });
+    });
+    return 있음 ? out : null;
+  }
+
   var ORD_DAILY_COLS = {
     d:    ['주문일', '날짜'],
     line: ['제품라인'],
@@ -2216,6 +2272,7 @@
     first: ['첫구매', '첫주문'],
     line:  ['제품라인'],
     sku:   ['상품코드', '자체상품코드', '품목코드', 'SKU'],
+    name:  ['상품명', '품목명', '제품명'],
     amt:   ['매출', '매출(SllngPrc)'],
     qty:   ['수량']
   };
@@ -2255,6 +2312,7 @@
         first: !!rvText(r, C.first),
         line: rvText(r, C.line),
         sku: rvText(r, C.sku),
+        name: rvText(r, C.name),
         amt: rvNum(r, C.amt) || 0,
         qty: rvNum(r, C.qty) || 0
       });
@@ -2263,7 +2321,8 @@
     }
     /* 휴대전화 열이 없으면 주문자ID로 세고, 화면에 그렇게 적습니다 */
     return rows.length
-      ? { rows: rows, min: min, max: max, 폰있음: C.phone >= 0, 코드있음: C.sku >= 0 }
+      ? { rows: rows, min: min, max: max, 폰있음: C.phone >= 0, 코드있음: C.sku >= 0,
+          이름있음: C.name >= 0 }
       : null;
   }
 
@@ -2364,6 +2423,11 @@
     return false;
   }
 
+  /** 정기배송 품목인지 — 상품코드가 R 로 시작합니다 */
+  function 정기배송인가(r) {
+    return /^R/i.test(rvNorm(r && r.sku));
+  }
+
   /**
    * 이 줄이 행사품목인지.
    * 전략상품코드가 있으면 그걸로 보고, 없으면 제품라인으로 봅니다.
@@ -2420,7 +2484,7 @@
       if (itemHit(r, 조건)) 대상주문[r.ord] = 1;
     }
     var 폰기준 = O.폰있음;
-    var 총 = 0, 품목 = 0, 품목plus = 0, 품목수량 = 0, 총수량 = 0;
+    var 총 = 0, 품목 = 0, 품목plus = 0, 품목수량 = 0, 총수량 = 0, 정기 = 0;
     /* 고객을 두 벌로 셉니다.
        전체  = 행사기간에 산 모든 사람 (매장이 얼마나 붐볐나)
        품목  = 그중 행사품목이 든 주문을 한 사람 (프로모션이 실제로 움직인 사람)
@@ -2437,6 +2501,7 @@
       if (키) { 고객[키] = 1; if (r.first) 신규[키] = 1; }
       else if (r.ord) 무키주문[r.ord] = 1;   /* 번호가 비어 있어 셀 수 없는 주문 */
 
+      if (정기배송인가(r)) 정기 += r.amt;
       if (itemHit(r, 조건)) { 품목 += r.amt; 품목수량 += r.qty; }
       if (대상주문[r.ord]) {
         품목plus += r.amt;
@@ -2449,11 +2514,72 @@
 
     return { 시작: lo, 끝: hi, 잘림: hi !== to,
              총매출: 총, 총수량: 총수량, 품목매출: 품목, 품목수량: 품목수량,
+             정기배송매출: 정기, 정기배송셀수있음: !!(O.코드있음),
              품목plus매출: 품목plus,
              전체구매고객수: 고객수, 전체주문수: 세기(주문),
              구매고객수: 품목고객수, 신규고객수: 품목신규수,
              기존고객수: 품목고객수 - 품목신규수, 주문수: 세기(품목주문),
              기준: 폰기준 ? '휴대전화번호' : '주문자ID', 번호없는주문: 세기(무키주문) };
+  }
+
+  /**
+   * 구매조합 — 행사품목을 산 사람들이 무엇을 함께 담았는지.
+   * 사람 단위로 묶습니다. 행사기간에 그 사람이 한 '행사품목이 든 주문' 을 모두 합쳐
+   * 한 조합으로 봅니다 — 주문을 두 번 나눠 산 사람을 두 조합으로 세지 않기 위해서입니다.
+   * 상품명은 가나다순으로 정렬해 담은 순서가 달라도 같은 조합으로 봅니다.
+   */
+  function ordCombos(from, to, 조건) {
+    조건 = 품목조건으로(조건);
+    var O = ORD.line;
+    if (!O || !O.이름있음 || !from || !to || from > to) return null;
+    var lo = from, hi = to > O.max ? O.max : to;
+    if (lo < O.min || lo > hi) return null;
+
+    var 대상주문 = {}, i, r;
+    for (i = 0; i < O.rows.length; i++) {
+      r = O.rows[i];
+      if (r.d < lo || r.d > hi) continue;
+      if (itemHit(r, 조건)) 대상주문[r.ord] = 1;
+    }
+
+    var 폰기준 = O.폰있음;
+    var 사람 = {}, 번호없음 = {};
+    for (i = 0; i < O.rows.length; i++) {
+      r = O.rows[i];
+      if (r.d < lo || r.d > hi || !대상주문[r.ord]) continue;
+      var 키 = (폰기준 ? r.phone : r.cust) || '';
+      if (!키) { if (r.ord) 번호없음[r.ord] = 1; continue; }
+      var 품명 = r.name || r.sku || r.line;
+      if (!품명) continue;
+      if (!사람[키]) 사람[키] = { 품목: {}, 매출: 0 };
+      /* 행사품목이면 표시해 둡니다 — 조합 이름 맨 앞에 세우려고요 */
+      if (itemHit(r, 조건)) 사람[키].품목[품명] = 1;
+      else if (!사람[키].품목[품명]) 사람[키].품목[품명] = 0;
+      사람[키].매출 += r.amt || 0;
+    }
+
+    var 조합 = {}, 사람수 = 0, k, n;
+    for (k in 사람) {
+      사람수++;
+      var 목록 = [];
+      for (n in 사람[k].품목) 목록.push(n);
+      /* 행사품목을 앞에, 나머지는 가나다순 — 줄마다 같은 품목이 먼저 와야 눈에 붙습니다 */
+      목록.sort(function (a, b) {
+        var 차 = (사람[k].품목[b] ? 1 : 0) - (사람[k].품목[a] ? 1 : 0);
+        return 차 || a.localeCompare(b, 'ko');
+      });
+      var 열쇠 = 목록.join('');
+      if (!조합[열쇠]) 조합[열쇠] = { 품목: 목록, 고객수: 0, 매출: 0 };
+      조합[열쇠].고객수++;
+      조합[열쇠].매출 += 사람[k].매출;
+    }
+    var out = [];
+    for (k in 조합) out.push(조합[k]);
+    out.sort(function (a, b) { return (b.고객수 - a.고객수) || (b.매출 - a.매출); });
+
+    var 없는수 = 0; for (k in 번호없음) 없는수++;
+    return { 목록: out, 사람수: 사람수, 번호없는주문: 없는수,
+             기준: 폰기준 ? '휴대전화번호' : '주문자ID' };
   }
 
   /** 이 구간을 마감 요약이 온전히 덮고 있는지 */
@@ -2480,10 +2606,18 @@
         ? Promise.resolve([])
         : tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_MEMO_GID).then(function (title) {
             return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:Z'));
+          }).catch(function () { return []; }),
+      /* 유입 탭도 없어도 리뷰는 나와야 합니다 */
+      (CONFIG.VISIT_GID === null || CONFIG.VISIT_GID === undefined)
+        ? Promise.resolve([])
+        : tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.VISIT_GID).then(function (title) {
+            return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:H'));
           }).catch(function () { return []; })
     ]).then(function (res) {
       REVIEW = parseReview(res[0]);
       REVIEW_MEMO = parseReviewMemo(res[2]);
+      VISIT = parseVisit(res[3]);
+      visitState = VISIT ? 'ready' : 'off';
       reviewState = 'ready';
       renderReview();
     }).catch(function (e) {
@@ -2736,7 +2870,11 @@
       품목전7:  S(전7시작, 전7끝, 품목조건),
       품목전30: S(전30시작, 전30끝, 품목조건),
       품목작년: S(작년시작, 작년끝, 품목조건),
-      주문: null, 유입합: null, 구매고객: i.구매고객, 시트구매고객: i.구매고객
+      주문: null, 유입합: null, 구매고객: i.구매고객, 시트구매고객: i.구매고객,
+      방문:     visitSum(from, to),
+      방문전7:  visitSum(전7시작, 전7끝),
+      방문전30: visitSum(전30시작, 전30끝),
+      방문작년: visitSum(작년시작, 작년끝)
     };
     p.발신.forEach(function (r) {
       if (r.유입 !== null && r.유입 !== undefined) ctx.유입합 = (ctx.유입합 || 0) + r.유입;
@@ -2746,7 +2884,9 @@
     if (마감 && ordState.line === 'ready') {
       /* 주문라인요약에 상품코드가 있으면 일자별요약이 못 따라와도 SKU 로 셉니다 —
          고객수·추가구매매출은 이 탭 하나로 나오기 때문입니다 */
-      ctx.주문 = ordStats(from, to, 주문코드가능 ? { sku: 코드 } : { line: 라인 });
+      var 주문조건 = 주문코드가능 ? { sku: 코드 } : { line: 라인 };
+      ctx.주문 = ordStats(from, to, 주문조건);
+      ctx.조합 = ordCombos(from, to, 주문조건);
       if (ctx.주문) {
         ctx.구매고객 = ctx.주문.구매고객수;          /* 행사품목이 든 주문을 한 사람만 */
         ctx.신규고객 = ctx.주문.신규고객수;
@@ -2766,8 +2906,8 @@
                        : '잠정 (일일매출RAWDATA · 취소·환불 미반영)']);
     return rvSourceStrip(ctx) +
            rvOverviewCard(ctx, csv) + rvSendCard(ctx, csv) +
-           rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvAovCard(ctx, csv) +
-           rvVsCard(ctx, csv);
+           rvBuyerCard(ctx, csv) + rvSalesCard(ctx, csv) + rvVisitCard(ctx, csv) +
+           rvAovCard(ctx, csv) + rvComboCard(ctx, csv) + rvVsCard(ctx, csv);
   }
 
   /** 프로모션 하나만 그립니다 — 테스트에서 씁니다 */
@@ -2848,11 +2988,40 @@
       var 글자 = x[2] === 'chline' || x[2] === 'txt';
       var 값 = 발신.map(x[1]);
       csv.push([x[0]].concat(값.map(rvPlain)));
+
+      /* 옆 칸과 값이 같으면 하나로 붙입니다 — 떨어져 있는 같은 값은 안 붙습니다.
+         카카오 색은 발신채널 줄에만 칠하므로, 그 줄만 색까지 같아야 붙입니다. */
+      var 색줄 = x[0] === '발신채널';
+      var 묶음 = [];
+      값.forEach(function (v, i) {
+        var 앞 = 묶음[묶음.length - 1];
+        if (앞 && 앞.v === v && (!색줄 || 카카오칸[i] === 카카오칸[앞.첫])) {
+          앞.끝 = i; 앞.n++;
+        } else {
+          묶음.push({ v: v, 첫: i, 끝: i, n: 1 });
+        }
+      });
+
+      /* 병합된 칸에는 어느 발신인지 표시할 자리가 없어 메모를 못 답니다.
+         그런 메모는 항목 이름 칸으로 올려 붙입니다. */
+      var 위로 = [], 칸메모 = 묶음.map(function (g) {
+        var ms = [];
+        for (var i = g.첫; i <= g.끝; i++) {
+          var m = rvMemoPick(ctx, x[0], 발신[i]);
+          if (m) ms = ms.concat(m);
+        }
+        if (!ms.length) return null;
+        if (g.n > 1) { 위로 = 위로.concat(ms); return null; }
+        return ms;
+      });
+
       var 줄클래스 = x[2] === 'chline' ? ' class="chline"' : (x[2] === 'em' ? ' class="em"' : '');
       return '<tr' + 줄클래스 + '>' +
-        rvTd('k', esc(x[0]), rvMemoPick(ctx, x[0], null)) +
-        값.map(function (v, i) {
-          return rvTd((글자 ? 's' : 's num') + 카카오칸[i], v, rvMemoPick(ctx, x[0], 발신[i]));
+        rvTd('k', esc(x[0]),
+             메모합(rvMemoPick(ctx, x[0], null), 위로.length ? 위로 : null)) +
+        묶음.map(function (g, gi) {
+          return rvTd((글자 ? 's' : 's num') + (색줄 ? 카카오칸[g.첫] : ''),
+                      g.v, 칸메모[gi], g.n);
         }).join('') + '</tr>';
     }).join('');
 
@@ -2902,6 +3071,7 @@
       n.push('고객수는 <b>자사몰주문RAWDATA</b>에서 <b>' + esc(ctx.주문.기준) +
              '</b>의 고유 개수를 세어 낸 값입니다 — 기간 안에 두 번 샀거나 아이디를 ' +
              '여러 개 써도 번호가 같으면 한 명으로 셉니다. ' +
+             '<br>' +
              '<b>신규고객수</b>는 이 프로모션에서 처음 산 사람이 아니라 ' +
              '<b>희녹에서 생애 첫 구매</b>를 한 고객입니다 — 주문 원장의 <b>첫구매</b> 열이 ' +
              '찍힌 줄로 셉니다.');
@@ -2948,13 +3118,15 @@
     }
     function 칸(x) { return x === undefined ? rvNA('—') : x; }
 
-    줄('행사기간매출', rvWon(행사 && 행사.amt));
+    var 정기 = ctx.주문 && ctx.주문.정기배송셀수있음 ? ctx.주문.정기배송매출 : null;
+    줄('행사기간매출', rvWon(행사 && 행사.amt), null, null, null, false,
+       자동메모(ctx.p.이름, '행사기간매출',
+         정기 === null ? '' : '정기배송 매출: ' + rvPlain(rvWon(정기))));
     /* 이 줄은 행사품목까지 포함한 값이라, 순수 추가구매분을 메모로 덧붙입니다 */
     var 추가만 = (추가 === null || 추가 === undefined || !품목) ? null : 추가 - 품목.amt;
     줄('행사품목+추가구매품목매출', rvWon(추가), null, null, null, false,
        자동메모(ctx.p.이름, '행사품목+추가구매품목매출', 추가만 === null ? '' :
-         '행사품목을 뺀 추가구매품목만 ' + rvPlain(rvWon(추가만)) + ' 입니다 — ' +
-         '행사품목이 든 주문에 같이 담긴 다른 상품의 금액입니다.'));
+         '추가구매 품목 매출: ' + rvPlain(rvWon(추가만))));
     줄('행사품목매출', rvWon(품목 && 품목.amt));
     줄('행사기간매출(일평균)', rvWon(행사 && 행사.매출일평균),
        rvDelta(행사 && 행사.매출일평균, ctx.전7 && ctx.전7.매출일평균),
@@ -2995,6 +3167,12 @@
     n.push(ctx.마감
       ? '매출·수량은 <b>자사몰주문RAWDATA</b>에서 냅니다 — 월마감 후 시트라 취소·환불이 반영된 값입니다.'
       : '매출·수량은 <b>일일매출RAWDATA</b>에서 냅니다 — 매일 모으는 시트라 취소·환불은 아직 빠져 있습니다.');
+    n.push('행사품목+추가구매품목매출의 메모에 적힌 <b>추가구매 품목 매출</b>은 ' +
+           '행사품목이 든 주문에 같이 담긴 다른 상품의 금액입니다.');
+    if (ctx.주문 && ctx.주문.정기배송셀수있음) {
+      n.push('행사기간매출의 메모에 적힌 <b>정기배송 매출</b>은 상품코드가 <b>R</b>로 ' +
+             '시작하는 줄을 더한 값입니다.');
+    }
     n.push(추가계산
       ? '행사품목+추가구매품목매출은 <b>행사품목이 든 주문의 전체 금액</b>을 더한 값입니다 — 같은 주문에 딸려 산 상품까지 들어갑니다.'
       : '행사품목+추가구매품목매출은 주문번호가 있어야 낼 수 있어 <b>리뷰 시트 입력값</b>을 씁니다.');
@@ -3037,6 +3215,54 @@
       n.join('<br>'));
   }
 
+  /**
+   * 유입정보 — 방문 탭(날짜별)에서 행사기간을 더해 냅니다.
+   * 방문고객수는 세션 단위라 한 사람이 하루에 여러 번 와도 세션이 끊겨야 두 번입니다.
+   */
+  function rvVisitCard(ctx, csv) {
+    var v = ctx.방문;
+    if (!v) {
+      if (visitState !== 'ready') return '';
+      return rvCard('유입정보', '',
+        '<div class="body">' + rvEmptyBox('이 기간의 방문 자료가 없습니다',
+          '유입 탭이 <b>' + (VISIT ? VISIT.min.replace(/-/g, '.') + ' ~ ' +
+          VISIT.max.replace(/-/g, '.') : '비어 있습니다') + '</b> 범위라 ' +
+          '행사기간(' + ctx.from.replace(/-/g, '.') + ' ~ ' + ctx.to.replace(/-/g, '.') +
+          ')을 덮지 못합니다.') + '</div>');
+    }
+    var 신규 = ctx.주문 ? ctx.신규고객 : ctx.p.정보.신규고객;
+    var t = [
+      ['방문고객수', rvCnt(v.방문, '명'), false],
+      ['-처음방문', rvCnt(v.처음, '명'), true],
+      ['-재방문', rvCnt(v.재방문, '명'), true],
+      ['-재방문율', rvPct(rvDiv(v.재방문, v.방문)), true],
+      ['가입고객수', rvCnt(v.가입, '명'), false],
+      ['-기간 내 가입고객 구매전환율', rvPct(rvDiv(신규, v.가입)), true]
+    ];
+
+    csv.push([]); csv.push(['[유입정보]']);
+    var body = t.map(function (x) {
+      csv.push([x[0], rvPlain(x[1])]);
+      return '<tr' + (x[2] ? ' class="sub"' : '') + '><td class="k">' + esc(x[0]) + '</td>' +
+             rvTd('v num', x[1], rvMemoPick(ctx, x[0], null)) + '</tr>';
+    }).join('');
+
+    var n = ['<b>방문고객수</b>는 새로 열린 세션의 수입니다 — 세션이 살아 있는 동안 여러 번 ' +
+             '둘러봐도 한 번으로 셉니다.',
+             '<b>처음방문</b>은 사이트에 처음 접속한 IP, <b>재방문</b>은 전에 온 적이 있거나 ' +
+             '세션이 끝난 뒤 다시 온 경우입니다. 재방문율 = 재방문 ÷ 방문고객수.',
+             '<b>기간 내 가입고객 구매전환율</b>은 행사기간 신규고객수(생애 첫 구매) ÷ ' +
+             '같은 기간 가입고객수입니다 — 유입 탭에 가입자를 가릴 키가 없어 ' +
+             '<b>가입한 그 사람이 샀는지</b>까지는 못 봅니다. 대략의 크기로만 보세요.'];
+    if (v.잘림) {
+      n.push('유입 탭에 <b>' + v.끝.replace(/-/g, '.') + '</b> 까지만 들어 있어 ' +
+             '그때까지의 합계입니다.');
+    }
+    return rvCard('유입정보', '',
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvVisit"><tbody>' +
+      body + '</tbody></table></div></div>', n.join('<br>'));
+  }
+
   function rvAovCard(ctx, csv) {
     var 구매 = ctx.구매고객, 행사 = ctx.행사, 품목 = ctx.품목;
     var 추가 = ctx.주문 ? ctx.주문.품목plus매출 : ctx.p.정보.추가매출;
@@ -3067,6 +3293,62 @@
         : '나누는 값은 리뷰 시트의 <b>구매고객수</b>입니다. 주문 원장이 이 기간을 덮으면 ' +
           '행사품목을 산 고객 수로 바뀝니다.') +
       '<br>직전 기간·작년의 구매고객수는 화면에 내지 않으므로 객단가도 증감을 내지 않습니다.');
+  }
+
+  /* 조합 표에 몇 줄까지 내놓을지 — 나머지는 한 줄로 접습니다 */
+  var RV_COMBO_TOP = 10;
+
+  /**
+   * 구매조합 — 행사품목을 산 사람이 무엇을 함께 담았는지, 많이 나온 조합부터.
+   * 주문라인요약에 상품명 열이 있어야 나옵니다.
+   */
+  function rvComboCard(ctx, csv) {
+    var C = ctx.조합;
+    if (!C) return '';
+    if (!C.목록.length) {
+      return rvCard('구매조합', '', rvEmptyBox('행사품목이 든 주문을 찾지 못했습니다.'),
+        '구매조합은 <b>주문라인요약</b>의 상품명으로 냅니다.');
+    }
+    var 분모 = ctx.구매고객;
+    var 위 = C.목록.slice(0, RV_COMBO_TOP);
+    var 나머지 = C.목록.slice(RV_COMBO_TOP);
+    var 나머지고객 = 0;
+    나머지.forEach(function (g) { 나머지고객 += g.고객수; });
+
+    csv.push([]); csv.push(['[구매조합]']);
+    csv.push(['조합', '고객수', '비중']);
+    var body = 위.map(function (g) {
+      var 이름 = g.품목.join(' & ');
+      csv.push([이름, g.고객수, rvPlain(rvPct(rvDiv(g.고객수, 분모)))]);
+      /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
+      var 보임 = g.품목.map(esc).join(' &<br>');
+      return '<tr>' + rvTd('k combo', 보임, rvMemoPick(ctx, 이름, null)) +
+             '<td class="c num">' + rvCnt(g.고객수, '명') + '</td>' +
+             '<td class="c num">' + rvPct(rvDiv(g.고객수, 분모)) + '</td></tr>';
+    }).join('');
+    if (나머지.length) {
+      csv.push(['나머지 ' + 나머지.length + '개 조합', 나머지고객,
+                rvPlain(rvPct(rvDiv(나머지고객, 분모)))]);
+      body += '<tr class="sub"><td class="k combo">나머지 ' + 나머지.length + '개 조합</td>' +
+              '<td class="c num">' + rvCnt(나머지고객, '명') + '</td>' +
+              '<td class="c num">' + rvPct(rvDiv(나머지고객, 분모)) + '</td></tr>';
+    }
+
+    var head = '<thead><tr><th class="k">조합</th><th class="c">고객수</th>' +
+               '<th class="c">비중</th></tr></thead>';
+    var n = ['한 사람이 행사기간에 여러 번 샀으면 <b>행사품목이 든 주문</b>을 모두 합쳐 ' +
+             '한 조합으로 봅니다 — 사람은 ' + esc(C.기준) + '로 가릅니다.'];
+    n.push('비중 = 그 조합 고객수 ÷ <b>행사품목 구매고객수</b>(' + rvPlain(rvCnt(분모, '명')) + ').' +
+           ' 한 사람은 한 조합에만 들어가므로 비중을 다 더하면 100%가 됩니다.');
+    n.push('수량은 보지 않습니다 — 같은 상품을 두 개 샀어도 조합은 한 가지입니다. ' +
+           '조합 이름은 <b>행사품목</b>을 앞에 두고 나머지를 가나다순으로 적습니다.');
+    if (C.번호없는주문) {
+      n.push('번호가 비어 있어 사람을 가릴 수 없는 주문 ' + rvPlain(rvCnt(C.번호없는주문, '건')) +
+             '은 빠졌습니다.');
+    }
+    return rvCard('구매조합', '',
+      '<div class="body flush"><div class="tablewrap"><table class="rv" id="rvCombo">' +
+      head + '<tbody>' + body + '</tbody></table></div></div>', n.join('<br>'));
   }
 
   /* ── 프로모션 비교 ──────────────────────────────────────── */
