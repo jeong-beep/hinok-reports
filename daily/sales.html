@@ -292,6 +292,7 @@
                                            width: auto; line-height: 1.55; }
   table.rv.cmb td.rk, table.rv.cmb th.rk { width: 54px; text-align: center;
                                            color: var(--ink-muted); }
+  table.rv.cmb td.gb, table.rv.cmb th.gb { width: 76px; text-align: center; }
   table.rv.cmb td.c { text-align: center; width: 110px; font-weight: 620; }
   table.rv.cmb th.c { text-align: center; width: 110px; }
   /* 프로모션 비교 — 카드마다 열이 하나씩 붙습니다. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
@@ -2601,7 +2602,7 @@
    * 한 조합으로 봅니다 — 주문을 두 번 나눠 산 사람을 두 조합으로 세지 않기 위해서입니다.
    * 상품명은 가나다순으로 정렬해 담은 순서가 달라도 같은 조합으로 봅니다.
    */
-  function ordCombos(from, to, 조건) {
+  function ordCombos(from, to, 조건, 갈라서) {
     조건 = 품목조건으로(조건);
     var O = ORD.line;
     if (!O || !O.이름있음 || !from || !to || from > to) return null;
@@ -2620,15 +2621,17 @@
     for (i = 0; i < O.rows.length; i++) {
       r = O.rows[i];
       if (r.d < lo || r.d > hi || !대상주문[r.ord]) continue;
+      var 키 = (폰기준 ? r.phone : r.cust) || '';
+      if (!키) { if (r.ord) 번호없음[r.ord] = 1; continue; }
+      if (!사람[키]) 사람[키] = { 품목: {}, 매출: 0, 신규: false };
+      /* 생애 첫 구매 표시는 아래에서 빼는 줄에도 찍히므로 먼저 봅니다 */
+      if (r.first) 사람[키].신규 = true;
       /* 정기배송은 프로모션과 무관하게 그 달에 나가는 주문이라 조합에서 뺍니다 */
       if (정기배송인가(r) && !itemHit(r, 조건)) { 정기뺌 = true; continue; }
       /* 사은품은 고른 게 아니라 딸려 간 것이라 조합에서 뺍니다 */
       if (사은품인가(r) && !itemHit(r, 조건)) { 사은품뺌 = true; continue; }
-      var 키 = (폰기준 ? r.phone : r.cust) || '';
-      if (!키) { if (r.ord) 번호없음[r.ord] = 1; continue; }
       var 품명 = r.name || 코드정리(r.sku) || r.line;
       if (!품명) continue;
-      if (!사람[키]) 사람[키] = { 품목: {}, 매출: 0 };
       var 담김 = 사람[키].품목[품명];
       if (!담김) 담김 = 사람[키].품목[품명] = { 이름: 품명, 수량: 0, 행사: false };
       담김.수량 += (r.qty || 0);
@@ -2639,17 +2642,22 @@
 
     var 조합 = {}, 사람수 = 0, k, n;
     for (k in 사람) {
-      사람수++;
       var 목록 = [];
       for (n in 사람[k].품목) 목록.push(사람[k].품목[n]);
+      if (!목록.length) continue;      /* 담은 게 전부 사은품·정기배송이면 뺍니다 */
+      사람수++;
       /* 행사품목을 앞에, 나머지는 가나다순 — 줄마다 같은 품목이 먼저 와야 눈에 붙습니다 */
       목록.sort(function (a, b) {
         var 차 = (b.행사 ? 1 : 0) - (a.행사 ? 1 : 0);
         return 차 || a.이름.localeCompare(b.이름, 'ko');
       });
       /* 수량까지 열쇠에 넣습니다 — 두 개 산 사람과 한 개 산 사람은 다른 조합입니다 */
-      var 열쇠 = 목록.map(function (x) { return x.이름 + '×' + x.수량; }).join('');
-      if (!조합[열쇠]) 조합[열쇠] = { 품목: 목록, 고객수: 0, 매출: 0 };
+      var 열쇠 = (갈라서 ? (사람[k].신규 ? '신규' : '기존') + '' : '') +
+                 목록.map(function (x) { return x.이름 + '×' + x.수량; }).join('');
+      if (!조합[열쇠]) {
+        조합[열쇠] = { 품목: 목록, 고객수: 0, 매출: 0,
+                      신규: 갈라서 ? 사람[k].신규 : null };
+      }
       조합[열쇠].고객수++;
       조합[열쇠].매출 += 사람[k].매출;
     }
@@ -2987,6 +2995,7 @@
       var 주문조건 = 주문코드가능 ? { sku: 코드 } : { line: 라인 };
       ctx.주문 = ordStats(from, to, 주문조건);
       ctx.조합 = ordCombos(from, to, 주문조건);
+      ctx.조합갈라 = ordCombos(from, to, 주문조건, true);
       if (ctx.주문) {
         ctx.구매고객 = ctx.주문.구매고객수;          /* 행사품목이 든 주문을 한 사람만 */
         ctx.신규고객 = ctx.주문.신규고객수;
@@ -3290,14 +3299,14 @@
     var 몸2 = 표(합계, true);
 
     function 상자(키, 몸, 묶음들, 보임) {
-      return '<div class="body flush" data-sendview="' + 키 + '"' + (보임 ? '' : ' hidden') +
+      return '<div class="body flush" data-view="' + 키 + '"' + (보임 ? '' : ' hidden') +
         '><div class="tablewrap"><table class="rv" id="rvSend' + (보임 ? '' : 'Sum') + '">' +
         rv머리(ctx, function (x, i) { return 묶음들[i].발신.length; }) +
         '<tbody>' + 몸 + '</tbody></table></div></div>';
     }
     var 탭 = '<div class="seg rv-seg" role="group" aria-label="발신 보기">' +
-      '<button type="button" data-sendtab="all" aria-pressed="true">발신별</button>' +
-      '<button type="button" data-sendtab="sum" aria-pressed="false">프로모션 합계</button></div>';
+      '<button type="button" data-tab="all" aria-pressed="true">발신별</button>' +
+      '<button type="button" data-tab="sum" aria-pressed="false">프로모션 합계</button></div>';
 
     var n = ['타겟대비 비중 = 발신모수 ÷ 타겟모수 · 열람률 = 열람수 ÷ 발신모수 · ' +
              '클릭률 = 클릭수 ÷ <b>열람수</b>. 문자처럼 열람수를 알 수 없는 채널은 비율도 내지 않습니다.'];
@@ -3661,8 +3670,8 @@
     function 한품목(x) { return x.이름 + ' ' + rvPlain(rvCnt(x.수량, '개')); }
 
     /* 조합 이름은 프로모션마다 달라 열을 붙일 수 없습니다 — 표를 따로 그립니다 */
-    function 한표(c, 이름, 첫번째) {
-      var C = c.조합;
+    function 한표(c, 이름, 첫번째, 갈라서) {
+      var C = 갈라서 ? c.조합갈라 : c.조합;
       if (!C || !C.목록.length) {
         return '<div class="combo-one"><div class="combo-h">' + esc(이름) +
                '</div><div class="rv-empty">이 프로모션은 조합을 낼 수 없습니다 — ' +
@@ -3674,20 +3683,29 @@
       var 나머지고객 = 0;
       나머지.forEach(function (g) { 나머지고객 += g.고객수; });
 
-      csv.push([]); csv.push(['[구매조합] ' + 이름]);
-      csv.push(['RANK', '조합', '객단가', '고객수', '비중']);
+      /* 갈라 센 표에는 '구분' 칸이 하나 더 붙습니다 */
+      function 구분칸(g, 태그) {
+        if (!갈라서) return '';
+        var t = g.신규 ? '첫구매' : '재구매';
+        return '<' + 태그 + ' class="c gb">' + (g.신규 === null ? '' : t) + '</' + 태그 + '>';
+      }
+      csv.push([]);
+      csv.push(['[구매조합' + (갈라서 ? ' — 첫구매·재구매' : '') + '] ' + 이름]);
+      csv.push(['RANK'].concat(갈라서 ? ['구분'] : [])
+                       .concat(['조합', '객단가', '고객수', '비중']));
       var 나머지매출 = 0;
       나머지.forEach(function (g) { 나머지매출 += g.매출; });
       var body = 위.map(function (g, i) {
         var 조합이름 = g.품목.map(한품목).join(' & ');
         var 객단가 = rvDiv(g.매출, g.고객수);
-        csv.push([i + 1, 조합이름, rvPlain(rvWon(객단가)), g.고객수,
-                  rvPlain(rvPct(rvDiv(g.고객수, 분모)))]);
+        csv.push([i + 1].concat(갈라서 ? [g.신규 ? '첫구매' : '재구매'] : [])
+                        .concat([조합이름, rvPlain(rvWon(객단가)), g.고객수,
+                                 rvPlain(rvPct(rvDiv(g.고객수, 분모)))]));
         /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
         var 보임 = g.품목.map(function (x) {
           return esc(x.이름) + ' <b>' + esc(rvPlain(rvCnt(x.수량, '개'))) + '</b>';
         }).join(' &<br>');
-        return '<tr><td class="rk num">' + (i + 1) + '</td>' +
+        return '<tr><td class="rk num">' + (i + 1) + '</td>' + 구분칸(g, 'td') +
                rvTd('cb', 보임, rvMemoPick(c, 조합이름, null)) +
                '<td class="c num">' + rvWon(객단가) + '</td>' +
                '<td class="c num">' + rvCnt(g.고객수, '명') + '</td>' +
@@ -3695,27 +3713,36 @@
       }).join('');
       if (나머지.length) {
         var 나머지객단가 = rvDiv(나머지매출, 나머지고객);
-        csv.push(['', '나머지 ' + 나머지.length + '개 조합', rvPlain(rvWon(나머지객단가)),
-                  나머지고객, rvPlain(rvPct(rvDiv(나머지고객, 분모)))]);
+        csv.push([''].concat(갈라서 ? [''] : [])
+                     .concat(['나머지 ' + 나머지.length + '개 조합', rvPlain(rvWon(나머지객단가)),
+                              나머지고객, rvPlain(rvPct(rvDiv(나머지고객, 분모)))]));
         body += '<tr class="sub"><td class="rk num"></td>' +
+                (갈라서 ? '<td class="c gb"></td>' : '') +
                 '<td class="cb">나머지 ' + 나머지.length + '개 조합</td>' +
                 '<td class="c num">' + rvWon(나머지객단가) + '</td>' +
                 '<td class="c num">' + rvCnt(나머지고객, '명') + '</td>' +
                 '<td class="c num">' + rvPct(rvDiv(나머지고객, 분모)) + '</td></tr>';
       }
-      var head = '<thead><tr><th class="rk">RANK</th><th class="cb">조합</th>' +
+      var head = '<thead><tr><th class="rk">RANK</th>' +
+                 (갈라서 ? '<th class="c gb">구분</th>' : '') +
+                 '<th class="cb">조합</th>' +
                  '<th class="c">객단가</th><th class="c">고객수</th>' +
                  '<th class="c">비중</th></tr></thead>';
       return '<div class="combo-one' + (첫번째 ? ' g' : '') + '">' +
              (ctx.비교.length ? '<div class="combo-h">' + esc(이름) + ' · 행사품목 구매고객 ' +
               rvPlain(rvCnt(분모, '명')) + '</div>' : '') +
-             '<div class="tablewrap"><table class="rv cmb" id="rvCombo' + (첫번째 ? '' : '2') + '">' +
-             head + '<tbody>' + body + '</tbody></table></div></div>';
+             '<div class="tablewrap"><table class="rv cmb"' +
+             (갈라서 ? '' : ' id="rvCombo' + (첫번째 ? '' : '2') + '"') +
+             '>' + head + '<tbody>' + body + '</tbody></table></div></div>';
     }
 
-    var 표들 = rv열(ctx).map(function (col, i) {
-      return 한표(col.ctx, col.이름, i === 0);
-    }).join('');
+    function 표들(갈라서) {
+      return rv열(ctx).map(function (col, i) {
+        return 한표(col.ctx, col.이름, i === 0, 갈라서);
+      }).join('');
+    }
+    var 전체표 = 표들(false);
+    var 갈라표 = ctx.조합갈라 ? 표들(true) : '';
 
     var C = ctx.조합, 분모 = ctx.구매고객;
     var n = ['한 사람이 행사기간에 여러 번 샀으면 <b>행사품목이 든 주문</b>을 모두 합쳐 ' +
@@ -3738,7 +3765,20 @@
       n.push('번호가 비어 있어 사람을 가릴 수 없는 주문 ' + rvPlain(rvCnt(C.번호없는주문, '건')) +
              '은 빠졌습니다.');
     }
-    return rvCard('구매조합', '', '<div class="body flush">' + 표들 + '</div>', n.join('<br>'));
+    if (!갈라표) {
+      return rvCard('구매조합', '', '<div class="body flush">' + 전체표 + '</div>',
+                    n.join('<br>'));
+    }
+    n.push('<b>첫구매·재구매</b> 탭은 같은 조합이라도 <b>산 사람이 희녹에서 생애 첫 구매인지</b>에 ' +
+           '따라 줄을 나눕니다 — 주문 원장의 <b>첫구매</b> 열로 가릅니다. ' +
+           '비중의 분모는 두 탭 모두 행사품목 구매고객수입니다.');
+    var 탭 = '<div class="seg rv-seg" role="group" aria-label="조합 보기">' +
+      '<button type="button" data-tab="all" aria-pressed="true">전체</button>' +
+      '<button type="button" data-tab="split" aria-pressed="false">첫구매·재구매</button></div>';
+    return rvCard('구매조합', '',
+      '<div class="body flush" data-view="all">' + 전체표 + '</div>' +
+      '<div class="body flush" data-view="split" hidden>' + 갈라표 + '</div>',
+      n.join('<br>'), 탭);
   }
 
   /* ── 프로모션 비교 ──────────────────────────────────────── */
@@ -4334,18 +4374,19 @@
     }
     if (popEl && !e.target.closest('.memopop')) closeMemo();
   });
-  /* 발신 성과의 보기 전환 — 카드를 다시 그려도 살아 있도록 문서에 걸어 둡니다 */
+  /* 카드 안의 보기 전환 — 카드를 다시 그려도 살아 있도록 문서에 걸어 둡니다.
+     같은 카드 안에서만 짝을 맞추므로 카드끼리 키 이름이 겹쳐도 됩니다. */
   document.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-sendtab]');
+    var b = e.target.closest('[data-tab]');
     if (!b) return;
     var card = b.closest('section.card');
     if (!card) return;
-    var 고른것 = b.getAttribute('data-sendtab');
-    card.querySelectorAll('[data-sendtab]').forEach(function (x) {
+    var 고른것 = b.getAttribute('data-tab');
+    card.querySelectorAll('[data-tab]').forEach(function (x) {
       x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
     });
-    card.querySelectorAll('[data-sendview]').forEach(function (v) {
-      v.hidden = v.getAttribute('data-sendview') !== 고른것;
+    card.querySelectorAll('[data-view]').forEach(function (v) {
+      v.hidden = v.getAttribute('data-view') !== 고른것;
     });
     closeMemo();
   });
