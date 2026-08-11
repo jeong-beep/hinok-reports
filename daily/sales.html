@@ -231,9 +231,12 @@
        표 머리(프로모션 이름) 12 / 650 · 그 아래 기간 10.5 / 500
        표 머리(열 이름)       10.5 / 600
        항목 이름              12.5 / 400 · 하위 항목 12 / 400
-       값                     12.5 / 620
+       값                     12.5 / 400 — 기본은 보통 굵기입니다
        구분 띠(head·chline)   12.5 / 620 + 옅은 바탕
-       각주                   11.5 / 400 */
+       비율 줄(em)            12.5 / 620
+       각주                   11.5 / 400
+     굵게는 '이 줄은 다르다'는 표시로만 씁니다 — 값까지 굵히면 표 전체가 굵어 보여
+     정작 봐야 할 줄이 묻힙니다. */
 
   /* 개요 : 다른 카드와 같은 표입니다 — 항목 이름 칸이 왼쪽에 붙고 가로로 흐릅니다 */
   #rvOverview td.v { white-space: normal; word-break: keep-all; min-width: 220px; }
@@ -245,14 +248,17 @@
   table.rv td.k { width: 210px; }
   table.rv tr.sub td.k { color: var(--ink-muted); font-size: 12px; }
   table.rv tr.head td { background: var(--surface-2); font-weight: 620; }
-  table.rv td.v { text-align: left; font-weight: 620; }
+  table.rv td.v { text-align: left; }
   table.rv td.d { text-align: center; width: 132px; font-size: 12px; }
   .na { color: var(--ink-muted); font-weight: 400; }
 
-  /* 발신 성과 : 지표가 행, 발신이 열 */
-  #rvSend td.k { width: 150px; }
-  #rvSend td.s { text-align: center; font-weight: 620; }
-  #rvSend tr.chline td { background: var(--surface-2); font-weight: 620; }
+  /* 발신 성과 : 지표가 행, 발신이 열.
+     탭이 둘(전부 나열 #rvSend · 프로모션별 합계 #rvSendSum)이라 두 표에 함께 겁니다 —
+     한쪽에만 걸면 탭을 옮길 때 같은 카드가 달라 보입니다 */
+  #rvSend td.k, #rvSendSum td.k { width: 150px; }
+  #rvSend td.s, #rvSendSum td.s { text-align: center; }
+  #rvSend tr.chline td,
+  #rvSendSum tr.chline td { background: var(--surface-2); font-weight: 620; }
 
   /* 카드 머리에 붙는 보기 전환 — 상단 고정줄의 것보다 한 치수 작게 */
   .rv-seg button { font-size: 11.5px; padding: 4px 10px; }
@@ -287,17 +293,18 @@
   /* 발신 성과 — 카카오 열은 옅은 노랑으로 갈라 둡니다. 두 테마 모두 같은 색이라
      글자색도 함께 고정해야 어두운 테마에서 읽힙니다. */
   /* 발신채널 줄은 tr.chline 바탕색이 깔려 있어, 그보다 뒤에 같은 무게로 적어야 이깁니다 */
-  #rvSend tr td.kko { background: #fff2cc; color: #15191d; }
-  #rvSend tr.em td { font-weight: 620; }
+  #rvSend tr td.kko,
+  #rvSendSum tr td.kko { background: #fff2cc; color: #15191d; }
+  #rvSend tr.em td, #rvSendSum tr.em td { font-weight: 620; }
   /* 병합된 칸은 가운데로 — 두 열에 걸쳐 있어 왼쪽에 붙으면 어디 것인지 헷갈립니다 */
-  #rvSend td[colspan] { text-align: center; }
+  #rvSend td[colspan], #rvSendSum td[colspan] { text-align: center; }
   /* 구매조합 — 조합 이름은 여러 줄이라 왼쪽에 붙이고 줄바꿈을 허용합니다 */
   table.rv.cmb td.cb, table.rv.cmb th.cb { text-align: left; white-space: normal;
                                            width: auto; line-height: 1.55; }
   table.rv.cmb td.rk, table.rv.cmb th.rk { width: 54px; text-align: center;
                                            color: var(--ink-muted); }
   table.rv.cmb td.gb, table.rv.cmb th.gb { width: 76px; text-align: center; }
-  table.rv.cmb td.c { text-align: center; width: 110px; font-weight: 620; }
+  table.rv.cmb td.c { text-align: center; width: 110px; }
   table.rv.cmb th.c { text-align: center; width: 110px; }
   /* 프로모션 비교 — 카드마다 열이 하나씩 붙습니다. 이 프로모션 칸(.g)을 옅게 깔아 둡니다 */
   table.rv td.g, table.rv th.g { background: var(--surface-2); }
