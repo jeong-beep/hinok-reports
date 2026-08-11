@@ -328,6 +328,9 @@
              font-size: 12.5px; line-height: 1.7; margin-bottom: 14px; color: var(--ink-2); }
   .rv-memo .mp-t + .mp-t { margin-top: 7px; padding-top: 7px;
                            border-top: 1px dashed var(--hairline); }
+  /* 시트에서 넣으신 굵게·밑줄이 그대로 옵니다 */
+  .rv-memo b, .memopop b { font-weight: 700; color: var(--ink); }
+  .rv-memo u, .memopop u { text-underline-offset: 3px; }
   .mp-t .who { display: block; margin-top: 3px; font-size: 10.5px; color: var(--ink-muted); }
   .rv-warn { background: color-mix(in srgb, var(--serious) 8%, transparent);
              border: 1px solid color-mix(in srgb, var(--serious) 30%, transparent);
@@ -955,6 +958,22 @@
   function sheetValues(range) { return sheetValuesOf(CONFIG.SHEET_ID, range); }
 
   /**
+   * 칸 안의 글자 서식까지 읽습니다 — values 로는 굵게·밑줄이 오지 않습니다.
+   * memo 탭처럼 작은 표에만 씁니다. 실패해도 값 쪽은 멀쩡하므로 부르는 쪽에서 삼킵니다.
+   */
+  function sheetRichOf(sheetId, range) {
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId +
+              '?includeGridData=true&ranges=' + encodeURIComponent(range) +
+              '&fields=' + encodeURIComponent(
+                'sheets.data.rowData.values(formattedValue,textFormatRuns,' +
+                'effectiveFormat.textFormat)');
+    return api(url).then(function (j) {
+      var d = j.sheets && j.sheets[0] && j.sheets[0].data && j.sheets[0].data[0];
+      return (d && d.rowData) || [];
+    });
+  }
+
+  /**
    * gid 로 탭 이름을 찾습니다 — 탭 이름이 바뀌어도 gid 는 그대로라서요.
    * 한 파일에서 탭을 여럿 읽으므로 탭 목록은 파일당 한 번만 받아 둡니다.
    */
@@ -1512,6 +1531,49 @@
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   /* 시트 칸 안에서 줄을 바꿔 적으신 경우 화면에서도 줄을 바꿉니다 */
   function escBr(s) { return esc(s).replace(/\r?\n/g, '<br>'); }
+
+  /** 글자 한 토막에 굵게·기울임·밑줄·취소선을 입힙니다 */
+  function 꾸밈(글, f) {
+    var out = escBr(글);
+    if (!f) return out;
+    if (f.strikethrough) out = '<s>' + out + '</s>';
+    if (f.underline) out = '<u>' + out + '</u>';
+    if (f.italic) out = '<i>' + out + '</i>';
+    if (f.bold) out = '<b>' + out + '</b>';
+    return out;
+  }
+
+  /**
+   * 시트 칸 하나를 서식까지 살려 HTML 로 바꿉니다.
+   * textFormatRuns 는 '이 자리부터 서식이 바뀐다'는 표시라, 다음 표시 직전까지가 한 토막입니다.
+   * 토막에 없는 항목은 칸 전체 서식을 따릅니다.
+   */
+  function 서식글(셀) {
+    if (!셀) return '';
+    var 글 = 셀.formattedValue;
+    if (글 === undefined || 글 === null || 글 === '') return '';
+    글 = String(글);
+    var 바탕 = (셀.effectiveFormat && 셀.effectiveFormat.textFormat) || null;
+    var runs = 셀.textFormatRuns;
+    if (!runs || !runs.length) return 꾸밈(글, 바탕);
+
+    function 합침(f) {
+      if (!f) return 바탕;
+      if (!바탕) return f;
+      var out = {}, k;
+      for (k in 바탕) out[k] = 바탕[k];
+      for (k in f) out[k] = f[k];
+      return out;
+    }
+    var out = '', 첫 = runs[0].startIndex || 0;
+    if (첫 > 0) out += 꾸밈(글.slice(0, 첫), 바탕);
+    for (var i = 0; i < runs.length; i++) {
+      var 시작 = runs[i].startIndex || 0;
+      var 끝 = (i + 1 < runs.length) ? (runs[i + 1].startIndex || 0) : 글.length;
+      if (끝 > 시작) out += 꾸밈(글.slice(시작, 끝), 합침(runs[i].format));
+    }
+    return out;
+  }
   function md(ds) { return ds.slice(5) + '(' + WD[new Date(ds + 'T00:00:00').getDay()] + ')'; }
 
   /** 금액 : ₩ 접두, 마이너스는 빨간색 */
@@ -2060,10 +2122,16 @@
     return rvNorm(s).replace(/^[-\u2013\u2014\u3131]+/, '');
   }
 
-  function parseReviewMemo(vals) {
+  function parseReviewMemo(vals, rich) {
     if (!vals || vals.length < 2) return [];
     var C = mapBy(vals[0] || [], RVMEMO_COLS);
     if (C.이름 < 0 || C.메모 < 0) return [];
+    /* 굵게·밑줄 같은 칸 서식은 값 요청으로 오지 않아 따로 읽어 둔 것을 씁니다 */
+    function 서식(줄, 칸) {
+      var r = rich && rich[줄];
+      var v = r && r.values && r.values[칸];
+      return v ? 서식글(v) : '';
+    }
     var out = [], seen = {};
     for (var i = 1; i < vals.length; i++) {
       var r = vals[i] || [];
@@ -2074,7 +2142,8 @@
         이름: 이름, 시작: rvDate(r, C.시작),
         항목: rvText(r, C.항목),
         발신채널: rvText(r, C.발신채널), 발신일: rvDate(r, C.발신일),
-        메모: 글, 작성일: rvDate(r, C.작성일), 작성자: rvText(r, C.작성자)
+        메모: 글, 본문: 서식(i, C.메모) || escBr(글),
+        작성일: rvDate(r, C.작성일), 작성자: rvText(r, C.작성자)
       };
       var k = [m.이름, m.시작, m.항목, m.발신채널, m.발신일, m.메모].join('|');
       if (seen[k]) continue;
@@ -2694,8 +2763,13 @@
       (CONFIG.REVIEW_MEMO_GID === null || CONFIG.REVIEW_MEMO_GID === undefined)
         ? Promise.resolve([])
         : tabNameByGid(CONFIG.REVIEW_SHEET_ID, CONFIG.REVIEW_MEMO_GID).then(function (title) {
-            return sheetValuesOf(CONFIG.REVIEW_SHEET_ID, quoteTab(title, 'A1:Z'));
-          }).catch(function () { return []; }),
+            var 범위 = quoteTab(title, 'A1:Z');
+            /* 서식은 없어도 글자는 나와야 하므로 실패를 삼킵니다 */
+            return Promise.all([
+              sheetValuesOf(CONFIG.REVIEW_SHEET_ID, 범위),
+              sheetRichOf(CONFIG.REVIEW_SHEET_ID, 범위).catch(function () { return null; })
+            ]);
+          }).catch(function () { return [[], null]; }),
       /* 유입 탭도 없어도 리뷰는 나와야 합니다 */
       (CONFIG.VISIT_GID === null || CONFIG.VISIT_GID === undefined)
         ? Promise.resolve([])
@@ -2704,7 +2778,7 @@
           }).catch(function () { return []; })
     ]).then(function (res) {
       REVIEW = parseReview(res[0]);
-      REVIEW_MEMO = parseReviewMemo(res[2]);
+      REVIEW_MEMO = parseReviewMemo(res[2][0], res[2][1]);
       VISIT = parseVisit(res[3]);
       visitState = VISIT ? 'ready' : 'off';
       reviewState = 'ready';
@@ -2906,7 +2980,7 @@
     var 전체메모 = rvMemoPick(ctx, '', null);
     var 메모띠 = 전체메모
       ? '<div class="rv-memo">' + 전체메모.map(function (m) {
-          return '<div class="mp-t">' + esc(m.메모) + rvMemoWho(m) + '</div>';
+          return '<div class="mp-t">' + (m.본문 || escBr(m.메모)) + rvMemoWho(m) + '</div>';
         }).join('') + '</div>'
       : '';
     return out + 메모띠 + (w.length ? '<div class="rv-warn">' + w.join('<br>') + '</div>' : '');
