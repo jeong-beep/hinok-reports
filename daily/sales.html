@@ -183,6 +183,10 @@
              color: var(--noteflo-ink); font-weight: 700; font-size: 13.5px;
              line-height: 1.5; box-shadow: var(--shadow); white-space: pre-wrap; }
   .noteflo[hidden] { display: none; }
+  /* 시트에서 넣으신 굵게·밑줄이 그대로 옵니다 — 띠 자체가 이미 굵은 글씨라
+     굵게는 한 단계 더 진하게, 밑줄은 글자와 떨어뜨려 둡니다 */
+  .noteflo b { font-weight: 800; }
+  .noteflo u { text-underline-offset: 3px; }
 
   /* ── KPI ────────────────────────────────────────────────── */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
@@ -1009,6 +1013,16 @@
       return sheetValuesOf(sheetId, quoteTab(title, span));
     });
   }
+  /** 값과 칸 서식을 함께 — 서식 쪽이 실패해도 값은 그대로 돌려줍니다 */
+  function valuesAndRich(sheetId, gid, span) {
+    return tabNameByGid(sheetId, gid).then(function (title) {
+      var 범위 = quoteTab(title, span);
+      return Promise.all([
+        sheetValuesOf(sheetId, 범위),
+        sheetRichOf(sheetId, 범위).catch(function () { return null; })
+      ]);
+    });
+  }
 
   /* ═══════════════════════════════════════════════════════
      데이터
@@ -1088,11 +1102,13 @@
     clearErr();
     Promise.all([
       valuesByGid(CONFIG.SHEET_ID, CONFIG.DATA_GID, 'A1:Z'),
-      없으면빈값(valuesByGid(CONFIG.SHEET_ID, CONFIG.MEMO_GID, 'A1:Z')),
-      없으면빈값(valuesByGid(CONFIG.SHEET_ID, CONFIG.NOTE_GID, 'A1:B')),
+      valuesAndRich(CONFIG.SHEET_ID, CONFIG.MEMO_GID, 'A1:Z')
+        .catch(function () { return [[], null]; }),
+      valuesAndRich(CONFIG.SHEET_ID, CONFIG.NOTE_GID, 'A1:B')
+        .catch(function () { return [[], null]; }),
       없으면빈값(sheetValues(CONFIG.PROMO_RANGE))
     ]).then(function (res) {
-      DATA = parseRows(res[0], res[1], res[2], res[3]);
+      DATA = parseRows(res[0], res[1][0], res[2][0], res[3], res[1][1], res[2][1]);
       var now = new Date();
       document.getElementById('whoFetched').textContent =
         ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ' 조회';
@@ -1105,7 +1121,7 @@
     });
   }
 
-  function parseRows(values, memoVals, noteVals, promoVals) {
+  function parseRows(values, memoVals, noteVals, promoVals, memoRich, noteRich) {
     if (!values.length) throw new Error('시트가 비어 있습니다');
     var C = mapColumns(values[0]);
     COLMAP = C;
@@ -1145,8 +1161,8 @@
       rows: rows, dates: dates, channels: channels,
       months: Object.keys(months).sort(),
       maxDate: dates[dates.length - 1],
-      memos: parseMemos(memoVals),
-      notes: parseNotes(noteVals),
+      memos: parseMemos(memoVals, memoRich),
+      notes: parseNotes(noteVals, noteRich),
       promos: buildPromos(rows, promoVals, dates[dates.length - 1])
     };
   }
@@ -1222,20 +1238,23 @@
   }
 
   /** 'flaoting comments' 탭 → { 날짜: 코멘트 } */
-  function parseNotes(vals) {
+  function parseNotes(vals, rich) {
     var out = {};
     if (!vals || vals.length < 2) return out;
     for (var i = 1; i < vals.length; i++) {
       var r = vals[i];
       if (!r || typeof r[0] !== 'number') continue;
       var txt = String(r[1] === undefined || r[1] === null ? '' : r[1]).trim();
-      if (txt) out[serialToISO(r[0])] = txt;
+      if (!txt) continue;
+      var 칸 = rich && rich[i] && rich[i].values && rich[i].values[1];
+      /* 시트에서 넣으신 굵게·밑줄을 그대로 씁니다 — 없으면 줄바꿈만 살립니다 */
+      out[serialToISO(r[0])] = { text: txt, html: (칸 && 서식글(칸)) || escBr(txt) };
     }
     return out;
   }
 
   /** memo 탭 → [{d, ch, line, code, text}] */
-  function parseMemos(vals) {
+  function parseMemos(vals, rich) {
     if (!vals || !vals.length) return [];
     var C;
     try { C = mapColumns(vals[0], ['date']); } catch (e) { return []; }
@@ -1256,12 +1275,15 @@
       var text = String(r[txtI] === undefined || r[txtI] === null ? '' : r[txtI]).trim();
       if (!text) continue;
       var ch = String(chI >= 0 ? (r[chI] || '') : '').trim();
+      var 칸 = rich && rich[i] && rich[i].values && rich[i].values[txtI];
       var m = {
         d: serialToISO(r[C.date]),
         ch: MEMO_CH_ALIAS[ch] || ch,
         line: codeStr(lineI >= 0 ? r[lineI] : ''),
         code: codeStr(codeI >= 0 ? r[codeI] : ''),
-        text: text
+        text: text,
+        /* 시트에서 넣으신 굵게·밑줄을 그대로 씁니다 — 없으면 줄바꿈만 살립니다 */
+        html: (칸 && 서식글(칸)) || escBr(text)
       };
       var key = m.d + '' + m.ch + '' + m.line + '' + m.code + '' + m.text;
       if (seen[key]) continue;
@@ -1697,10 +1719,10 @@
    */
   function renderNote(anchor) {
     var el = document.getElementById('noteFlo');
-    var txt = (state.month === '' && state.ch === '' && state.promo === '')
-      ? (DATA.notes || {})[anchor] : '';
-    if (!txt) { el.hidden = true; el.textContent = ''; return; }
-    el.textContent = txt;
+    var 코멘트 = (state.month === '' && state.ch === '' && state.promo === '')
+      ? (DATA.notes || {})[anchor] : null;
+    if (!코멘트) { el.hidden = true; el.innerHTML = ''; return; }
+    el.innerHTML = 코멘트.html || escBr(코멘트.text);
     el.hidden = false;
   }
 
@@ -4388,7 +4410,7 @@
     list.forEach(function (m) {
       if (seenTxt[m.text]) return;
       seenTxt[m.text] = 1;
-      texts.push(m.text);
+      texts.push(m.html || escBr(m.text));
     });
 
     closeMemo();
@@ -4399,7 +4421,7 @@
     popEl.className = 'memopop';
     popEl.innerHTML = '<div class="mp-h">' + md(d) + ' · ' + esc(ch) +
       (line ? ' · ' + esc(line) : '') + (code ? ' · ' + esc(code) : '') + '</div>' +
-      texts.map(function (x) { return '<div class="mp-t">' + esc(x) + '</div>'; }).join('');
+      texts.map(function (x) { return '<div class="mp-t">' + x + '</div>'; }).join('');
     document.body.appendChild(popEl);
 
     var r = cell.getBoundingClientRect(), pr = popEl.getBoundingClientRect();
