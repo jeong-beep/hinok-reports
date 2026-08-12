@@ -3789,11 +3789,11 @@
       /* 갈라 센 표에는 '구분' 칸이 하나 더 붙습니다 */
       function 구분칸(g, 태그) {
         if (!갈라서) return '';
-        var t = g.신규 ? '첫구매' : '재구매';
+        var t = g.신규 ? '신규고객' : '기존고객';
         return '<' + 태그 + ' class="c gb">' + (g.신규 === null ? '' : t) + '</' + 태그 + '>';
       }
       csv.push([]);
-      csv.push(['[구매조합' + (갈라서 ? ' — 첫구매·재구매' : '') + '] ' + 이름]);
+      csv.push(['[구매조합' + (갈라서 ? ' — 신규고객·기존고객' : '') + '] ' + 이름]);
       csv.push(['RANK'].concat(갈라서 ? ['구분'] : [])
                        .concat(['조합', '객단가', '고객수', '비중']));
       var 나머지매출 = 0;
@@ -3801,7 +3801,7 @@
       var body = 위.map(function (g, i) {
         var 조합이름 = g.품목.map(한품목).join(' & ');
         var 객단가 = rvDiv(g.매출, g.고객수);
-        csv.push([i + 1].concat(갈라서 ? [g.신규 ? '첫구매' : '재구매'] : [])
+        csv.push([i + 1].concat(갈라서 ? [g.신규 ? '신규고객' : '기존고객'] : [])
                         .concat([조합이름, rvPlain(rvWon(객단가)), g.고객수,
                                  rvPlain(rvPct(rvDiv(g.고객수, 분모)))]));
         /* 한 품목이 한 줄에 오도록 ' &' 뒤에서 끊습니다 */
@@ -3872,12 +3872,12 @@
       return rvCard('구매조합', '', '<div class="body flush">' + 전체표 + '</div>',
                     n.join('<br>'));
     }
-    n.push('<b>첫구매·재구매</b> 탭은 같은 조합이라도 <b>산 사람이 희녹에서 생애 첫 구매인지</b>에 ' +
+    n.push('<b>신규고객·기존고객</b> 탭은 같은 조합이라도 <b>산 사람이 희녹에서 생애 첫 구매인지</b>에 ' +
            '따라 줄을 나눕니다 — 주문 원장의 <b>첫구매</b> 열로 가릅니다. ' +
            '비중의 분모는 두 탭 모두 행사품목 구매고객수입니다.');
     var 탭 = '<div class="seg rv-seg" role="group" aria-label="조합 보기">' +
       '<button type="button" data-tab="all" aria-pressed="true">전체</button>' +
-      '<button type="button" data-tab="split" aria-pressed="false">첫구매·재구매</button></div>';
+      '<button type="button" data-tab="split" aria-pressed="false">신규고객·기존고객</button></div>';
     return rvCard('구매조합', '',
       '<div class="body flush" data-view="all">' + 전체표 + '</div>' +
       '<div class="body flush" data-view="split" hidden>' + 갈라표 + '</div>',
