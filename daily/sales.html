@@ -33,25 +33,25 @@
     /* 열별 색 스케일의 가장 진한 단계. 농도는 알파로만 조절해
        글자가 흰색으로 바뀔 만큼 어두워지지 않습니다. */
     --scale-rgb:    122, 179, 230;
-    /* 판매처 색 — CH_ORDER 위치와 1:1 고정.
-       자사몰·네이버·카카오·29cm는 지정 브랜드 색이고, 인접 구간이
-       색각 이상에서 구분되도록 명도 계단으로 배치했습니다. */
-    --c1:#1B6B3A;   /* 자사몰       진한 초록 */
-    --c2:#4E9A1F;   /* 네이버       연두 */
-    --c3:#F7C500;   /* 카카오       노랑 */
-    --c4:#B5457B;   /* 캐리마켓(온) */
-    --c5:#1A1A1A;   /* 29cm        검정 */
-    --c6:#9A5F2B;   /* 제네시스 */
-    --c7:#2A78D6;   /* 현대M몰 */
-    --c8:#C0392B;   /* 롯데백화점(온) */
-    --c9:#5C5FBF;   /* 신세계면세점 */
-    --c10:#DE5F2A;  /* 롯데면세점 */
-    --c11:#008B7A;  /* 신라면세점 */
-    --c12:#7B3FA0;  /* 플래그쉽 */
-    --c13:#0288A7;  /* HOS청담 */
-    --c14:#6D7C1F;  /* 어메니티 */
-    --c15:#D14A8F;  /* 페이히어 */
-    --c-other:#8b939c;
+    /* 판매처 색 — 설정 탭의 판매처 순서와 1:1 고정입니다 (첫 줄이 c1).
+       앞 몇 자리는 지정 브랜드 색이고, 인접 구간이 색각 이상에서 구분되도록
+       명도 계단으로 배치했습니다. 순서를 바꾸면 이 검증이 깨집니다. */
+    --c1:#1B6B3A;   /* 진한 초록 */
+    --c2:#4E9A1F;   /* 연두 */
+    --c3:#F7C500;   /* 노랑 */
+    --c4:#B5457B;
+    --c5:#1A1A1A;   /* 검정 */
+    --c6:#9A5F2B;
+    --c7:#2A78D6;
+    --c8:#C0392B;
+    --c9:#5C5FBF;
+    --c10:#DE5F2A;
+    --c11:#008B7A;
+    --c12:#7B3FA0;
+    --c13:#0288A7;
+    --c14:#6D7C1F;
+    --c15:#D14A8F;
+    --c-other:#8b939c;   /* 설정에 없는 판매처 */
     --shadow: 0 1px 2px rgba(15,23,32,.05), 0 8px 24px -12px rgba(15,23,32,.16);
   }
   @media (prefers-color-scheme: dark) {
@@ -65,7 +65,7 @@
       --up:#c96a50; --down:#3e8cc4; --neg:#e8877a; --memo:#f0a04b;
       --noteflo-bg:#3b211b; --noteflo-bd:#5d3529; --noteflo-ink:#f0a86b;
       --today-hl:#d8dc22; --scale-rgb:122, 179, 230; --today-bd:#ff9d4d;
-      /* 29cm 검정은 어두운 배경에서 묻히므로 흰색으로 반전됩니다 */
+      /* c5 의 검정은 어두운 배경에서 묻히므로 흰색으로 반전됩니다 */
       --c1:#0C7B46;  --c2:#5CA51E;  --c3:#E8B900;  --c4:#D46A9C;  --c5:#D8D8D8;
       --c6:#B7823F;  --c7:#3987E5;  --c8:#E06A5A;  --c9:#8286E0;  --c10:#D66E45;
       --c11:#26A69A; --c12:#8B5BB5; --c13:#3AA8C4; --c14:#8A9930; --c15:#DA649F;
@@ -755,14 +755,21 @@
     DATA_GID: 225619214,              // 일일매출정보
     MEMO_GID: 1323367654,             // 메모 — 날짜 · 판매처 · 제품라인 · 상품코드 · 메모
     NOTE_GID: 1881090590,             // 플로팅코멘트 — 날짜 · comments
+    /* 설정 탭 — 판매처 순서 · 제품라인 힌트 · 판매처 별칭을 여기서 읽습니다.
+       페이지 소스에 두면 로그인하지 않은 사람에게도 그대로 보이므로 시트로 옮겼습니다.
+       탭이 없거나 못 읽으면 화면은 그대로 돌아가고, 각주에 그 사실이 적힙니다.
+       모양은 첫 행이 머리글이고 세 열입니다 — 구분 · 값 · 값2
+         판매처       (판매처 이름)                ← 적은 순서가 표시 순서이자 색 순서
+         라인힌트     (상품명 조각)   (라인 코드)  ← 좁은 이름을 위에 적으세요
+         판매처별칭   (메모 표기)     (원본 표기)
+         제품군       (보여줄 이름)   (라인 코드)  ← promotion 탭이 없을 때 쓰는 목록 */
+    CONF_GID: null,
     /* 제품군 정의 탭 (이름 · 제품라인 · 구분). 없으면 아래 기본값을 씁니다.
        기획전은 일일매출정보 탭의 promo 열에서 자동으로 읽으므로 여기 적을 필요가 없습니다.
        드롭다운에는 여기 적은 순서 그대로 나옵니다 — 위에 두고 싶은 것을 위에 적으세요. */
     PROMO_RANGE: "'promotion'!A1:C",
-    제품군_기본: [
-      { 이름: '캄 앤 밸런스 오일', 제품라인: 'OIL', 구분: '제품군' },
-      { 이름: '룸 스프레이',       제품라인: 'RSP', 구분: '제품군' }
-    ],
+    /* promotion 탭이 없을 때 쓰는 제품군. 설정 탭의 '제품군' 줄에서 채웁니다. */
+    제품군_기본: [],
     RECENT_DAYS: 30,
 
     /* 프로모션 리뷰 — 프로모션 정보와 발신 데이터를 적어 두는 탭입니다.
@@ -801,20 +808,19 @@
     관리자: ['jeong@hinok.life']
   };
 
-  /* 판매처 표시 순서. 시트에 새 채널이 생기면 목록 끝에 자동으로 붙습니다. */
-  var CH_ORDER = ['자사몰', '네이버', '카카오', '캐리마켓(온)', '29cm', '제네시스', '현대M몰',
-                  '롯데백화점(온)', '신세계면세점', '롯데면세점', '신라면세점',
-                  '플래그쉽', 'HOS청담', '어메니티', '페이히어'];
+  /* 아래 셋은 설정 탭에서 채웁니다 (CONF_GID). 못 읽어도 화면은 돌아갑니다. */
 
-  /* memo 탭의 판매처 표기가 시트1과 다를 때 맞춰줍니다 */
-  var MEMO_CH_ALIAS = {
-    '롯데DFS': '롯데면세점', '신세계DFS': '신세계면세점', '신라DFS': '신라면세점',
-    '플래그십': '플래그쉽', '일일총주문금액': '합계', '총합계': '합계'
-  };
+  /* 판매처 표시 순서. 설정에 없는 채널은 목록 끝에 자동으로 붙습니다. */
+  var CH_ORDER = [];
+  /* memo 탭의 판매처 표기가 원본과 다를 때 맞춰줍니다 */
+  var MEMO_CH_ALIAS = {};
   var TOTAL_KEY = '합계';
 
+  /* 색을 배정한 순서. 화면에 세운 판매처 순서를 그대로 쓰므로,
+     설정을 못 읽어 순서가 데이터 순이 되어도 색이 전부 회색이 되지는 않습니다. */
+  var CH_COLOR = [];
   function chColor(name) {
-    var i = CH_ORDER.indexOf(name);
+    var i = CH_COLOR.indexOf(name);
     return i >= 0 && i < 15 ? 'var(--c' + (i + 1) + ')' : 'var(--c-other)';
   }
 
@@ -1098,6 +1104,57 @@
   /** 없어도 화면이 도는 탭 — 못 읽으면 빈 값으로 넘깁니다 */
   function 없으면빈값(p) { return p.catch(function () { return []; }); }
 
+  /* 설정 탭에서 무엇을 읽었는지 — 각주에 적어 조용히 기본값으로 돌지 않게 합니다 */
+  var CONF = { 판매처: 0, 라인힌트: 0, 판매처별칭: 0, 제품군: 0 };
+
+  /**
+   * 설정 탭 → CH_ORDER · LINE_HINTS · MEMO_CH_ALIAS.
+   * 첫 행은 머리글로 보고 건너뜁니다. 구분이 맞지 않는 줄은 그냥 지나갑니다 —
+   * 시트에 메모를 적어 두셔도 화면이 깨지지 않게요.
+   * 메모를 파싱할 때 별칭이 필요하므로 parseRows 보다 먼저 불러야 합니다.
+   */
+  function applyConf(vals) {
+    CH_ORDER = []; LINE_HINTS = []; MEMO_CH_ALIAS = {}; CONFIG.제품군_기본 = [];
+    CONF = { 판매처: 0, 라인힌트: 0, 판매처별칭: 0, 제품군: 0 };
+    if (!vals || vals.length < 2) return;
+
+    for (var i = 1; i < vals.length; i++) {
+      var r = vals[i] || [];
+      var 구분 = String(r[0] === undefined || r[0] === null ? '' : r[0]).replace(/\s+/g, '');
+      var a = String(r[1] === undefined || r[1] === null ? '' : r[1]).trim();
+      var b = String(r[2] === undefined || r[2] === null ? '' : r[2]).trim();
+      if (!구분 || !a) continue;
+
+      if (구분 === '판매처') {
+        if (CH_ORDER.indexOf(a) < 0) { CH_ORDER.push(a); CONF.판매처++; }
+      } else if (구분 === '라인힌트') {
+        /* 이름에서 제품라인을 추정할 때 씁니다. 적은 순서대로 먼저 맞춰 보므로
+           좁은 이름이 넓은 이름보다 위에 있어야 합니다. */
+        if (b) { LINE_HINTS.push([a.replace(/\s+/g, ''), b.toUpperCase()]); CONF.라인힌트++; }
+      } else if (구분 === '판매처별칭') {
+        if (b) { MEMO_CH_ALIAS[a] = b; CONF.판매처별칭++; }
+      } else if (구분 === '제품군') {
+        /* promotion 탭이 없을 때 쓰는 제품군. 적은 순서가 드롭다운 순서입니다. */
+        if (b) {
+          CONFIG.제품군_기본.push({ 이름: a, 제품라인: b, 구분: '제품군' });
+          CONF.제품군++;
+        }
+      }
+    }
+  }
+
+  /** 설정에서 못 읽은 것이 있으면 각주에 적을 문장을 돌려줍니다 */
+  function confText() {
+    var 빠짐 = [];
+    if (!CONF.판매처) 빠짐.push('판매처 순서·색');
+    if (!CONF.라인힌트) 빠짐.push('제품라인 추정');
+    if (!CONF.판매처별칭) 빠짐.push('메모 판매처 표기 보정');
+    if (!CONF.제품군) 빠짐.push('제품군 목록');
+    if (!빠짐.length) return '';
+    return ' 설정 탭에서 ' + 빠짐.join(' · ') + '을(를) 읽지 못해 기본값으로 동작합니다 ' +
+           '— 설정 탭의 구분 열(판매처 · 라인힌트 · 판매처별칭 · 제품군)을 확인해 주세요.';
+  }
+
   function loadAll() {
     showLoading(true);
     clearErr();
@@ -1107,8 +1164,13 @@
         .catch(function () { return [[], null]; }),
       valuesAndRich(CONFIG.SHEET_ID, CONFIG.NOTE_GID, 'A1:B')
         .catch(function () { return [[], null]; }),
-      없으면빈값(sheetValues(CONFIG.PROMO_RANGE))
+      없으면빈값(sheetValues(CONFIG.PROMO_RANGE)),
+      (CONFIG.CONF_GID === null || CONFIG.CONF_GID === undefined)
+        ? Promise.resolve([])
+        : 없으면빈값(valuesByGid(CONFIG.SHEET_ID, CONFIG.CONF_GID, 'A1:C'))
     ]).then(function (res) {
+      /* 판매처 별칭이 메모 파싱에 쓰이므로 반드시 parseRows 앞입니다 */
+      applyConf(res[4]);
       DATA = parseRows(res[0], res[1][0], res[2][0], res[3], res[1][1], res[2][1]);
       var now = new Date();
       document.getElementById('whoFetched').textContent =
@@ -1154,6 +1216,10 @@
     var found = Object.keys(chSet);
     var channels = CH_ORDER.filter(function (c) { return chSet[c]; })
       .concat(found.filter(function (c) { return CH_ORDER.indexOf(c) < 0; }).sort());
+    /* 색은 설정에 적은 순서로 배정합니다 — 어떤 판매처가 그날 데이터에 없어도
+       뒤 판매처의 색이 밀리지 않습니다. 설정을 못 읽었을 때만 화면 순서를 씁니다
+       (그래야 전부 회색이 되지 않습니다). */
+    CH_COLOR = CH_ORDER.length ? CH_ORDER : channels;
 
     var months = {};
     dates.forEach(function (d) { months[d.slice(0, 7)] = 1; });
@@ -1697,7 +1763,7 @@
     if (!state.ch) renderM1(A, anchor);
     renderM2(A, anchor);
 
-    document.getElementById('colmap').textContent = colmapText();
+    document.getElementById('colmap').textContent = colmapText() + confText();
     document.getElementById('coverage').textContent =
       '원본 ' + nf.format(DATA.rows.length) + '행 · 수록 기간 ' + DATA.dates[0] + ' ~ ' + DATA.maxDate +
       ' · 판매처 ' + DATA.channels.length + '곳 · 메모 ' + (DATA.memos || []).length + '건';
@@ -1966,14 +2032,7 @@
    * 룸 스프레이를 더 스프레이로 잘못 보지 않습니다.
    * 추정한 값은 화면에 '추정'이라고 적어 두므로 조용히 틀리지 않습니다.
    */
-  var LINE_HINTS = [
-    ['룸스프레이', 'RSP'], ['스페이스스프레이', 'SSP'], ['아이필로우', 'EPW'],
-    ['캄앤밸런스오일', 'OIL'], ['캄&밸런스오일', 'OIL'],
-    ['디터전트', 'TDT'], ['핸드워시', 'THW'], ['핸드밤', 'THB'], ['향낭', 'THN'],
-    ['바디워시', 'TBW'], ['바디로션', 'TBL'], ['샴푸', 'TSH'], ['더솝', 'TSO'],
-    ['오일', 'OIL'], ['에디션', 'LTD'],
-    ['더스프레이', 'TSP'], ['스프레이', 'TSP']
-  ];
+  var LINE_HINTS = [];      /* 설정 탭의 '라인힌트' 줄에서 채웁니다 */
   /**
    * 이름 끝에 붙은 괄호는 발신 대상을 적어 둔 것으로 봅니다.
    *   '캄 앤 밸런스 오일 런칭 (구매고객)'  →  이름 '캄 앤 밸런스 오일 런칭' · 타겟 '구매고객'
